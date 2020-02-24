@@ -32,6 +32,10 @@ virtual-keyboard-unstable-v1.c: $(@:c=xml)
 clean:
 	rm *.o swaynergy swaynergy-clip-update
 
+install: swaynergy swaynergy-clip-update
+	mkdir -p "${PREFIX}/bin"
+	install -m755 $^ ${PREFIX}/bin
+
 homeinstall: swaynergy swaynergy-clip-update 
 	cp -f $^ ~/bin
 
