@@ -27,7 +27,7 @@ wlr-virtual-pointer-unstable-v1.c: $(@:c=xml)
 virtual-keyboard-unstable-v1.c: $(@:c=xml)
 	wayland-scanner private-code $(@:c=xml) $@
 
-.PHONY: clean homeinstall distclean
+.PHONY: clean homeinstall distclean install
 
 clean:
 	rm *.o swaynergy swaynergy-clip-update
