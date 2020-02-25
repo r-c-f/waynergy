@@ -4,6 +4,7 @@
 #include <string.h>
 #include <stdarg.h>
 
+__attribute__((unused))
 static void *xmalloc(size_t len)
 {
 	void *ret;
@@ -11,6 +12,7 @@ static void *xmalloc(size_t len)
 		abort();
 	return ret;
 }
+__attribute__((unused))
 static void *xcalloc(size_t nmemb, size_t size)
 {
 	void *ret;
@@ -18,12 +20,14 @@ static void *xcalloc(size_t nmemb, size_t size)
 		abort();
 	return ret;
 }
+__attribute__((unused))
 static void *xrealloc(void *ptr, size_t len)
 {
 	if (!(ptr = realloc(ptr, len)))
 		abort();
 	return ptr;
 }
+__attribute__((unused))
 static char *xstrdup(void *str)
 {
 	char *ret;
@@ -31,6 +35,7 @@ static char *xstrdup(void *str)
 		abort();
 	return ret;
 }
+__attribute__((unused))
 static void xasprintf(char **strp, const char *fmt, ...)
 {
 	va_list ap;
@@ -40,6 +45,7 @@ static void xasprintf(char **strp, const char *fmt, ...)
 		abort();
 	va_end(ap);
 }
+__attribute__((unused))
 static void strfreev(char **strv)
 {
 	size_t i;

@@ -88,7 +88,7 @@ void clipMonitorPollProc(struct pollfd *pfd)
 
 
 /* set wayland clipboard with wl-copy */
-bool clipWlCopy(enum uSynergyClipboardId id, const char *data, size_t len)
+bool clipWlCopy(enum uSynergyClipboardId id, const unsigned char *data, size_t len)
 {
 	pid_t pid;
 	/* create the pipe we will use to communicate with it */

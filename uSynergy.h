@@ -361,7 +361,7 @@ typedef struct uSynergyContext
 	uint8_t*						m_replyCur;										/* Write offset into reply buffer */
 	int8_t							m_joystickSticks[USYNERGY_NUM_JOYSTICKS][4];	/* Joystick stick position in 2 axes for 2 sticks */
 	uint16_t						m_joystickButtons[USYNERGY_NUM_JOYSTICKS];		/* Joystick button state */
-	char* 							m_clipBuf[2]; /* buffers for clipboard data */
+	unsigned char* 							m_clipBuf[2]; /* buffers for clipboard data */
 	size_t 							m_clipLen[2]; /* allocated length of clipboard buffers */
 	size_t 							m_clipPos[2]; /* actual length of clipboard buffers */
 	size_t 							m_clipPosExpect[2]; /* expected length of clipboard data */

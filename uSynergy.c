@@ -224,9 +224,8 @@ static void sSendJoystickCallback(uSynergyContext *context, uint8_t joyNum)
 /**
 @brief Send clipboard data
 **/
-void uSynergySendClipboard(uSynergyContext *context, int id, uint32_t len, const char *text)
+void uSynergySendClipboard(uSynergyContext *context, int id, uint32_t len, const unsigned char *text)
 {
-	int i;
 	char buffer[128];
 	int pos;
 	uint32_t chunk_len;
@@ -240,7 +239,7 @@ void uSynergySendClipboard(uSynergyContext *context, int id, uint32_t len, const
 								4 +					/* Clipboard format */
 								4;					/* Clipboard data length */
 	uint32_t max_length = USYNERGY_REPLY_BUFFER_SIZE - overhead_size;
-	char chunk[max_length];
+	unsigned char chunk[max_length];
 
 	// Assemble start packet.
 	sprintf(buffer, "%d", len);
@@ -482,10 +481,11 @@ static void sProcessMessage(uSynergyContext *context, const uint8_t *message)
 		// 4 char: identifier ("CCLP")
 		// 1 uint8_t: clipboard ID
 		// 1 uint32_t: sequence number
-		const char *parse_msg = message + 8;
+		const unsigned char *parse_msg = message + 8;
 		uint8_t id = *parse_msg;
 		++parse_msg;
 		uint32_t seq = sNetToNative32(parse_msg);
+		(void)seq;
 		parse_msg += 4;
 		/* XXX: I think the sequence number is always zero on receive?*/
 		context->m_clipGrabbed[id] = false;
@@ -509,6 +509,7 @@ static void sProcessMessage(uSynergyContext *context, const uint8_t *message)
 		uint8_t id = message[8];
 		const uint8_t *parse_msg  = &message[9];
 		uint32_t sequence = sNetToNative32(parse_msg);
+		(void)sequence;
 		parse_msg += 4;
 		uint8_t mark = *parse_msg;
 		++parse_msg;

@@ -6,7 +6,7 @@ static char *config_home(void)
 	static char *path;
 	char *env;
 	if (!path) {
-		if (env = getenv("XDG_CONFIG_HOME")) {
+		if ((env = getenv("XDG_CONFIG_HOME"))) {
 			xasprintf(&path,"%s/swaynergy",env);
 		} else {
 			if (!(env = getenv("HOME")))
