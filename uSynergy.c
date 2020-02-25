@@ -367,6 +367,12 @@ static void sProcessMessage(uSynergyContext *context, const uint8_t *message)
 		if (context->m_screenActiveCallback != 0L)
 			context->m_screenActiveCallback(context->m_cookie, false);
 	}
+	else if (USYNERGY_IS_PACKET("CSEC"))
+	{
+		//Screensaver state
+		bool active = message[8];
+		sSendScreensaverCallback(context->m_cookie, active);
+	}
 	else if (USYNERGY_IS_PACKET("DMDN"))
 	{
 		// Mouse down

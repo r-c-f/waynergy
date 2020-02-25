@@ -66,7 +66,7 @@ static void syn_clip_cb(uSynergyCookie cookie, enum uSynergyClipboardId id, uint
 }
 static void syn_screensaver_cb(uSynergyCookie cookie, bool state)
 {
-	char *cmd = configTryString(state ? "screensaver_start" : "screensaver_stop", NULL);
+	char *cmd = configTryString(state ? "screensaver/start" : "screensaver/stop", NULL);
 	if (cmd)
 		system(cmd);
 	free(cmd);

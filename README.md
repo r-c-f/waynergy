@@ -66,6 +66,11 @@ One scancode per line in the following files in the `intrinsic_mask` folder:
 There's also an xkb format keymap to provide, if the default is not sufficient;
 it it should be placed in `xkb_keymap`. 
 
+#### Screensaver
+
+`screensaver/start` should contain a command to be run when the screensaver is
+activated remotely, `screensaver/stop` should contain a command to terminate
+it when it is deactivated. 
 
 ## Acknowledgements
 
