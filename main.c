@@ -28,8 +28,6 @@ static struct sopt optspec[] = {
 
 uSynergyContext synContext;
 
-static char *host;
-
 static void syn_mouse_wheel_cb(uSynergyCookie cookie, int16_t x, int16_t y)
 {
 	wlMouseWheel(x, y);
@@ -91,7 +89,7 @@ void sig_handle(int sig)
 int main(int argc, char **argv)
 {
 	int opt, optind = 0, optcpos = 0;
-	char *optarg, *port, *name, hostname[HOST_NAME_MAX] = {0};
+	char *optarg, *port, *name, *host, hostname[HOST_NAME_MAX] = {0};
 	short optshrt;
 	long optlong;
 	bool optshrt_valid, optlong_valid;
