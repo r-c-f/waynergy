@@ -26,7 +26,24 @@ See
 ```
 swaynergy -h
 ```
+output:
+```
+swaynergy: Synergy client for wlroots compositors
 
+USAGE: swaynergy [-h|--help] [-c|--host host] [-p|--port port] [-W|--width width] [-H|--height height] [-N|--name name]
+	-h|--help:
+		Help text
+	-c|--host host:
+		Server to connect to
+	-p|--port port:
+		Port
+	-W|--width width:
+		Width of screen in pixels
+	-H|--height height:
+		Height of screen in pixels
+	-N|--name name:
+		Name of client screen
+```
 ### Configuration
 
 The configuration files are stored in `$XDG_CONFIG_HOME/swaynergy`, which is
