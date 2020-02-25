@@ -230,11 +230,11 @@ static bool local_mod_init(void) {
 	size_t line_count, i, l;
 	long key;
 	char *conf[] = {
-		"shift",
-		"control",
-		"alt",
-		"meta",
-		"super",
+		"intrinsic_mask/shift",
+		"instrinsic_mask/control",
+		"intrinsic_mask/alt",
+		"intrinsic_mask/meta",
+		"intrinsic_mask/super",
 		NULL
 	};
 	uint32_t masks[] = {

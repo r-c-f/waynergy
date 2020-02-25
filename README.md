@@ -37,7 +37,7 @@ each file named for the setting, because parsing is for those who are not lazy.
 
 Due to the annoying nature of the synergy protocol and an unwillingess to work 
 too much with xkbcommon, we support intrinsic masks for a given set of keys. 
-One scancode per line in the following files:
+One scancode per line in the following files in the `intrinsic_mask` folder:
 
 * `alt`
 * `control`
