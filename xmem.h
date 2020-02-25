@@ -20,10 +20,8 @@ static void *xcalloc(size_t nmemb, size_t size)
 }
 static void *xrealloc(void *ptr, size_t len)
 {
-	if (!(ptr = realloc(ptr, len))) {
-		fprintf(stderr, "xrealloc: Could not allocate, size %zd\n", len); 
+	if (!(ptr = realloc(ptr, len)))
 		abort();
-	}
 	return ptr;
 }
 static char *xstrdup(void *str)
