@@ -33,7 +33,7 @@ struct sopt {
 	/* Long option name, if not null. i.e. --long-option would be "long-option" */
 	char *name;
 	/* Parameter, if not null. Or name of unparsed argument, if SOPT_AFTER */
-	char *param;
+	char *arg;
 	/* Description for usage text */
 	char *desc;
 };
@@ -41,20 +41,20 @@ struct sopt {
 
 /* Initializer macros, for static option array definitions. Use like:
  * 	struct sopt optspec[] = {
- * 		SOPT_INIT...(...),
- * 		SOPT_INIT...(...),
+ * 		SOPT...(...),
+ * 		SOPT...(...),
  * 		...
- * 		SOPT_INIT_END
+ * 		SOPT_END
  * 	};
 */
-/* Define a flag, i.e. simple option like -o (takes no parameter) */
-#define SOPT_INIT_FLAG(opt, desc) { (opt), NULL, NULL, (desc) }
+/* Define a simple option like -o (takes no parameter) */
+#define SOPT_INIT(opt, desc) { (opt), NULL, NULL, (desc) }
 /* Same as above, but with a long option name given */
-#define SOPT_INIT_FLAGL(opt, name, desc) { (opt), (name), NULL, (desc) }
+#define SOPT_INITL(opt, name, desc) { (opt), (name), NULL, (desc) }
 /* Define an option with an argument, i.e. -o foo */
-#define SOPT_INIT_PARAM(opt, param, desc) { (opt), NULL, (param), (desc)}
+#define SOPT_INIT_ARG(opt, param, desc) { (opt), NULL, (param), (desc)}
 /* Same as above, but with long option name given */
-#define SOPT_INIT_PARAML(opt, name, param, desc) {(opt), (name), (param), (desc)}
+#define SOPT_INIT_ARGL(opt, name, param, desc) {(opt), (name), (param), (desc)}
 /* Define an unparsed argument, i.e. after -- */
 #define SOPT_INIT_AFTER(str, desc) {SOPT_AFTER, NULL, (str), (desc)}
 /* Terminate the option array. Must be last element. */
@@ -63,7 +63,7 @@ struct sopt {
 #define SOPT_VALID(opt) ((opt)->val != SOPT_INVAL)
 
 /*simple helper -- print out usage example*/
-static inline void sopt_usage_printarg(struct sopt *opt)
+static inline void sopt_usage_printopt(struct sopt *opt)
 {
 	bool shortopt, longopt;
 
@@ -81,8 +81,8 @@ static inline void sopt_usage_printarg(struct sopt *opt)
 	if (longopt) {
 		fprintf(stderr, "--%s", opt->name);
 	}
-	if (opt->param) {
-		fprintf(stderr, " %s", opt->param);
+	if (opt->arg) {
+		fprintf(stderr, " %s", opt->arg);
 	}
 }
 /*print out usage message
@@ -108,14 +108,14 @@ static void sopt_usage(struct sopt *optspec, char *name, char *desc)
 			continue;
 		}
 		fprintf(stderr, " [");
-		sopt_usage_printarg(opt);
+		sopt_usage_printopt(opt);
 		fprintf(stderr, "]");
 	}
 	if (afteropt) {
 		fprintf(stderr, " --");
 		for (opt = optspec; SOPT_VALID(opt); ++opt) {
 			if (opt->val == SOPT_AFTER)
-				fprintf(stderr, " %s", opt->param);
+				fprintf(stderr, " %s", opt->arg);
 		}
 	}
 	fprintf(stderr, "\n\t");
@@ -124,13 +124,13 @@ static void sopt_usage(struct sopt *optspec, char *name, char *desc)
 	for (opt = optspec; SOPT_VALID(opt); ++opt) {
 		if (opt->val == SOPT_AFTER)
 			continue;
-		sopt_usage_printarg(opt);
+		sopt_usage_printopt(opt);
 		fprintf(stderr, ":\n\t\t%s\n\t", opt->desc);
 	}
 	if (afteropt) {
 		for (opt = optspec; SOPT_VALID(opt); ++opt) {
 			if (opt->val == SOPT_AFTER)
-				fprintf(stderr, "%s:\n\t\t%s\n\t", opt->param, opt->desc);
+				fprintf(stderr, "%s:\n\t\t%s\n\t", opt->arg, opt->desc);
 		}
 	}
 	/*make it prettier*/
@@ -171,14 +171,14 @@ static inline void sopt_usage_s(void)
  * opt:
  * 	array of possible option structures
  * cpos:
- * 	Stores the current position in a combined argument, i.e. -abcd.
+ * 	Stores the current position in a combined option, i.e. -abcd.
  * 	*cpos MUST BE ZERO ON FIRST CALL
  * optind:
  * 	Current position in the argv array. At end of processing, will point
  * 	to first non-parsed argument.
  * 	*optind MUST BE ZERO ON FIRST CALL
- * optartg:
- * 	Pointer to any parameter given after the argument.
+ * optarg:
+ * 	Pointer to any argument given after the option, or NULL.
  *
  * RETURNS:
  * 	'?' if unknown or invalid input given,
@@ -188,7 +188,7 @@ static int sopt_getopt(int argc, char **argv, struct sopt *opt, int *cpos, int *
 {
 	if (!(opt && cpos &&argv && optind && optarg && argc))
 		return -1;
-	/* handle the case of combined arguments */
+	/* handle the case of combined options */
 	if (*cpos)
 		goto shortopt;
 	/*otherwise proceed normally*/
@@ -198,12 +198,12 @@ static int sopt_getopt(int argc, char **argv, struct sopt *opt, int *cpos, int *
 		return -1;
 
 	if (argv[*optind][1] == '-') {
-		/*end of arguments*/
+		/*end of options*/
 		if (!argv[*optind][2]) {
-			++*optind; //optind points at next non-argument
+			++*optind; //optind points at next non-option
 			return -1;
 		}
-		/*or a long argument*/
+		/*or a long option*/
 		for (; SOPT_VALID(opt); ++opt) {
 			/*don't want to be passing NULL to strcmp, now do we?*/
 			if (opt->name) {
@@ -226,13 +226,13 @@ shortopt:
 		if (argv[*optind][++*cpos]) {
 			/* make sure that we're not expecting a param for
 			 * this argument -- if we are, someone fucked up */
-			if (opt->param)
+			if (opt->arg)
 				return '?';
 		} else {
 			*cpos = 0;
 		}
 	}
-	*optarg = opt->param ? argv[++*optind] : NULL;
+	*optarg = opt->arg ? argv[++*optind] : NULL;
 	return opt->val;
 }
 

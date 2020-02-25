@@ -16,12 +16,12 @@
 
 
 static struct sopt optspec[] = {
-	SOPT_INIT_FLAGL('h', "help", "Help text"),
-	SOPT_INIT_PARAML('c', "host", "host", "Server to connect to"),
-	SOPT_INIT_PARAML('p', "port", "port", "Port"),
-	SOPT_INIT_PARAML('W', "width", "width", "Width of screen in pixels"),
-	SOPT_INIT_PARAML('H', "height", "height", "Height of screen in pixels"),
-	SOPT_INIT_PARAML('N', "name", "name", "Name of client screen"),
+	SOPT_INITL('h', "help", "Help text"),
+	SOPT_INIT_ARGL('c', "host", "host", "Server to connect to"),
+	SOPT_INIT_ARGL('p', "port", "port", "Port"),
+	SOPT_INIT_ARGL('W', "width", "width", "Width of screen in pixels"),
+	SOPT_INIT_ARGL('H', "height", "height", "Height of screen in pixels"),
+	SOPT_INIT_ARGL('N', "name", "name", "Name of client screen"),
 	SOPT_INIT_END
 };
 
