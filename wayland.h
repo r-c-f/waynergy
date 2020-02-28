@@ -5,8 +5,8 @@
 #include <poll.h>
 #include <wayland-client.h>
 #include <wayland-client-protocol.h>
-#include "wlr-virtual-pointer-unstable-v1.h"
-#include "virtual-keyboard-unstable-v1.h"
+#include "wlr-virtual-pointer-unstable-v1.prot.h"
+#include "virtual-keyboard-unstable-v1.prot.h"
 
 
 extern int wlSetup(int width, int height);
