@@ -80,13 +80,22 @@ static int set_layout(void)
 	int ret = 0;
 	int fd;
 	char nul = 0;
-	char *keymap_str = configTryString("xkb_keymap", "xkb_keymap { \
+	char *path;
+
+	if ((path = osGetHomeConfigPath("xkb_keymap"))) {
+		fd = open(path, O_RDONLY | O_CLOEXEC);
+		free (path);
+		if (fd != -1)
+			return fd;
+	}
+
+	char *keymap_str = "xkb_keymap { \
 	xkb_keycodes  { include \"xfree86+aliases(qwerty)\"	}; \
 	xkb_types     { include \"complete\"	}; \
 	xkb_compat    { include \"complete\"	}; \
 	xkb_symbols   { include \"pc+us+inet(evdev)\"	}; \
 	xkb_geometry  { include \"pc(pc105)\"	}; \
-};");
+};";
 	if ((fd = osGetAnonFd()) == -1) {
 		ret = 1;
 		goto done;
