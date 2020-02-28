@@ -26,16 +26,3 @@ char *osGetRuntimePath(char *name)
 	xasprintf(&res, "%s/%s", base, name);
 	return res;
 }
-char *osGetHomeConfigPath(char *name)
-{
-	char *res;
-        char *env;
-	if ((env = getenv("XDG_CONFIG_HOME"))) {
-		xasprintf(&res,"%s/swaynergy/%s", env, name);
-	} else {
-		if (!(env = getenv("HOME")))
-			return NULL;
-		xasprintf(&res, "%s/.config/swaynergy/%s",env, name);
-	}
-	return res;
-}
