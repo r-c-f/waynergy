@@ -1,21 +1,7 @@
 #include "config.h"
+#include "os.h"
 #include "xmem.h"
 #include <stdbool.h>
-static char *config_home(void)
-{
-	static char *path;
-	char *env;
-	if (!path) {
-		if ((env = getenv("XDG_CONFIG_HOME"))) {
-			xasprintf(&path,"%s/swaynergy",env);
-		} else {
-			if (!(env = getenv("HOME")))
-				return NULL;
-			xasprintf(&path, "%s/.config/swaynergy",env);
-		}
-	}
-	return path;
-}
 
 /* read file into a buffer, resizing as needed */
 static bool buf_append_file(char **buf, size_t *len, size_t *pos, char *path)
@@ -41,7 +27,8 @@ char *configReadFile(char *name)
 	size_t len, pos;
 	char *buf, *path;
 
-	xasprintf(&path, "%s/%s", config_home(), name);
+	if (!(path = osGetHomeConfigPath(name)))
+		return NULL;
 
 	len = 4096;
 	buf = xmalloc(len);
@@ -65,7 +52,8 @@ char **configReadLines(char *name)
 	char **line;
 	FILE *f;
 
-	xasprintf(&path, "%s/%s", config_home(), name);
+	if (!(path = osGetHomeConfigPath(name)))
+		return NULL;
 	if (!(f = fopen(path, "r"))) {
 		free(path);
 		return NULL;
@@ -88,7 +76,7 @@ char **configReadLines(char *name)
 	return xrealloc(line, sizeof(*line) * (pos + 1));
 }
 
-	
+
 
 
 
