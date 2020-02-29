@@ -50,6 +50,9 @@ The configuration files are stored in `$XDG_CONFIG_HOME/swaynergy`, which is
 probably at `~/.config/swaynergy` in most cases. A single variable goes into 
 each file named for the setting, because parsing is for those who are not lazy.
 
+The basics are `port`, `host`, `name`, `width`, and `height`, which do exactly
+what the command line option would do. 
+
 #### Modifier keys
 
 Due to the annoying nature of the synergy protocol and an unwillingess to work 
@@ -72,6 +75,20 @@ it it should be placed in `xkb_keymap`.
 activated remotely, `screensaver/stop` should contain a command to terminate
 it when it is deactivated. 
 
+#### Idle inhibition hack
+
+`idle-inhibit` should contain a 'start' and a 'stop' file, with commands to
+be run to stop whatever idle monitor is working when swaynergy starts, and 
+to restart it before swaynergy exits. This is to bypass the problem of needing
+an active surface to inhibit idle in the actual underlying protocols, which 
+we must do in order to prevent the screensaver/lock screen/whatever from being
+triggered except by the Synergy screensaver message. In my case, this means
+killing swayidle, and restarting swayidle.
+
 ## Acknowledgements
 
 * [uSynergy](https://github.com/symless/synergy-micro-client) for the protocol library
+* The swaywm people, who've provided the protocols to make something like this
+possible
+* wl-clipboard, because its watch mode turns it into a clipboard manager so I
+I don't have to.

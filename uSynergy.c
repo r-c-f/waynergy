@@ -371,7 +371,7 @@ static void sProcessMessage(uSynergyContext *context, const uint8_t *message)
 	{
 		//Screensaver state
 		bool active = message[8];
-		sSendScreensaverCallback(context->m_cookie, active);
+		sSendScreensaverCallback(context, active);
 	}
 	else if (USYNERGY_IS_PACKET("DMDN"))
 	{
