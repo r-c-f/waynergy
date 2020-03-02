@@ -64,10 +64,18 @@ static void syn_clip_cb(uSynergyCookie cookie, enum uSynergyClipboardId id, uint
 }
 static void syn_screensaver_cb(uSynergyCookie cookie, bool state)
 {
-	char *cmd = configTryString(state ? "screensaver/start" : "screensaver/stop", NULL);
-	if (cmd)
-		system(cmd);
-	free(cmd);
+	size_t i;
+	int ret;
+	char **cmd = configReadLines(state ? "screensaver/start" : "screensaver/stop", NULL);
+	if (!cmd)
+		return;
+	for (i = 0; cmd[i]; ++i) {
+		ret = system(cmd[i]);
+		if (ret) {
+			fprintf(stderr, "Screensaver callback state %s command #%d (%s) failed with code %d\n", state ? "start" : "stop", i, cmd[i], ret);
+		}
+	}
+	strfreev(cmd);
 }
 void sig_handle(int sig)
 {
