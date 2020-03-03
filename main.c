@@ -24,7 +24,6 @@ static struct sopt optspec[] = {
 	SOPT_INIT_ARGL('N', "name", "name", "Name of client screen"),
 	SOPT_INIT_ARGL('l', "logfile", "file", "Name of logfile (up to " LOG_FILE_MAX_COUNT_STR "), - is stderr"),
 	SOPT_INIT_ARGL('L', "loglevel", "level", "Log level -- number, or one of " LOG_LEVEL_USAGE_STR),
-	SOPT_INIT_ARGL('O', "orientation-hack", "orientation", "Hack way to automatically get output -- are screens side by side (h) or one on top of the other (v)"),
 	SOPT_INIT_END
 };
 
@@ -80,14 +79,6 @@ static void syn_screensaver_cb(uSynergyCookie cookie, bool state)
 	}
 	strfreev(cmd);
 }
-/* FIXME: sway lies about positioning, probably need some fucking xdg shit to
- * fix it. For now, we hack away like the filthy scum we are */
-enum layout_hack {
-	LAYOUT_HACK_HORIZ = 0, //add X together to get size
-	LAYOUT_HACK_VERT, //add Y together to get size
-	LAYOUT_HACK_NONE, //do nothing of the sort, trust the compositor
-};
-static enum layout_hack layout_hack = LAYOUT_HACK_NONE;
 void wl_output_update_cb(struct wlOutput *output)
 {
 	int b, l, t, r;
@@ -98,31 +89,17 @@ void wl_output_update_cb(struct wlOutput *output)
 	int width = 0;
 	int height = 0;
 	for(; output; output = output->next) {
-		switch (layout_hack) {
-			case LAYOUT_HACK_NONE:
-				if (b > output->y)
-					b = output->y;
-				if (l > output->x)
-					l = output->x;
-				if (t < (output->y + output->height))
-					t = (output->y + output->height);
-				if (r < (output->x + output->width))
-					r = (output->x + output->width);
-				width = r - l;
-				height = t - b;
-				break;
-			case LAYOUT_HACK_VERT:
-				if (output->width > width)
-					width = output->width;
-				height += output->height;
-				break;
-			case LAYOUT_HACK_HORIZ:
-				if (output->height > height)
-					height = output->height;
-				width += output->width;
-				break;
-		}
+		if (b > output->y)
+			b = output->y;
+		if (l > output->x)
+			l = output->x;
+		if (t < (output->y + output->height))
+			t = (output->y + output->height);
+		if (r < (output->x + output->width))
+			r = (output->x + output->width);
 	}
+	width = r - l;
+	height = t - b;
 	logInfo("Geometry updated: %dx%d", width, height);
 	uSynergyUpdateRes(&synContext, width, height);
 	wlResUpdate(width, height);
@@ -156,6 +133,7 @@ int main(int argc, char **argv)
 	short optshrt;
 	long optlong;
 	bool optshrt_valid, optlong_valid;
+	bool man_geom = false;
 
 	/* If we are run as swaynergy-clip-update, we're just supposed to write
 	 * to the FIFO */
@@ -172,10 +150,8 @@ int main(int argc, char **argv)
 	port = configTryString("port", "24800");
 	host = configTryString("host", "localhost");
 	name = configTryString("name", hostname);
-	/* default to 1024x768 -- it will work, at least */
-	synContext.m_clientWidth = configTryLong("width", 1024);
-	synContext.m_clientHeight = configTryLong("height", 768);
-
+	synContext.m_clientWidth = configTryLong("width", -1);
+	synContext.m_clientHeight = configTryLong("height", -1);
 	sopt_usage_set(optspec, argv[0], "Synergy client for wlroots compositors");
 	while ((opt = sopt_getopt(argc, argv, optspec, &optcpos, &optind, &optarg)) != -1) {
 		if (optarg) {
@@ -236,16 +212,6 @@ int main(int argc, char **argv)
 					goto opterror;
 				}
 				break;
-			case 'O':
-				if (*optarg == 'h') {
-					layout_hack = LAYOUT_HACK_HORIZ;
-				}else if (*optarg = 'v') {
-					layout_hack = LAYOUT_HACK_VERT;
-				} else {
-					fprintf(stderr, "%s not valid layout\n", optarg);
-					goto opterror;
-				}
-				break;
 opterror:
 			default:
 			       	sopt_usage_s();
@@ -254,6 +220,16 @@ opterror:
 	}
 	/* set up logging */
 	logInit(log_level, logfiles);
+	/* now we decide if we should use manual geom */
+	if ((synContext.m_clientWidth == -1) || (synContext.m_clientHeight == -1)) {
+		if ((synContext.m_clientWidth * synContext.m_clientHeight) < 0) {
+			logErr("Must specify both manual dimensions");
+			sopt_usage_s();
+			return 1;
+		}
+		logInfo("Using manaul dimensions: %dx%d", synContext.m_clientWidth, synContext.m_clientHeight);
+		man_geom = true;
+	}
 	/* set up signal handler */
 	signal(SIGTERM, sig_handle);
 	signal(SIGINT, sig_handle);
@@ -272,7 +248,7 @@ opterror:
 	synContext.m_traceFunc = syn_trace;
 	synContext.m_clipboardCallback = syn_clip_cb;
 	synContext.m_screensaverCallback = syn_screensaver_cb;
-	wlOnOutputsUpdated = wl_output_update_cb;
+	wlOnOutputsUpdated = man_geom ? NULL : wl_output_update_cb;
 	/*run*/
 	if(!clipSpawnMonitors())
 		return 3;

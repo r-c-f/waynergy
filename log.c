@@ -61,6 +61,7 @@ static void log_out_v(enum logLevel level, const char *fmt, va_list ap)
 		va_copy(aq, ap);
 		vfprintf(log_file[i], fmt, aq);
 		putc('\n', log_file[i]);
+		fflush(log_file[i]);
 	}
 }
 
