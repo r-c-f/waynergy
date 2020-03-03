@@ -24,6 +24,7 @@ static struct sopt optspec[] = {
 	SOPT_INIT_ARGL('N', "name", "name", "Name of client screen"),
 	SOPT_INIT_ARGL('l', "logfile", "file", "Name of logfile (up to " LOG_FILE_MAX_COUNT_STR "), - is stderr"),
 	SOPT_INIT_ARGL('L', "loglevel", "level", "Log level -- number, or one of " LOG_LEVEL_USAGE_STR),
+	SOPT_INIT_ARGL('O', "orientation-hack", "orientation", "Hack way to automatically get output -- are screens side by side (h) or one on top of the other (v)"),
 	SOPT_INIT_END
 };
 
@@ -79,6 +80,55 @@ static void syn_screensaver_cb(uSynergyCookie cookie, bool state)
 	}
 	strfreev(cmd);
 }
+/* FIXME: sway lies about positioning, probably need some fucking xdg shit to
+ * fix it. For now, we hack away like the filthy scum we are */
+enum layout_hack {
+	LAYOUT_HACK_HORIZ = 0, //add X together to get size
+	LAYOUT_HACK_VERT, //add Y together to get size
+	LAYOUT_HACK_NONE, //do nothing of the sort, trust the compositor
+};
+static enum layout_hack layout_hack = LAYOUT_HACK_NONE;
+void wl_output_update_cb(struct wlOutput *output)
+{
+	int b, l, t, r;
+	b = 0;
+	l = 0;
+	t = 0;
+	r = 0;
+	int width = 0;
+	int height = 0;
+	for(; output; output = output->next) {
+		switch (layout_hack) {
+			case LAYOUT_HACK_NONE:
+				if (b > output->y)
+					b = output->y;
+				if (l > output->x)
+					l = output->x;
+				if (t < (output->y + output->height))
+					t = (output->y + output->height);
+				if (r < (output->x + output->width))
+					r = (output->x + output->width);
+				width = r - l;
+				height = t - b;
+				break;
+			case LAYOUT_HACK_VERT:
+				if (output->width > width)
+					width = output->width;
+				height += output->height;
+				break;
+			case LAYOUT_HACK_HORIZ:
+				if (output->height > height)
+					height = output->height;
+				width += output->width;
+				break;
+		}
+	}
+	logInfo("Geometry updated: %dx%d", width, height);
+	uSynergyUpdateRes(&synContext, width, height);
+	wlResUpdate(width, height);
+}
+
+
 void sig_handle(int sig)
 {
 	switch (sig) {
@@ -186,6 +236,16 @@ int main(int argc, char **argv)
 					goto opterror;
 				}
 				break;
+			case 'O':
+				if (*optarg == 'h') {
+					layout_hack = LAYOUT_HACK_HORIZ;
+				}else if (*optarg = 'v') {
+					layout_hack = LAYOUT_HACK_VERT;
+				} else {
+					fprintf(stderr, "%s not valid layout\n", optarg);
+					goto opterror;
+				}
+				break;
 opterror:
 			default:
 			       	sopt_usage_s();
@@ -212,6 +272,7 @@ opterror:
 	synContext.m_traceFunc = syn_trace;
 	synContext.m_clipboardCallback = syn_clip_cb;
 	synContext.m_screensaverCallback = syn_screensaver_cb;
+	wlOnOutputsUpdated = wl_output_update_cb;
 	/*run*/
 	if(!clipSpawnMonitors())
 		return 3;

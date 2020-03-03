@@ -1,5 +1,9 @@
 #include "log.h"
 #include "xmem.h"
+#include <time.h>
+#include <stdint.h>
+#include <inttypes.h>
+#include <assert.h>
 
 static enum logLevel log_level = LOG_NONE;
 
@@ -25,6 +29,26 @@ enum logLevel logLevelParse(char *str)
 	return LOG_NONE;
 }
 
+static void log_print_ts(FILE *out)
+{
+        struct timespec ts;
+        clock_gettime(CLOCK_MONOTONIC, &ts);
+        fprintf(out, "%" PRIdMAX ".%09ld",
+                        (intmax_t)ts.tv_sec,
+                        ts.tv_nsec);
+}
+static char *log_level_get_str(enum logLevel level)
+{
+	static char *log_level_str[] = {
+		"NONE",
+		"ERROR",
+		"INFO",
+		"DEBUG"
+	};
+	assert(level < (sizeof(log_level_str)/sizeof(*log_level_str)));
+	return log_level_str[level];
+}
+
 static void log_out_v(enum logLevel level, const char *fmt, va_list ap)
 {
 	size_t i;
@@ -32,8 +56,11 @@ static void log_out_v(enum logLevel level, const char *fmt, va_list ap)
 	if (level > log_level)
 		return;
 	for (i = 0; (i < LOG_FILE_MAX_COUNT) && (log_file[i]); ++i) {
+		log_print_ts(log_file[i]);
+		fprintf(log_file[i], ": [%s] ", log_level_get_str(level));
 		va_copy(aq, ap);
 		vfprintf(log_file[i], fmt, aq);
+		putc('\n', log_file[i]);
 	}
 }
 

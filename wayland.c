@@ -13,20 +13,133 @@
 #include "xmem.h"
 #include "wayland.h"
 #include <stdbool.h>
+#include "log.h"
+
+
+
 
 static struct wl_seat *seat = NULL;
 static struct zwlr_virtual_pointer_manager_v1 *pointer_manager = NULL;
 static struct zwp_virtual_keyboard_manager_v1 *keyboard_manager = NULL;
+static struct wlOutput *wlOutputs;
+void wlOutputAppend(struct wl_output *output)
+{
+	struct wlOutput *l;
+	struct wlOutput *n = xmalloc(sizeof(*n));
+	memset(n, 0, sizeof(*n));
+	n->wl_output = output;
+	if (!wlOutputs) {
+		wlOutputs = n;
+	} else {
+		for (l = wlOutputs; l->next; l = l->next);
+		l->next = n;
+	}
+}
+struct wlOutput *wlOutputGet(struct wl_output *wl_output)
+{
+	struct wlOutput *l;
+	for (l = wlOutputs; l; l = l->next) {
+		if (l->wl_output == wl_output) {
+			break;
+		}
+	}
+	return l;
+}
 
+static void output_geometry(void *data, struct wl_output *wl_output, int32_t x, int32_t y, int32_t physical_width, int32_t physical_height, int32_t subpixel, const char *make, const char *model, int32_t transform)
+{
+	struct wlOutput *output = wlOutputGet(wl_output);
+	if (!output) {
+		logErr("Output not found");
+		return;
+	}
+	logDbg("Mutating output...");
+	output->complete = false;
+	output->x = x;
+	output->y = y;
+	logDbg("Got output at position %d,%d", x, y);
+}
+static void output_mode(void *data, struct wl_output *wl_output, uint32_t flags, int32_t width, int32_t height, int32_t refresh)
+{
+	struct wlOutput *output = wlOutputGet(wl_output);
+	bool preferred = flags & WL_OUTPUT_MODE_PREFERRED;
+	bool current = flags & WL_OUTPUT_MODE_CURRENT;
+	logDbg("Got %smode: %dx%d@%d%s", current ? "current " : "", width, height, refresh, preferred ? "*" : "");
+	if (!output) {
+		logErr("Output not found in list");
+		return;
+	}
+	if (current) {
+		if (!preferred) {
+			logInfo("Not using preferred mode on output -- check config");
+		}
+		logDbg("Mutating output...");
+		output->complete = false;
+		output->width = width;
+		output->height = height;
+	}
+}
+static void output_scale(void *data, struct wl_output *wl_output, int32_t factor)
+{
+	struct wlOutput *output = wlOutputGet(wl_output);
+	logDbg("Got scale factor for output: %d", factor);
+	if (!output) {
+		logErr("Output not found in list");
+		return;
+	}
+	logDbg("Mutating output...");
+	output->complete = false;
+	output->scale = factor;
+}
+void (*wlOnOutputsUpdated)(struct wlOutput *outputs) = NULL;
+static void output_done(void *data, struct wl_output *wl_output)
+{
+	struct wlOutput *output = wlOutputGet(wl_output);
+	if (!output) {
+		logErr("Output not found in list");
+		return;
+	}
+	output->complete = true;
+	logInfo("Output updated: %dx%d at %d, %d (scale: %d)",
+			output->width,
+			output->height,
+			output->x,
+			output->y,
+			output->scale);
+
+	/* fire event if all outputs are complete. */
+	bool complete = true;
+	for (output = wlOutputs; output; output = output->next) {
+		complete = complete && output->complete;
+	}
+	if (complete) {
+		logDbg("All outputs updated, triggering event");
+		if (wlOnOutputsUpdated)
+			wlOnOutputsUpdated(wlOutputs);
+	}
+}
+
+static struct wl_output_listener output_listener = {
+	.geometry = output_geometry,
+	.mode = output_mode,
+	.done = output_done,
+	.scale = output_scale
+};
 static void handle_global(void *data, struct wl_registry *registry, uint32_t name, const char *interface, uint32_t version)
 {
+	struct wl_output *wl_output;
 	if (strcmp(interface, wl_seat_interface.name) == 0) {
 		seat = wl_registry_bind(registry, name, &wl_seat_interface, version);
 	} else if (strcmp(interface, zwlr_virtual_pointer_manager_v1_interface.name) == 0) {
 		pointer_manager = wl_registry_bind(registry, name, &zwlr_virtual_pointer_manager_v1_interface, 1);
 	} else if (strcmp(interface, zwp_virtual_keyboard_manager_v1_interface.name) == 0) {
 		keyboard_manager = wl_registry_bind(registry, name, &zwp_virtual_keyboard_manager_v1_interface, 1);
+	} else if (strcmp(interface, wl_output_interface.name) == 0) {
+		wl_output = wl_registry_bind(registry, name, &wl_output_interface, version);
+		wl_output_add_listener(wl_output, &output_listener, NULL);
+		wlOutputAppend(wl_output);
 	}
+
 }
 static void handle_global_remove(void *data, struct wl_registry *registry, uint32_t name)
 {
@@ -140,7 +253,11 @@ int wlSetup(int width, int height)
 	local_mod_init();
 	return 0;
 }
-
+void wlResUpdate(int width, int height)
+{
+	wlWidth = width;
+	wlHeight = height;
+}
 void wlMouseRelativeMotion(int dx, int dy)
 {
 	zwlr_virtual_pointer_v1_motion(pointer, wlTS(), wl_fixed_from_int(dx), wl_fixed_from_int(dy));

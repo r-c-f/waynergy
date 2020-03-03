@@ -28,7 +28,7 @@ freely, subject to the following restrictions:
 #include <string.h>
 #include "xmem.h"
 #include <stdlib.h>
-
+#include "log.h"
 
 //---------------------------------------------------------------------------------------------------------------------
 //	Internal helpers
@@ -158,6 +158,8 @@ static bool sSendReply(uSynergyContext *context)
 static void sSendMouseWheelCallback(uSynergyContext *context, int16_t x, int16_t y)
 {
 	if (!context->m_mouseWheelCallback)
+		return;
+	if (context->m_resChanged || !context->m_infoCurrent)
 		return;
 	context->m_mouseWheelCallback(context->m_cookie, x, y);
 }
@@ -321,12 +323,13 @@ static void sProcessMessage(uSynergyContext *context, const uint8_t *message)
 		sAddUInt16(context, 0);		// mx?
 		sAddUInt16(context, 0);		// my?
 		sSendReply(context);
+		context->m_infoCurrent = false;
 		return;
 	}
 	else if (USYNERGY_IS_PACKET("CIAK"))
 	{
-		// Do nothing?
 		//		kMsgCInfoAck		= "CIAK"
+		context->m_infoCurrent = true;
 		return;
 	}
 	else if (USYNERGY_IS_PACKET("CROP"))
@@ -343,7 +346,7 @@ static void sProcessMessage(uSynergyContext *context, const uint8_t *message)
 		// Obtain the Synergy sequence number
 		context->m_sequenceNumber = sNetToNative32(message + 12);
 		context->m_isCaptured = true;
-		
+
 
 		// Call callback
 		if (context->m_screenActiveCallback != 0L)
@@ -541,7 +544,7 @@ static void sProcessMessage(uSynergyContext *context, const uint8_t *message)
 				fprintf(stderr, "Packet too long!\n");
 				return;
 			}
-			
+
 			memmove(context->m_clipBuf[id] + context->m_clipPos[id], parse_msg, len);
 			context->m_clipPos[id] += len;
 		} else if (mark ==  SYN_DATA_END && context->m_clipInStream[id]) {
@@ -582,7 +585,6 @@ static void sProcessMessage(uSynergyContext *context, const uint8_t *message)
 		sTrace(context, buffer);
 		return;
 	}
-
 	// Reply with CNOP maybe?
 	sAddString(context, "CNOP");
 	sSendReply(context);
@@ -770,7 +772,7 @@ static uint8_t *buf_add_int32(uint8_t *buf, uint32_t val)
 /* Update clipboard buffer from local clipboard */
 void uSynergyUpdateClipBuf(uSynergyContext *context, enum uSynergyClipboardId id, uint32_t len, const char *data)
 {
-	/* to prevent feedback loops, check to make sure the data is actually 
+	/* to prevent feedback loops, check to make sure the data is actually
 	 * different from what we've already got */
 	if (uSynergyClipBufContains(context, id, len, data))
 		return;
@@ -785,7 +787,7 @@ void uSynergyUpdateClipBuf(uSynergyContext *context, enum uSynergyClipboardId id
 	uint8_t *buf = context->m_clipBuf[id];
 	buf = buf_add_int32(buf, 1); //formats
 	buf = buf_add_int32(buf, USYNERGY_CLIPBOARD_FORMAT_TEXT); //type, text only for now
-	buf = buf_add_int32(buf, len); //length of actual data	
+	buf = buf_add_int32(buf, len); //length of actual data
 	memmove(buf, data, len);
 	/* send CCLP  -- CCLP%1i%4i */
 	sAddString(context, "CCLP");
@@ -794,4 +796,25 @@ void uSynergyUpdateClipBuf(uSynergyContext *context, enum uSynergyClipboardId id
 	sSendReply(context);
 }
 
+/* Update resolution */
+void uSynergyUpdateRes(uSynergyContext *context, int16_t width, int16_t height)
+{
+	context->m_clientWidth = width;
+	context->m_clientHeight = height;
+	if (context->m_connected) {
+		logDbg("Sending DINF to update screen resolution");
+		/* send information update */
+		uint16_t x = 0, y = 0, warp = 0;
+		sAddString(context, "DINF");
+		sAddUInt16(context, x);
+		sAddUInt16(context, y);
+		sAddUInt16(context, context->m_clientWidth);
+		sAddUInt16(context, context->m_clientHeight);
+		sAddUInt16(context, warp);
+		sAddUInt16(context, 0);         // mx?
+		sAddUInt16(context, 0);         // my?
+		sSendReply(context);
+		context->m_infoCurrent = false;
+	}
+}
 

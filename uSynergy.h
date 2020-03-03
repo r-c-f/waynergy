@@ -352,6 +352,8 @@ typedef struct uSynergyContext
 	/* State data, used internall by client, initialized by uSynergyInit() */
 	bool					m_connected;									/* Is our socket connected? */
 	bool					m_hasReceivedHello;								/* Have we received a 'Hello' from the server? */
+	bool 					m_infoCurrent; /* whether we've gotten an acknowledge from our information message */
+	bool 					m_resChanged; /* whether we've had a screen resolution change or not */
 	bool					m_isCaptured;									/* Is Synergy active (i.e. this client is receiving input messages?) */
 	uint32_t						m_lastMessageTime;								/* Time at which last message was received */
 	uint32_t						m_sequenceNumber;								/* Packet sequence number */
@@ -426,6 +428,16 @@ supported with some effort.
 **/
 extern void 		uSynergyUpdateClipBuf(uSynergyContext *context, enum uSynergyClipboardId id, uint32_t len, const char *data);
 
+/**
+@brief Update screen resolution
+
+This will send an update to the server on screen resolution change.
+
+@param context 		Synergy context
+@param width 		Width in pixels
+@param height 		Height in pixels
+**/
+extern void 		uSynergyUpdateRes(uSynergyContext *context, int16_t width, int16_t height);
 
 #ifdef __cplusplus
 };

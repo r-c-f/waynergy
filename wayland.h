@@ -9,7 +9,22 @@
 #include "virtual-keyboard-unstable-v1.prot.h"
 
 
+struct wlOutput
+{
+	struct wl_output *wl_output;
+	int32_t x;
+	int32_t y;
+	int width;
+	int height;
+	int32_t scale;
+	bool complete;
+	struct wlOutput *next;
+};
+
+extern void (*wlOnOutputsUpdated)(struct wlOutput *output);
+
 extern int wlSetup(int width, int height);
+extern void wlResUpdate(int width, int height);
 extern void wlClose(void);
 extern int wlPrepareFd(void);
 extern void wlPollProc(short revents);
