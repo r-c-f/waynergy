@@ -23,7 +23,7 @@ static struct sopt optspec[] = {
 	SOPT_INIT_ARGL('H', "height", "height", "Height of screen in pixels"),
 	SOPT_INIT_ARGL('N', "name", "name", "Name of client screen"),
 	SOPT_INIT_ARGL('l', "logfile", "file", "Name of logfile (up to " LOG_FILE_MAX_COUNT_STR "), - is stderr"),
-	SOPT_INIT_ARGL('L', "loglevel", "level", "Log level -- number, or one of " LOG_LEVEL_USAGE_STR),
+	SOPT_INIT_ARGL('L', "loglevel", "level", "Log level -- number, increasing from 0 for more verbosity"),
 	SOPT_INIT_END
 };
 
@@ -192,7 +192,7 @@ int main(int argc, char **argv)
 				name = xstrdup(optarg);
 				break;
 			case 'L':
-				log_level = logLevelParse(optarg);
+				log_level = optshrt;
 				break;
 			case 'l':
 				if (logfiles_pos == LOG_FILE_MAX_COUNT) {

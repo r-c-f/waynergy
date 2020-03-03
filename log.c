@@ -10,25 +10,6 @@ static enum logLevel log_level = LOG_NONE;
 static FILE *log_file[LOG_FILE_MAX_COUNT] = {0};
 
 
-enum logLevel logLevelParse(char *str)
-{
-	enum logLevel res = LOG_NONE;
-	char *tok;
-	char log_str[] = LOG_LEVEL_USAGE_STR;
-
-	errno = 0;
-	res = strtol(str, NULL, 0);
-	if (!errno && res)
-		return res;
-
-	strtok(log_str, " ");
-	for (res = LOG_NONE; (tok = strtok(NULL, " ")); ++res) {
-		if (!strcmp(tok, str))
-			return res;
-	}
-	return LOG_NONE;
-}
-
 static void log_print_ts(FILE *out)
 {
         struct timespec ts;
