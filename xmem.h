@@ -28,7 +28,7 @@ static void *xrealloc(void *ptr, size_t len)
 	return ptr;
 }
 __attribute__((unused))
-static char *xstrdup(void *str)
+static char *xstrdup(const char *str)
 {
 	char *ret;
 	if (!(ret = strdup(str)))

@@ -7,17 +7,22 @@
 #include <wayland-client-protocol.h>
 #include "wlr-virtual-pointer-unstable-v1.prot.h"
 #include "virtual-keyboard-unstable-v1.prot.h"
-
+#include "xdg-output-unstable-v1.prot.h"
 
 struct wlOutput
 {
 	struct wl_output *wl_output;
+	struct zxdg_output_v1 *xdg_output;
 	int32_t x;
 	int32_t y;
 	int width;
 	int height;
 	int32_t scale;
 	bool complete;
+	bool have_log_size;
+	bool have_log_pos;
+	char *name;
+	char *desc;
 	struct wlOutput *next;
 };
 

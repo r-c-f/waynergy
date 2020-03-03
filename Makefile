@@ -1,6 +1,6 @@
 CFLAGS+=-DUSE_INTRINSIC_MASK -D_GNU_SOURCE -DUSYNERGY_LITTLE_ENDIAN
 LDFLAGS=-lwayland-client
-PROT_H=wlr-virtual-pointer-unstable-v1.prot.h virtual-keyboard-unstable-v1.prot.h
+PROT_H=wlr-virtual-pointer-unstable-v1.prot.h virtual-keyboard-unstable-v1.prot.h xdg-output-unstable-v1.prot.h
 PROT_C=$(PROT_H:h=c)
 
 
@@ -9,8 +9,8 @@ all: swaynergy swaynergy-clip-update
 swaynergy-clip-update: swaynergy
 	cp $< $@
 
-swaynergy: $(PROT_H) $(PROT_C) clip.o config.o net.o main.o os.o clip-update.o wayland.o uSynergy.o log.o wlr-virtual-pointer-unstable-v1.prot.o virtual-keyboard-unstable-v1.prot.o
-	$(CC) $(CFLAGS) $(LDFLAGS) -o swaynergy clip.o config.o net.o main.o os.o clip-update.o wayland.o uSynergy.o log.o wlr-virtual-pointer-unstable-v1.prot.o virtual-keyboard-unstable-v1.prot.o
+swaynergy: $(PROT_H) $(PROT_C) clip.o config.o net.o main.o os.o clip-update.o wayland.o uSynergy.o log.o wlr-virtual-pointer-unstable-v1.prot.o virtual-keyboard-unstable-v1.prot.o xdg-output-unstable-v1.prot.o
+	$(CC) $(CFLAGS) $(LDFLAGS) -o swaynergy clip.o config.o net.o main.o os.o clip-update.o wayland.o uSynergy.o log.o wlr-virtual-pointer-unstable-v1.prot.o virtual-keyboard-unstable-v1.prot.o xdg-output-unstable-v1.prot.o
 
 %.o: %.c
 	$(CC) -c -o $@ $< $(CFLAGS)

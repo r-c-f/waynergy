@@ -21,13 +21,15 @@
 static struct wl_seat *seat = NULL;
 static struct zwlr_virtual_pointer_manager_v1 *pointer_manager = NULL;
 static struct zwp_virtual_keyboard_manager_v1 *keyboard_manager = NULL;
+static struct zxdg_output_manager_v1 *output_manager = NULL;
 static struct wlOutput *wlOutputs;
-void wlOutputAppend(struct wl_output *output)
+void wlOutputAppend(struct wl_output *output, struct zxdg_output_v1 *xdg_output)
 {
 	struct wlOutput *l;
 	struct wlOutput *n = xmalloc(sizeof(*n));
 	memset(n, 0, sizeof(*n));
 	n->wl_output = output;
+	n->xdg_output = xdg_output;
 	if (!wlOutputs) {
 		wlOutputs = n;
 	} else {
@@ -45,6 +47,15 @@ struct wlOutput *wlOutputGet(struct wl_output *wl_output)
 	}
 	return l;
 }
+struct wlOutput *wlOutputGetXdg(struct zxdg_output_v1 *xdg_output)
+{
+	struct wlOutput *l;
+	for (l = wlOutputs; l; l = l->next) {
+		if (l->xdg_output == xdg_output)
+			break;
+	}
+	return l;
+}
 
 static void output_geometry(void *data, struct wl_output *wl_output, int32_t x, int32_t y, int32_t physical_width, int32_t physical_height, int32_t subpixel, const char *make, const char *model, int32_t transform)
 {
@@ -54,6 +65,10 @@ static void output_geometry(void *data, struct wl_output *wl_output, int32_t x, 
 		return;
 	}
 	logDbg("Mutating output...");
+	if (output->have_log_pos) {
+		logDbg("Except not really, because the logical position outweighs this");
+		return;
+	}	
 	output->complete = false;
 	output->x = x;
 	output->y = y;
@@ -74,6 +89,10 @@ static void output_mode(void *data, struct wl_output *wl_output, uint32_t flags,
 			logInfo("Not using preferred mode on output -- check config");
 		}
 		logDbg("Mutating output...");
+		if (output->have_log_size) {
+			logDbg("Except not really, because logical size outweighs this");
+			return;
+		}
 		output->complete = false;
 		output->width = width;
 		output->height = height;
@@ -100,6 +119,12 @@ static void output_done(void *data, struct wl_output *wl_output)
 		return;
 	}
 	output->complete = true;
+	if (output->name) {
+		logInfo("Output name: %s", output->name);
+	}
+	if (output->desc) {
+		logInfo("Output description: %s", output->desc);
+	}
 	logInfo("Output updated: %dx%d at %d, %d (scale: %d)",
 			output->width,
 			output->height,
@@ -119,6 +144,75 @@ static void output_done(void *data, struct wl_output *wl_output)
 	}
 }
 
+static void xdg_output_pos(void *data, struct zxdg_output_v1 *xdg_output, int32_t x, int32_t y)
+{
+	logDbg("Got xdg output position: %d, %d", x, y);
+	struct wlOutput *output = wlOutputGetXdg(xdg_output);
+	if (!output) {
+		logErr("Could not find xdg output");
+		return;
+	}
+	logDbg("Mutating output from xdg_output event");
+	output->complete = false;
+	output->have_log_pos = true;
+	output->x = x;
+	output->y = y;
+}
+static void xdg_output_size(void *data, struct zxdg_output_v1 *xdg_output, int32_t width, int32_t height)
+{
+	logDbg("Got xdg output size: %dx%d", width, height);
+	struct wlOutput *output = wlOutputGetXdg(xdg_output);
+	if (!output) {
+		logErr("Could not find xdg output");
+		return;
+	}
+	logDbg("Mutating output from xdg_output event");
+	output->complete = false;
+	output->have_log_size = true;
+	output->width = width;
+	output->height = height;
+}
+static void xdg_output_name(void *data, struct zxdg_output_v1 *xdg_output, const char *name)
+{
+	logDbg("Got xdg output name: %s", name);
+	struct wlOutput *output = wlOutputGetXdg(xdg_output);
+	if (!output) {
+		logErr("Could not find xdg output");
+		return;
+	}
+	logDbg("Mutating output from xdg_output event");
+	output->complete = false;
+	if (output->name) {
+		free(output->name);
+	}
+	output->name = xstrdup(name);
+}
+static void xdg_output_desc(void *data, struct zxdg_output_v1 *xdg_output, const char *desc)
+{
+	logDbg("Got xdg output desc: %s", desc);
+	struct wlOutput *output = wlOutputGetXdg(xdg_output);
+	if (!output) {
+		logErr("Could not find xdg output");
+		return;
+	}
+	logDbg("Mutating output from xdg_output event");
+	output->complete = false;
+	if (output->desc) {
+		free(output->desc);
+	}
+	output->desc = xstrdup(desc);
+}
+
+
+
+
+static struct zxdg_output_v1_listener xdg_output_listener = {
+	.logical_position = xdg_output_pos,
+	.logical_size = xdg_output_size,
+	.name = xdg_output_name,
+	.description = xdg_output_desc,
+};
+
 static struct wl_output_listener output_listener = {
 	.geometry = output_geometry,
 	.mode = output_mode,
@@ -128,16 +222,33 @@ static struct wl_output_listener output_listener = {
 static void handle_global(void *data, struct wl_registry *registry, uint32_t name, const char *interface, uint32_t version)
 {
 	struct wl_output *wl_output;
+	struct zxdg_output_v1 *xdg_output;
 	if (strcmp(interface, wl_seat_interface.name) == 0) {
 		seat = wl_registry_bind(registry, name, &wl_seat_interface, version);
 	} else if (strcmp(interface, zwlr_virtual_pointer_manager_v1_interface.name) == 0) {
 		pointer_manager = wl_registry_bind(registry, name, &zwlr_virtual_pointer_manager_v1_interface, 1);
 	} else if (strcmp(interface, zwp_virtual_keyboard_manager_v1_interface.name) == 0) {
 		keyboard_manager = wl_registry_bind(registry, name, &zwp_virtual_keyboard_manager_v1_interface, 1);
+	} else if (strcmp(interface, zxdg_output_manager_v1_interface.name) ==0) {
+		output_manager = wl_registry_bind(registry, name, &zxdg_output_manager_v1_interface, 3);
+		if (wlOutputs) {
+			for (struct wlOutput *output = wlOutputs; output; output = output->next) {
+				if (!output->xdg_output) {
+					output->xdg_output = zxdg_output_manager_v1_get_xdg_output(output_manager, output->wl_output);
+					zxdg_output_v1_add_listener(output->xdg_output, &xdg_output_listener, NULL);
+				}
+			}
+		}
 	} else if (strcmp(interface, wl_output_interface.name) == 0) {
 		wl_output = wl_registry_bind(registry, name, &wl_output_interface, version);
 		wl_output_add_listener(wl_output, &output_listener, NULL);
-		wlOutputAppend(wl_output);
+		if (output_manager) {
+			xdg_output = zxdg_output_manager_v1_get_xdg_output(output_manager, wl_output);
+			zxdg_output_v1_add_listener(xdg_output, &xdg_output_listener, NULL);
+		} else {
+			xdg_output = NULL;
+		}
+		wlOutputAppend(wl_output, xdg_output);
 	}
 
 }
