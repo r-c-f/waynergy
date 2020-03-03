@@ -12,7 +12,7 @@
 #include "wayland.h"
 #include "config.h"
 #include "clip.h"
-
+#include "log.h"
 
 
 static struct sopt optspec[] = {
@@ -22,6 +22,8 @@ static struct sopt optspec[] = {
 	SOPT_INIT_ARGL('W', "width", "width", "Width of screen in pixels"),
 	SOPT_INIT_ARGL('H', "height", "height", "Height of screen in pixels"),
 	SOPT_INIT_ARGL('N', "name", "name", "Name of client screen"),
+	SOPT_INIT_ARGL('l', "logfile", "file", "Name of logfile (up to " LOG_FILE_MAX_COUNT_STR "), - is stderr"),
+	SOPT_INIT_ARGL('L', "loglevel", "level", "Log level -- number, or one of " LOG_LEVEL_USAGE_STR),
 	SOPT_INIT_END
 };
 
@@ -56,7 +58,7 @@ static void syn_key_cb(uSynergyCookie cookie, uint16_t key, uint16_t mod, bool d
 }
 static void syn_trace(uSynergyCookie cookie, const char *text)
 {
-	fprintf(stderr, "%s\n", text);
+	logInfo("%s\n", text);
 }
 static void syn_clip_cb(uSynergyCookie cookie, enum uSynergyClipboardId id, uint32_t format, const uint8_t *data, uint32_t size)
 {
@@ -98,6 +100,9 @@ int main(int argc, char **argv)
 {
 	int opt, optind = 0, optcpos = 0;
 	char *optarg, *port, *name, *host, hostname[HOST_NAME_MAX] = {0};
+	FILE *logfiles[LOG_FILE_MAX_COUNT] = {0};
+	size_t logfiles_pos = 0;
+	enum logLevel log_level = LOG_NONE;
 	short optshrt;
 	long optlong;
 	bool optshrt_valid, optlong_valid;
@@ -160,12 +165,35 @@ int main(int argc, char **argv)
 				free(name);
 				name = xstrdup(optarg);
 				break;
+			case 'L':
+				log_level = logLevelParse(optarg);
+				break;
+			case 'l':
+				if (logfiles_pos == LOG_FILE_MAX_COUNT) {
+					fprintf(stderr, "Too many log files given, ignoring %s\n", optarg);
+					break;
+				}
+				if (!(strcmp(optarg, "-"))) {
+					logfiles[logfiles_pos++] = stderr;
+					break;
+				}
+				errno = 0;
+				if ((logfiles[logfiles_pos] = fopen(optarg, "w+"))) {
+					++logfiles_pos;
+					break;
+				} else {
+					perror("logfile open");
+					goto opterror;
+				}
+				break;
 opterror:
 			default:
 			       	sopt_usage_s();
 				return 1;
 		}
 	}
+	/* set up logging */
+	logInit(log_level, logfiles);
 	/* set up signal handler */
 	signal(SIGTERM, sig_handle);
 	signal(SIGINT, sig_handle);
