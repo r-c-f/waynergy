@@ -26,18 +26,38 @@ struct wlOutput
 	struct wlOutput *next;
 };
 
-extern void (*wlOnOutputsUpdated)(struct wlOutput *output);
+struct wlContext {
+	struct wl_registry *registry;
+	struct wl_display *display;
+	struct wl_seat *seat;
+	struct zwp_virtual_keyboard_manager_v1 *keyboard_manager;
+	struct zwlr_virtual_pointer_manager_v1 *pointer_manager;
+	struct zxdg_output_manager_v1 *output_manager;
+	struct zwlr_virtual_pointer_v1 *pointer;
+	struct zwp_virtual_keyboard_v1 *keyboard;
+	struct wlOutput *outputs;
+	//listeners
+	struct zxdg_output_v1_listener xdg_output_listener;
+	struct wl_output_listener output_listener;
+	struct wl_registry_listener registry_listener;
+	//state
+	int width;
+	int height;
+	time_t epoch;
+	//callbacks
+	void (*on_output_update)(struct wlContext *ctx);
+};
 
-extern int wlSetup(int width, int height);
-extern void wlResUpdate(int width, int height);
-extern void wlClose(void);
-extern int wlPrepareFd(void);
-extern void wlPollProc(short revents);
+extern int wlSetup(struct wlContext *context, int width, int height);
+extern void wlResUpdate(struct wlContext *context, int width, int height);
+extern void wlClose(struct wlContext *context);
+extern int wlPrepareFd(struct wlContext *context);
+extern void wlPollProc(struct wlContext *context, short revents);
 
-extern void wlMouseRelativeMotion(int dx, int dy);
-extern void wlMouseMotion(int x, int y);
-extern void wlMouseButtonDown(int button);
-extern void wlMouseButtonUp(int button);
-extern void wlMouseWheel(signed short dx, signed short dy);
-extern void wlKey(int key, int state, uint32_t mask);
-extern void wlIdleInhibit(bool on);
+extern void wlMouseRelativeMotion(struct wlContext *context, int dx, int dy);
+extern void wlMouseMotion(struct wlContext *context, int x, int y);
+extern void wlMouseButtonDown(struct wlContext *context, int button);
+extern void wlMouseButtonUp(struct wlContext *context, int button);
+extern void wlMouseWheel(struct wlContext *context, signed short dx, signed short dy);
+extern void wlKey(struct wlContext *context, int key, int state, uint32_t mask);
+extern void wlIdleInhibit(struct wlContext *context, bool on);

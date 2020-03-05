@@ -20,7 +20,7 @@
 
 static struct addrinfo *hostinfo;
 static int synsock = -1;
-
+extern struct wlContext wlContext;
 
 
 static bool syn_connect(uSynergyCookie cookie)
@@ -51,7 +51,7 @@ enum net_pollfd_id {
 static bool syn_recv(uSynergyCookie cookie, uint8_t *buf, int max_len, int *out_len)
 {
 	uint32_t psize;
-	int wlfd = wlPrepareFd();
+	int wlfd = wlPrepareFd(&wlContext);
 	struct pollfd pollfds[] = {
 		/* POLLFD_WL */
 		{
@@ -82,7 +82,7 @@ static bool syn_recv(uSynergyCookie cookie, uint8_t *buf, int max_len, int *out_
 		if (pollfds[POLLFD_SYN].revents & POLLIN) {
 			break;
 		}
-		wlPollProc(pollfds[POLLFD_WL].revents);
+		wlPollProc(&wlContext, pollfds[POLLFD_WL].revents);
 		clipMonitorPollProc(&pollfds[POLLFD_CB]);
 		clipMonitorPollProc(&pollfds[POLLFD_P]);
 	}

@@ -18,39 +18,34 @@
 
 
 
-static struct wl_seat *seat = NULL;
-static struct zwlr_virtual_pointer_manager_v1 *pointer_manager = NULL;
-static struct zwp_virtual_keyboard_manager_v1 *keyboard_manager = NULL;
-static struct zxdg_output_manager_v1 *output_manager = NULL;
-static struct wlOutput *wlOutputs;
-void wlOutputAppend(struct wl_output *output, struct zxdg_output_v1 *xdg_output)
+void wlOutputAppend(struct wlOutput **outputs, struct wl_output *output, struct zxdg_output_v1 *xdg_output)
 {
 	struct wlOutput *l;
 	struct wlOutput *n = xmalloc(sizeof(*n));
 	memset(n, 0, sizeof(*n));
 	n->wl_output = output;
 	n->xdg_output = xdg_output;
-	if (!wlOutputs) {
-		wlOutputs = n;
+	if (!*outputs) {
+		*outputs = n;
 	} else {
-		for (l = wlOutputs; l->next; l = l->next);
+		for (l = *outputs; l->next; l = l->next);
 		l->next = n;
 	}
 }
-struct wlOutput *wlOutputGet(struct wl_output *wl_output)
+struct wlOutput *wlOutputGet(struct wlOutput *outputs, struct wl_output *wl_output)
 {
 	struct wlOutput *l;
-	for (l = wlOutputs; l; l = l->next) {
+	for (l = outputs; l; l = l->next) {
 		if (l->wl_output == wl_output) {
 			break;
 		}
 	}
 	return l;
 }
-struct wlOutput *wlOutputGetXdg(struct zxdg_output_v1 *xdg_output)
+struct wlOutput *wlOutputGetXdg(struct wlOutput *outputs, struct zxdg_output_v1 *xdg_output)
 {
 	struct wlOutput *l;
-	for (l = wlOutputs; l; l = l->next) {
+	for (l = outputs; l; l = l->next) {
 		if (l->xdg_output == xdg_output)
 			break;
 	}
@@ -59,7 +54,8 @@ struct wlOutput *wlOutputGetXdg(struct zxdg_output_v1 *xdg_output)
 
 static void output_geometry(void *data, struct wl_output *wl_output, int32_t x, int32_t y, int32_t physical_width, int32_t physical_height, int32_t subpixel, const char *make, const char *model, int32_t transform)
 {
-	struct wlOutput *output = wlOutputGet(wl_output);
+	struct wlContext *ctx = data;
+	struct wlOutput *output = wlOutputGet(ctx->outputs, wl_output);
 	if (!output) {
 		logErr("Output not found");
 		return;
@@ -76,7 +72,8 @@ static void output_geometry(void *data, struct wl_output *wl_output, int32_t x, 
 }
 static void output_mode(void *data, struct wl_output *wl_output, uint32_t flags, int32_t width, int32_t height, int32_t refresh)
 {
-	struct wlOutput *output = wlOutputGet(wl_output);
+	struct wlContext *ctx = data;
+	struct wlOutput *output = wlOutputGet(ctx->outputs, wl_output);
 	bool preferred = flags & WL_OUTPUT_MODE_PREFERRED;
 	bool current = flags & WL_OUTPUT_MODE_CURRENT;
 	logDbg("Got %smode: %dx%d@%d%s", current ? "current " : "", width, height, refresh, preferred ? "*" : "");
@@ -100,7 +97,8 @@ static void output_mode(void *data, struct wl_output *wl_output, uint32_t flags,
 }
 static void output_scale(void *data, struct wl_output *wl_output, int32_t factor)
 {
-	struct wlOutput *output = wlOutputGet(wl_output);
+	struct wlContext *ctx = data;
+	struct wlOutput *output = wlOutputGet(ctx->outputs, wl_output);
 	logDbg("Got scale factor for output: %d", factor);
 	if (!output) {
 		logErr("Output not found in list");
@@ -113,7 +111,8 @@ static void output_scale(void *data, struct wl_output *wl_output, int32_t factor
 void (*wlOnOutputsUpdated)(struct wlOutput *outputs) = NULL;
 static void output_done(void *data, struct wl_output *wl_output)
 {
-	struct wlOutput *output = wlOutputGet(wl_output);
+	struct wlContext *ctx = data;
+	struct wlOutput *output = wlOutputGet(ctx->outputs, wl_output);
 	if (!output) {
 		logErr("Output not found in list");
 		return;
@@ -134,20 +133,21 @@ static void output_done(void *data, struct wl_output *wl_output)
 
 	/* fire event if all outputs are complete. */
 	bool complete = true;
-	for (output = wlOutputs; output; output = output->next) {
+	for (output = ctx->outputs; output; output = output->next) {
 		complete = complete && output->complete;
 	}
 	if (complete) {
 		logDbg("All outputs updated, triggering event");
-		if (wlOnOutputsUpdated)
-			wlOnOutputsUpdated(wlOutputs);
+		if (ctx->on_output_update)
+			ctx->on_output_update(ctx);
 	}
 }
 
 static void xdg_output_pos(void *data, struct zxdg_output_v1 *xdg_output, int32_t x, int32_t y)
 {
 	logDbg("Got xdg output position: %d, %d", x, y);
-	struct wlOutput *output = wlOutputGetXdg(xdg_output);
+	struct wlContext *ctx = data;
+	struct wlOutput *output = wlOutputGetXdg(ctx->outputs, xdg_output);
 	if (!output) {
 		logErr("Could not find xdg output");
 		return;
@@ -161,7 +161,8 @@ static void xdg_output_pos(void *data, struct zxdg_output_v1 *xdg_output, int32_
 static void xdg_output_size(void *data, struct zxdg_output_v1 *xdg_output, int32_t width, int32_t height)
 {
 	logDbg("Got xdg output size: %dx%d", width, height);
-	struct wlOutput *output = wlOutputGetXdg(xdg_output);
+	struct wlContext *ctx = data;
+	struct wlOutput *output = wlOutputGetXdg(ctx->outputs, xdg_output);
 	if (!output) {
 		logErr("Could not find xdg output");
 		return;
@@ -175,7 +176,8 @@ static void xdg_output_size(void *data, struct zxdg_output_v1 *xdg_output, int32
 static void xdg_output_name(void *data, struct zxdg_output_v1 *xdg_output, const char *name)
 {
 	logDbg("Got xdg output name: %s", name);
-	struct wlOutput *output = wlOutputGetXdg(xdg_output);
+	struct wlContext *ctx = data;
+	struct wlOutput *output = wlOutputGetXdg(ctx->outputs, xdg_output);
 	if (!output) {
 		logErr("Could not find xdg output");
 		return;
@@ -190,7 +192,8 @@ static void xdg_output_name(void *data, struct zxdg_output_v1 *xdg_output, const
 static void xdg_output_desc(void *data, struct zxdg_output_v1 *xdg_output, const char *desc)
 {
 	logDbg("Got xdg output desc: %s", desc);
-	struct wlOutput *output = wlOutputGetXdg(xdg_output);
+	struct wlContext *ctx = data;
+	struct wlOutput *output = wlOutputGetXdg(ctx->outputs, xdg_output);
 	if (!output) {
 		logErr("Could not find xdg output");
 		return;
@@ -221,34 +224,35 @@ static struct wl_output_listener output_listener = {
 };
 static void handle_global(void *data, struct wl_registry *registry, uint32_t name, const char *interface, uint32_t version)
 {
+	struct wlContext *ctx = data;
 	struct wl_output *wl_output;
 	struct zxdg_output_v1 *xdg_output;
 	if (strcmp(interface, wl_seat_interface.name) == 0) {
-		seat = wl_registry_bind(registry, name, &wl_seat_interface, version);
+		ctx->seat = wl_registry_bind(registry, name, &wl_seat_interface, version);
 	} else if (strcmp(interface, zwlr_virtual_pointer_manager_v1_interface.name) == 0) {
-		pointer_manager = wl_registry_bind(registry, name, &zwlr_virtual_pointer_manager_v1_interface, 1);
+		ctx->pointer_manager = wl_registry_bind(registry, name, &zwlr_virtual_pointer_manager_v1_interface, 1);
 	} else if (strcmp(interface, zwp_virtual_keyboard_manager_v1_interface.name) == 0) {
-		keyboard_manager = wl_registry_bind(registry, name, &zwp_virtual_keyboard_manager_v1_interface, 1);
+		ctx->keyboard_manager = wl_registry_bind(registry, name, &zwp_virtual_keyboard_manager_v1_interface, 1);
 	} else if (strcmp(interface, zxdg_output_manager_v1_interface.name) ==0) {
-		output_manager = wl_registry_bind(registry, name, &zxdg_output_manager_v1_interface, 3);
-		if (wlOutputs) {
-			for (struct wlOutput *output = wlOutputs; output; output = output->next) {
+		ctx->output_manager = wl_registry_bind(registry, name, &zxdg_output_manager_v1_interface, 3);
+		if (ctx->outputs) {
+			for (struct wlOutput *output = ctx->outputs; output; output = output->next) {
 				if (!output->xdg_output) {
-					output->xdg_output = zxdg_output_manager_v1_get_xdg_output(output_manager, output->wl_output);
-					zxdg_output_v1_add_listener(output->xdg_output, &xdg_output_listener, NULL);
+					output->xdg_output = zxdg_output_manager_v1_get_xdg_output(ctx->output_manager, output->wl_output);
+					zxdg_output_v1_add_listener(output->xdg_output, &xdg_output_listener, ctx);
 				}
 			}
 		}
 	} else if (strcmp(interface, wl_output_interface.name) == 0) {
 		wl_output = wl_registry_bind(registry, name, &wl_output_interface, version);
-		wl_output_add_listener(wl_output, &output_listener, NULL);
-		if (output_manager) {
-			xdg_output = zxdg_output_manager_v1_get_xdg_output(output_manager, wl_output);
-			zxdg_output_v1_add_listener(xdg_output, &xdg_output_listener, NULL);
+		wl_output_add_listener(wl_output, &output_listener, ctx);
+		if (ctx->output_manager) {
+			xdg_output = zxdg_output_manager_v1_get_xdg_output(ctx->output_manager, wl_output);
+			zxdg_output_v1_add_listener(xdg_output, &xdg_output_listener, ctx);
 		} else {
 			xdg_output = NULL;
 		}
-		wlOutputAppend(wl_output, xdg_output);
+		wlOutputAppend(&ctx->outputs, wl_output, xdg_output);
 	}
 
 }
@@ -263,15 +267,6 @@ static const struct wl_registry_listener registry_listener = {
 };
 
 
-static struct wl_registry *registry = NULL;
-static struct wl_display *display = NULL;
-static struct zwlr_virtual_pointer_v1 *pointer = NULL;
-static struct zwp_virtual_keyboard_v1 *keyboard = NULL;
-
-static int wlWidth = 0;
-static int wlHeight = 0;
-static time_t wlEpoch = -1;
-
 static int button_map[] = {
 	0,
 	0x110,
@@ -281,24 +276,24 @@ static int button_map[] = {
 	0x151,
 	-1
 };
-static inline uint32_t wlTS(void)
+static inline uint32_t wlTS(struct wlContext *ctx)
 {
 	struct timespec ts;
-	if (wlEpoch == -1) {
-		wlEpoch = time(NULL);
+	if (ctx->epoch == -1) {
+		ctx->epoch = time(NULL);
 	}
 	clock_gettime(CLOCK_MONOTONIC, &ts);
-	ts.tv_sec -= wlEpoch;
+	ts.tv_sec -= ctx->epoch;
 	return (ts.tv_sec * 1000) + (ts.tv_nsec / 1000000);
 }
 
-void wlClose(void)
+void wlClose(struct wlContext *ctx)
 {
 	return;
 }
 
 /* create a layout file descriptor */
-static int set_layout(void)
+static int set_layout(struct wlContext *ctx)
 {
 	int ret = 0;
 	int fd;
@@ -329,7 +324,7 @@ static int set_layout(void)
 		goto done;
 	}
 	strcpy(ptr, keymap_str);
-	zwp_virtual_keyboard_v1_keymap(keyboard, WL_KEYBOARD_KEYMAP_FORMAT_XKB_V1, fd, keymap_size);
+	zwp_virtual_keyboard_v1_keymap(ctx->keyboard, WL_KEYBOARD_KEYMAP_FORMAT_XKB_V1, fd, keymap_size);
 done:
 	free(keymap_str);
 	return ret;
@@ -337,77 +332,77 @@ done:
 
 static bool local_mod_init(void);
 
-int wlSetup(int width, int height)
+int wlSetup(struct wlContext *ctx, int width, int height)
 {
-	wlWidth = width;
-	wlHeight = height;
-	display = wl_display_connect(NULL);
-	if (!display) {
+	ctx->width = width;
+	ctx->height = height;
+	ctx->display = wl_display_connect(NULL);
+	if (!ctx->display) {
 		printf("Couldn't connect, yo\n");
 		return 1;
 	}
-	registry = wl_display_get_registry(display);
-	wl_registry_add_listener(registry, &registry_listener, NULL);
-	wl_display_dispatch(display);
-	wl_display_roundtrip(display);
+	ctx->registry = wl_display_get_registry(ctx->display);
+	wl_registry_add_listener(ctx->registry, &registry_listener, ctx);
+	wl_display_dispatch(ctx->display);
+	wl_display_roundtrip(ctx->display);
 
-	pointer = zwlr_virtual_pointer_manager_v1_create_virtual_pointer(pointer_manager, seat);
-	wl_display_dispatch(display);
-	wl_display_roundtrip(display);
-	keyboard = zwp_virtual_keyboard_manager_v1_create_virtual_keyboard(keyboard_manager, seat);
-	wl_display_dispatch(display);
-	wl_display_roundtrip(display);
-	if(set_layout()) {
+	ctx->pointer = zwlr_virtual_pointer_manager_v1_create_virtual_pointer(ctx->pointer_manager, ctx->seat);
+	wl_display_dispatch(ctx->display);
+	wl_display_roundtrip(ctx->display);
+	ctx->keyboard = zwp_virtual_keyboard_manager_v1_create_virtual_keyboard(ctx->keyboard_manager, ctx->seat);
+	wl_display_dispatch(ctx->display);
+	wl_display_roundtrip(ctx->display);
+	if(set_layout(ctx)) {
 		return 1;
 	}
 	local_mod_init();
 	return 0;
 }
-void wlResUpdate(int width, int height)
+void wlResUpdate(struct wlContext *ctx, int width, int height)
 {
-	wlWidth = width;
-	wlHeight = height;
+	ctx->width = width;
+	ctx->height = height;
 }
-void wlMouseRelativeMotion(int dx, int dy)
+void wlMouseRelativeMotion(struct wlContext *ctx, int dx, int dy)
 {
-	zwlr_virtual_pointer_v1_motion(pointer, wlTS(), wl_fixed_from_int(dx), wl_fixed_from_int(dy));
-	zwlr_virtual_pointer_v1_frame(pointer);
-	wl_display_flush(display);
+	zwlr_virtual_pointer_v1_motion(ctx->pointer, wlTS(ctx), wl_fixed_from_int(dx), wl_fixed_from_int(dy));
+	zwlr_virtual_pointer_v1_frame(ctx->pointer);
+	wl_display_flush(ctx->display);
 }
-void wlMouseMotion(int x, int y)
+void wlMouseMotion(struct wlContext *ctx, int x, int y)
 {
-	zwlr_virtual_pointer_v1_motion_absolute(pointer, wlTS(), x, y, wlWidth, wlHeight);
-	zwlr_virtual_pointer_v1_frame(pointer);
-	wl_display_flush(display);
+	zwlr_virtual_pointer_v1_motion_absolute(ctx->pointer, wlTS(ctx), x, y, ctx->width, ctx->height);
+	zwlr_virtual_pointer_v1_frame(ctx->pointer);
+	wl_display_flush(ctx->display);
 }
-void wlMouseButtonDown(int button)
+void wlMouseButtonDown(struct wlContext *ctx, int button)
 {
-	zwlr_virtual_pointer_v1_button(pointer, wlTS(), button_map[button], 1);
-	zwlr_virtual_pointer_v1_frame(pointer);
-	wl_display_flush(display);
+	zwlr_virtual_pointer_v1_button(ctx->pointer, wlTS(ctx), button_map[button], 1);
+	zwlr_virtual_pointer_v1_frame(ctx->pointer);
+	wl_display_flush(ctx->display);
 }
-void wlMouseButtonUp(int button)
+void wlMouseButtonUp(struct wlContext *ctx, int button)
 {
-	zwlr_virtual_pointer_v1_button(pointer, wlTS(), button_map[button], 0);
-	zwlr_virtual_pointer_v1_frame(pointer);
-	wl_display_flush(display);
+	zwlr_virtual_pointer_v1_button(ctx->pointer, wlTS(ctx), button_map[button], 0);
+	zwlr_virtual_pointer_v1_frame(ctx->pointer);
+	wl_display_flush(ctx->display);
 }
-void wlMouseWheel(signed short dx, signed short dy)
+void wlMouseWheel(struct wlContext *ctx, signed short dx, signed short dy)
 {
 	//we are a wheel, after all
-	zwlr_virtual_pointer_v1_axis_source(pointer, 0);
+	zwlr_virtual_pointer_v1_axis_source(ctx->pointer, 0);
 	if (dx < 0) {
-		zwlr_virtual_pointer_v1_axis_discrete(pointer, wlTS(), 1, wl_fixed_from_int(15), 1);
+		zwlr_virtual_pointer_v1_axis_discrete(ctx->pointer, wlTS(ctx), 1, wl_fixed_from_int(15), 1);
 	}else if (dx > 0) {
-		zwlr_virtual_pointer_v1_axis_discrete(pointer, wlTS(), 1, wl_fixed_from_int(-15), -1);
+		zwlr_virtual_pointer_v1_axis_discrete(ctx->pointer, wlTS(ctx), 1, wl_fixed_from_int(-15), -1);
 	}
 	if (dy < 0) {
-		zwlr_virtual_pointer_v1_axis_discrete(pointer, wlTS(), 0, wl_fixed_from_int(15),1);
+		zwlr_virtual_pointer_v1_axis_discrete(ctx->pointer, wlTS(ctx), 0, wl_fixed_from_int(15),1);
 	} else {
-		zwlr_virtual_pointer_v1_axis_discrete(pointer, wlTS(), 0, wl_fixed_from_int(-15), -1);
+		zwlr_virtual_pointer_v1_axis_discrete(ctx->pointer, wlTS(ctx), 0, wl_fixed_from_int(-15), -1);
 	}
-	zwlr_virtual_pointer_v1_frame(pointer);
-	wl_display_flush(display);
+	zwlr_virtual_pointer_v1_frame(ctx->pointer);
+	wl_display_flush(ctx->display);
 }
 #define SMOD_SHIFT 		0x0001
 #define XMOD_SHIFT 		0x0001
@@ -510,7 +505,7 @@ static inline long intrinsic_mask(int key)
 	return 0;
 }
 
-void wlKey(int key, int state, uint32_t mask)
+void wlKey(struct wlContext *ctx, int key, int state, uint32_t mask)
 {
 	key -= 8;
 	int xkb_sym;
@@ -522,19 +517,19 @@ void wlKey(int key, int state, uint32_t mask)
 	}
 	logDbg("Got modifier mask: %" PRIx32, xmodmask); 
 	xmodmask |= intrinsic_mask(key + 8);
-	zwp_virtual_keyboard_v1_modifiers(keyboard, xmodmask, 0, 0, 0);
-	zwp_virtual_keyboard_v1_key(keyboard, wlTS(), xkb_sym, state);
+	zwp_virtual_keyboard_v1_modifiers(ctx->keyboard, xmodmask, 0, 0, 0);
+	zwp_virtual_keyboard_v1_key(ctx->keyboard, wlTS(ctx), xkb_sym, state);
 	if (!state) {
-		zwp_virtual_keyboard_v1_modifiers(keyboard, 0, 0, 0, 0);
+		zwp_virtual_keyboard_v1_modifiers(ctx->keyboard, 0, 0, 0, 0);
 	}
-	wl_display_flush(display);
+	wl_display_flush(ctx->display);
 }
 
-int wlPrepareFd(void)
+int wlPrepareFd(struct wlContext *ctx)
 {
 	int fd;
 
-	fd = wl_display_get_fd(display);
+	fd = wl_display_get_fd(ctx->display);
 //	while (wl_display_prepare_read(display) != 0) {
 //		wl_display_dispatch(display);
 //	}
@@ -542,17 +537,17 @@ int wlPrepareFd(void)
 	return fd;
 }
 
-void wlPollProc(short revents)
+void wlPollProc(struct wlContext *ctx, short revents)
 {
 	if (revents & POLLIN) {
 //		wl_display_cancel_read(display);
-		wl_display_dispatch(display);
+		wl_display_dispatch(ctx->display);
 	}
 }
 
 
 /* FIXME XXX: hacky as fuck way to inhibit idle -- we just execute some commands */
-void wlIdleInhibit(bool on)
+void wlIdleInhibit(struct wlContext *ctx, bool on)
 {
 	char *cmd = configTryString(on ? "idle-inhibit/cmd-on" : "idle-inhibit/cmd-off", NULL);
 	if (cmd)

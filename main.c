@@ -29,32 +29,33 @@ static struct sopt optspec[] = {
 
 
 uSynergyContext synContext;
+struct wlContext wlContext;
 
 static void syn_mouse_wheel_cb(uSynergyCookie cookie, int16_t x, int16_t y)
 {
-	wlMouseWheel(x, y);
+	wlMouseWheel(&wlContext, x, y);
 }
 
 static void syn_mouse_button_down_cb(uSynergyCookie cookie, enum uSynergyMouseButton button)
 {
-	wlMouseButtonDown(button);
+	wlMouseButtonDown(&wlContext, button);
 }
 static void syn_mouse_button_up_cb(uSynergyCookie cookie, enum uSynergyMouseButton button)
 {
-	wlMouseButtonUp(button);
+	wlMouseButtonUp(&wlContext, button);
 }
 static void syn_mouse_move_cb(uSynergyCookie cookie, bool rel, int16_t x, int16_t y)
 {
 	if (rel) {
-		wlMouseRelativeMotion(x, y);
+		wlMouseRelativeMotion(&wlContext, x, y);
 	} else {
-		wlMouseMotion(x, y);
+		wlMouseMotion(&wlContext, x, y);
 	}
 }
 static void syn_key_cb(uSynergyCookie cookie, uint16_t key, uint16_t mod, bool down, bool repeat)
 {
 	if (!repeat)
- 		wlKey(key, down, mod);
+ 		wlKey(&wlContext, key, down, mod);
 }
 static void syn_trace(uSynergyCookie cookie, const char *text)
 {
@@ -79,8 +80,9 @@ static void syn_screensaver_cb(uSynergyCookie cookie, bool state)
 	}
 	strfreev(cmd);
 }
-void wl_output_update_cb(struct wlOutput *output)
+void wl_output_update_cb(struct wlContext *context)
 {
+	struct wlOutput *output = context->outputs;
 	int b, l, t, r;
 	b = 0;
 	l = 0;
@@ -102,7 +104,7 @@ void wl_output_update_cb(struct wlOutput *output)
 	height = t - b;
 	logInfo("Geometry updated: %dx%d", width, height);
 	uSynergyUpdateRes(&synContext, width, height);
-	wlResUpdate(width, height);
+	wlResUpdate(&wlContext, width, height);
 }
 
 
@@ -113,7 +115,7 @@ void sig_handle(int sig)
 		case SIGINT:
 		case SIGQUIT:
 			logInfo("Received signal %d, cleaning up", sig);
-			wlIdleInhibit(false);
+			wlIdleInhibit(&wlContext, false);
 			/* stop clipbpoard monitors */
 			for (int i = 0; i < 2; ++i) {
 				if (clipMonitorPid[i] != -1)
@@ -238,12 +240,16 @@ opterror:
 	synContext.m_traceFunc = syn_trace;
 	synContext.m_clipboardCallback = syn_clip_cb;
 	synContext.m_screensaverCallback = syn_screensaver_cb;
-	wlOnOutputsUpdated = man_geom ? NULL : wl_output_update_cb;
+	/* wayland context events */
+	//first zero everything
+	memset(&wlContext, 0, sizeof(wlContext));
+	//now callbacks
+	wlContext.on_output_update = man_geom ? NULL : wl_output_update_cb;
 	/*run*/
 	if(!clipSpawnMonitors())
 		return 3;
-	wlSetup(synContext.m_clientWidth, synContext.m_clientHeight);
-	wlIdleInhibit(true);
+	wlSetup(&wlContext, synContext.m_clientWidth, synContext.m_clientHeight);
+	wlIdleInhibit(&wlContext, true);
 	while(1) uSynergyUpdate(&synContext);
 	return 0;
 }
