@@ -124,6 +124,7 @@ static void cleanup(void)
 }
 
 static char **argv_reexec;
+static char *path_reexec;
 
 void sig_handle(int sig)
 {
@@ -135,10 +136,10 @@ void sig_handle(int sig)
 			cleanup();
 			exit(0);
 		case SIGUSR1:
-			logInfo("Receieved SIGUSR1, restarting....");
+			logInfo("Receieved SIGUSR1, restarting as '%s'", argv_reexec[0]);
 			cleanup();
 			errno = 0;
-			execv(argv_reexec[0], argv_reexec);
+			execvp(argv_reexec[0], argv_reexec);
 			logErr("Could not rexec: %s", strerror(errno));
 			exit(1);
 		default:
@@ -172,6 +173,7 @@ int main(int argc, char **argv)
 	port = configTryString("port", "24800");
 	host = configTryString("host", "localhost");
 	name = configTryString("name", hostname);
+	path_reexec = configTryString("path_reexec", NULL);
 	synContext.m_clientWidth = configTryLong("width", 0);
 	synContext.m_clientHeight = configTryLong("height", 0);
 	sopt_usage_set(optspec, argv[0], "Synergy client for wlroots compositors");
