@@ -119,6 +119,8 @@ static void cleanup(void)
 	synNetDisconnect();
 	logClose();
 	wlClose(&wlContext);
+	/*unmask any caught signals*/
+
 }
 
 static char **argv_reexec;
@@ -242,6 +244,13 @@ opterror:
 	signal(SIGINT, sig_handle);
 	signal(SIGQUIT, sig_handle);
 	signal(SIGUSR1, sig_handle);
+	sigset_t set;
+	sigemptyset(&set);
+	sigaddset(&set, SIGUSR1);
+	sigaddset(&set, SIGTERM);
+	sigaddset(&set, SIGINT);
+	sigaddset(&set, SIGQUIT);
+	sigprocmask(SIG_UNBLOCK, &set, NULL);
 	/* we can't override const, so set hostname here*/
 	synContext.m_clientName = name;
 
