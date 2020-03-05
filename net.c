@@ -2,6 +2,7 @@
 #include "wayland.h"
 #include "fdio_full.h"
 #include "clip.h"
+#include "net.h"
 #include <stdlib.h>
 #include <stdbool.h>
 #include <unistd.h>
@@ -18,13 +19,13 @@
 #include <time.h>
 
 static struct addrinfo *hostinfo;
-static int synsock;
+static int synsock = -1;
 
 
 
 static bool syn_connect(uSynergyCookie cookie)
 {
-
+	synNetDisconnect();
 	for (; hostinfo; hostinfo = hostinfo->ai_next) {
 		if ((synsock = socket(hostinfo->ai_family, hostinfo->ai_socktype, hostinfo->ai_protocol)) == -1)
 			continue;
@@ -136,4 +137,12 @@ bool synNetConfig(uSynergyContext *context, char *host, char *port)
 	return true;
 }
 
+bool synNetDisconnect(void)
+{
+	if (synsock == -1)
+		return false;
+	shutdown(synsock, SHUT_RDWR);
+	close(synsock);
+	return true;
+}
 

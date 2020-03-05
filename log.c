@@ -7,7 +7,7 @@
 
 static enum logLevel log_level = LOG_NONE;
 
-static FILE *log_file[LOG_FILE_MAX_COUNT] = {0};
+static FILE *log_file;
 
 
 static void log_print_ts(FILE *out)
@@ -30,20 +30,24 @@ static char *log_level_get_str(enum logLevel level)
 	return log_level_str[level];
 }
 
-static void log_out_v(enum logLevel level, const char *fmt, va_list ap)
+static void log_out_v_(FILE *f, enum logLevel level, const char *fmt, va_list ap)
 {
 	size_t i;
 	va_list aq;
 	if (level > log_level)
 		return;
-	for (i = 0; (i < LOG_FILE_MAX_COUNT) && (log_file[i]); ++i) {
-		log_print_ts(log_file[i]);
-		fprintf(log_file[i], ": [%s] ", log_level_get_str(level));
-		va_copy(aq, ap);
-		vfprintf(log_file[i], fmt, aq);
-		putc('\n', log_file[i]);
-		fflush(log_file[i]);
-	}
+	log_print_ts(f);
+	fprintf(f, ": [%s] ", log_level_get_str(level));
+	va_copy(aq, ap);
+	vfprintf(f, fmt, aq);
+	putc('\n', f);
+	fflush(f);
+}
+static void log_out_v(enum logLevel level, const char *fmt, va_list ap)
+{
+	log_out_v_(stderr, level, fmt, ap);
+	if (log_file)
+		log_out_v_(log_file, level, fmt, ap);
 }
 
 void logOut(enum logLevel level, const char *fmt, ...)
@@ -74,20 +78,17 @@ void logDbg(const char *fmt, ...)
 	log_out_v(LOG_DBG, fmt, ap);
 	va_end(ap);
 }
-bool logInit(enum logLevel level, FILE **logfiles)
+bool logInit(enum logLevel level, FILE *logfile)
 {
-	size_t i;
-
 	log_level = level;
-	for (i = 0; (i < LOG_FILE_MAX_COUNT) && (log_file[i] = logfiles[i]); ++i);
+	if (logfile)
+		log_file = logfile;
 	logInfo("Log initialized at level %d\n", level);
 	return true;
 }
 void logClose(void)
 {
-	size_t i;
-	for (i = 0; (i < LOG_FILE_MAX_COUNT) && (log_file[i]); ++i) {
-		fclose(log_file[i]);
-	}
+	if (log_file)
+		fclose(log_file);
 }
 

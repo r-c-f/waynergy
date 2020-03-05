@@ -14,10 +14,8 @@ enum logLevel {
 	LOG_INFO,
 	LOG_DBG,
 };
-#define LOG_FILE_MAX_COUNT 4
-#define LOG_FILE_MAX_COUNT_STR "4"
 
-bool logInit(enum logLevel level, FILE **logfiles);
+bool logInit(enum logLevel level, FILE *logfile);
 void logOut(enum logLevel level, const char *fmt, ...);
 void logErr(const char *fmt, ...);
 void logInfo(const char *fmt, ...);

@@ -22,7 +22,7 @@ static struct sopt optspec[] = {
 	SOPT_INIT_ARGL('W', "width", "width", "Width of screen in pixels"),
 	SOPT_INIT_ARGL('H', "height", "height", "Height of screen in pixels"),
 	SOPT_INIT_ARGL('N', "name", "name", "Name of client screen"),
-	SOPT_INIT_ARGL('l', "logfile", "file", "Name of logfile (up to " LOG_FILE_MAX_COUNT_STR "), - is stderr"),
+	SOPT_INIT_ARGL('l', "logfile", "file", "Name of logfile to use"),
 	SOPT_INIT_ARGL('L', "loglevel", "level", "Log level -- number, increasing from 0 for more verbosity"),
 	SOPT_INIT_END
 };
@@ -112,12 +112,16 @@ void sig_handle(int sig)
 		case SIGTERM:
 		case SIGINT:
 		case SIGQUIT:
+			logInfo("Received signal %d, cleaning up", sig);
 			wlIdleInhibit(false);
 			/* stop clipbpoard monitors */
 			for (int i = 0; i < 2; ++i) {
 				if (clipMonitorPid[i] != -1)
 					kill(clipMonitorPid[i], SIGTERM);
 			}
+			/*close stuff*/
+			synNetDisconnect();
+			logClose();
 			exit(0);
 		default:
 			fprintf(stderr, "UNHANDLED SIGNAL: %d\n", sig);
@@ -127,8 +131,7 @@ int main(int argc, char **argv)
 {
 	int opt, optind = 0, optcpos = 0;
 	char *optarg, *port, *name, *host, hostname[HOST_NAME_MAX] = {0};
-	FILE *logfiles[LOG_FILE_MAX_COUNT] = {0};
-	size_t logfiles_pos = 0;
+	FILE *logfile = NULL;
 	enum logLevel log_level = LOG_NONE;
 	short optshrt;
 	long optlong;
@@ -195,23 +198,10 @@ int main(int argc, char **argv)
 				log_level = optshrt;
 				break;
 			case 'l':
-				if (logfiles_pos == LOG_FILE_MAX_COUNT) {
-					fprintf(stderr, "Too many log files given, ignoring %s\n", optarg);
-					break;
-				}
-				if (!(strcmp(optarg, "-"))) {
-					logfiles[logfiles_pos++] = stderr;
-					break;
-				}
 				errno = 0;
-				if ((logfiles[logfiles_pos] = fopen(optarg, "w+"))) {
-					++logfiles_pos;
+				if ((logfile = fopen(optarg, "w+")))
 					break;
-				} else {
-					perror("logfile open");
-					goto opterror;
-				}
-				break;
+				perror("logfile open");
 opterror:
 			default:
 			       	sopt_usage_s();
@@ -219,7 +209,7 @@ opterror:
 		}
 	}
 	/* set up logging */
-	logInit(log_level, logfiles);
+	logInit(log_level, logfile);
 	/* now we decide if we should use manual geom */
 	if (synContext.m_clientWidth || synContext.m_clientHeight) {
 		if (!(synContext.m_clientWidth && synContext.m_clientHeight)) {

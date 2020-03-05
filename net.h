@@ -20,3 +20,5 @@
 
 bool synNetConfig(uSynergyContext *context, char *host, char *port);
 bool netPollLoop(void);
+bool synNetDisconnect(void);
+
