@@ -3,6 +3,11 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <poll.h>
+#include <sys/mman.h>
+#include "os.h"
+#include "xmem.h"
+#include "config.h"
+#include <unistd.h>
 #include <wayland-client.h>
 #include <wayland-client-protocol.h>
 #include "wlr-virtual-pointer-unstable-v1.prot.h"
@@ -48,7 +53,9 @@ struct wlContext {
 	void (*on_output_update)(struct wlContext *ctx);
 };
 
+extern int wlLoadConfLayout(struct wlContext *ctx);
 extern int wlSetup(struct wlContext *context, int width, int height);
+extern uint32_t wlTS(struct wlContext *context);
 extern void wlResUpdate(struct wlContext *context, int width, int height);
 extern void wlClose(struct wlContext *context);
 extern int wlPrepareFd(struct wlContext *context);

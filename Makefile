@@ -9,8 +9,8 @@ all: swaynergy swaynergy-clip-update
 swaynergy-clip-update: swaynergy
 	cp $< $@
 
-swaynergy: $(PROT_H) $(PROT_C) clip.o config.o net.o main.o os.o clip-update.o wayland.o uSynergy.o log.o wlr-virtual-pointer-unstable-v1.prot.o virtual-keyboard-unstable-v1.prot.o xdg-output-unstable-v1.prot.o
-	$(CC) $(CFLAGS) $(LDFLAGS) -o swaynergy clip.o config.o net.o main.o os.o clip-update.o wayland.o uSynergy.o log.o wlr-virtual-pointer-unstable-v1.prot.o virtual-keyboard-unstable-v1.prot.o xdg-output-unstable-v1.prot.o
+swaynergy: $(PROT_H) $(PROT_C) clip.o config.o net.o main.o os.o clip-update.o wayland.o wl_key.o wl_mouse.o uSynergy.o log.o wlr-virtual-pointer-unstable-v1.prot.o virtual-keyboard-unstable-v1.prot.o xdg-output-unstable-v1.prot.o
+	$(CC) $(CFLAGS) $(LDFLAGS) -o swaynergy clip.o config.o net.o main.o os.o clip-update.o wayland.o wl_key.o wl_mouse.o uSynergy.o log.o wlr-virtual-pointer-unstable-v1.prot.o virtual-keyboard-unstable-v1.prot.o xdg-output-unstable-v1.prot.o
 
 %.o: %.c
 	$(CC) -c -o $@ $< $(CFLAGS)
