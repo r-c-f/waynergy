@@ -2,27 +2,18 @@
 #include <stdbool.h>
 #include "log.h"
 
-#define SMOD_SHIFT              0x0001
 #define XMOD_SHIFT              0x0001
-
-#define SMOD_CONTROL            0x0002
 #define XMOD_CONTROL            0x0004
-
-#define SMOD_ALT                0x0004
 #define XMOD_ALT                0x0008
-
-#define SMOD_META               0x0008
 #define XMOD_META               0x0008
-
-#define SMOD_SUPER              0x0010
 #define XMOD_SUPER              0x0040
 
 static uint32_t smod_to_xmod[][2] = {
-        {SMOD_SHIFT, XMOD_SHIFT},
-        {SMOD_CONTROL, XMOD_CONTROL},
-        {SMOD_ALT, XMOD_ALT},
-        {SMOD_META, XMOD_META},
-        {SMOD_SUPER, XMOD_SUPER},
+        {USYNERGY_MODIFIER_SHIFT, XMOD_SHIFT},
+        {USYNERGY_MODIFIER_CTRL, XMOD_CONTROL},
+        {USYNERGY_MODIFIER_ALT, XMOD_ALT},
+        {USYNERGY_MODIFIER_META, XMOD_META},
+        {USYNERGY_MODIFIER_WIN, XMOD_SUPER},
         {0,0}
 };
 static inline uint32_t wlModConvert(uint32_t smod)

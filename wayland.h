@@ -13,6 +13,7 @@
 #include "wlr-virtual-pointer-unstable-v1.prot.h"
 #include "virtual-keyboard-unstable-v1.prot.h"
 #include "xdg-output-unstable-v1.prot.h"
+#include "uSynergy.h"
 
 struct wlOutput
 {

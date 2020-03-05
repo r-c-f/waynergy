@@ -107,6 +107,21 @@ void wl_output_update_cb(struct wlContext *context)
 	wlResUpdate(&wlContext, width, height);
 }
 
+static void cleanup(void)
+{
+	wlIdleInhibit(&wlContext, false);
+	/* stop clipbpoard monitors */
+	for (int i = 0; i < 2; ++i) {
+		if (clipMonitorPid[i] != -1)
+			kill(clipMonitorPid[i], SIGTERM);
+	}
+	/*close stuff*/
+	synNetDisconnect();
+	logClose();
+	wlClose(&wlContext);
+}
+
+static char **argv_reexec;
 
 void sig_handle(int sig)
 {
@@ -115,22 +130,22 @@ void sig_handle(int sig)
 		case SIGINT:
 		case SIGQUIT:
 			logInfo("Received signal %d, cleaning up", sig);
-			wlIdleInhibit(&wlContext, false);
-			/* stop clipbpoard monitors */
-			for (int i = 0; i < 2; ++i) {
-				if (clipMonitorPid[i] != -1)
-					kill(clipMonitorPid[i], SIGTERM);
-			}
-			/*close stuff*/
-			synNetDisconnect();
-			logClose();
+			cleanup();
 			exit(0);
+		case SIGUSR1:
+			logInfo("Receieved SIGUSR1, restarting....");
+			cleanup();
+			errno = 0;
+			execv(argv_reexec[0], argv_reexec);
+			logErr("Could not rexec: %s", strerror(errno));
+			exit(1);
 		default:
 			fprintf(stderr, "UNHANDLED SIGNAL: %d\n", sig);
 	}
 }
 int main(int argc, char **argv)
 {
+	argv_reexec = argv;
 	int opt, optind = 0, optcpos = 0;
 	char *optarg, *port, *name, *host, hostname[HOST_NAME_MAX] = {0};
 	FILE *logfile = NULL;
@@ -226,6 +241,7 @@ opterror:
 	signal(SIGTERM, sig_handle);
 	signal(SIGINT, sig_handle);
 	signal(SIGQUIT, sig_handle);
+	signal(SIGUSR1, sig_handle);
 	/* we can't override const, so set hostname here*/
 	synContext.m_clientName = name;
 
