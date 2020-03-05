@@ -74,7 +74,7 @@ static void syn_screensaver_cb(uSynergyCookie cookie, bool state)
 	for (i = 0; cmd[i]; ++i) {
 		ret = system(cmd[i]);
 		if (ret) {
-			fprintf(stderr, "Screensaver callback state %s command #%d (%s) failed with code %d\n", state ? "start" : "stop", i, cmd[i], ret);
+			fprintf(stderr, "Screensaver callback state %s command #%zd (%s) failed with code %d\n", state ? "start" : "stop", i, cmd[i], ret);
 		}
 	}
 	strfreev(cmd);
@@ -150,8 +150,8 @@ int main(int argc, char **argv)
 	port = configTryString("port", "24800");
 	host = configTryString("host", "localhost");
 	name = configTryString("name", hostname);
-	synContext.m_clientWidth = configTryLong("width", -1);
-	synContext.m_clientHeight = configTryLong("height", -1);
+	synContext.m_clientWidth = configTryLong("width", 0);
+	synContext.m_clientHeight = configTryLong("height", 0);
 	sopt_usage_set(optspec, argv[0], "Synergy client for wlroots compositors");
 	while ((opt = sopt_getopt(argc, argv, optspec, &optcpos, &optind, &optarg)) != -1) {
 		if (optarg) {
@@ -221,8 +221,8 @@ opterror:
 	/* set up logging */
 	logInit(log_level, logfiles);
 	/* now we decide if we should use manual geom */
-	if ((synContext.m_clientWidth == -1) || (synContext.m_clientHeight == -1)) {
-		if ((synContext.m_clientWidth * synContext.m_clientHeight) < 0) {
+	if (synContext.m_clientWidth || synContext.m_clientHeight) {
+		if (!(synContext.m_clientWidth && synContext.m_clientHeight)) {
 			logErr("Must specify both manual dimensions");
 			sopt_usage_s();
 			return 1;

@@ -76,7 +76,6 @@ void logDbg(const char *fmt, ...)
 }
 bool logInit(enum logLevel level, FILE **logfiles)
 {
-	FILE *f;
 	size_t i;
 
 	log_level = level;

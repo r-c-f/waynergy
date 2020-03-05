@@ -267,7 +267,6 @@ static struct wl_registry *registry = NULL;
 static struct wl_display *display = NULL;
 static struct zwlr_virtual_pointer_v1 *pointer = NULL;
 static struct zwp_virtual_keyboard_v1 *keyboard = NULL;
-static struct wl_event_queue *queue = NULL;
 
 static int wlWidth = 0;
 static int wlHeight = 0;
@@ -333,7 +332,7 @@ static int set_layout(void)
 	zwp_virtual_keyboard_v1_keymap(keyboard, WL_KEYBOARD_KEYMAP_FORMAT_XKB_V1, fd, keymap_size);
 done:
 	free(keymap_str);
-	return 0;
+	return ret;
 }
 
 static bool local_mod_init(void);
@@ -397,7 +396,6 @@ void wlMouseWheel(signed short dx, signed short dy)
 {
 	//we are a wheel, after all
 	zwlr_virtual_pointer_v1_axis_source(pointer, 0);
-	uint32_t ts = wlTS();
 	if (dx < 0) {
 		zwlr_virtual_pointer_v1_axis_discrete(pointer, wlTS(), 1, wl_fixed_from_int(15), 1);
 	}else if (dx > 0) {
@@ -455,7 +453,7 @@ static size_t local_mod_len = 0;
 static bool local_mod_init(void) {
 #ifdef USE_INTRINSIC_MASK
 	char **lines;
-	size_t line_count, i, l;
+	size_t i, l;
 	long key;
 	char *conf[] = {
 		"intrinsic_mask/shift",
@@ -516,12 +514,14 @@ void wlKey(int key, int state, uint32_t mask)
 {
 	key -= 8;
 	int xkb_sym;
+	uint32_t xmodmask = wlModConvert(mask);
 	if ((key & 0xE000) == 0xE000) {
 		xkb_sym = key + 0x1000;
 	} else {
 		xkb_sym = key;
 	}
-	uint32_t xmodmask = wlModConvert(mask) | intrinsic_mask(key + 8);
+	logDbg("Got modifier mask: %" PRIx32, xmodmask); 
+	xmodmask |= intrinsic_mask(key + 8);
 	zwp_virtual_keyboard_v1_modifiers(keyboard, xmodmask, 0, 0, 0);
 	zwp_virtual_keyboard_v1_key(keyboard, wlTS(), xkb_sym, state);
 	if (!state) {
