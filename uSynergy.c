@@ -273,6 +273,17 @@ void uSynergySendClipboard(uSynergyContext *context, int id, uint32_t len, const
 	sSendReply(context);
 }
 
+/**
+@brief Mark context as being disconnected
+**/
+static void sSetDisconnected(uSynergyContext *context)
+{
+	context->m_connected		= false;
+	context->m_hasReceivedHello = false;
+	context->m_isCaptured		= false;
+	context->m_replyCur			= context->m_replyBuffer + 4;
+	context->m_sequenceNumber	= 0;
+}
 
 /**
 @brief Parse a single client message, update state, send callbacks and send replies
@@ -566,6 +577,21 @@ static void sProcessMessage(uSynergyContext *context, const uint8_t *message)
 			}
 		}
 	}
+	else if (USYNERGY_IS_PACKET("CBYE")) {
+		logInfo("Server disconnected");
+		sSetDisconnected(context);
+		return;
+	}
+	else if (USYNERGY_IS_PACKET("EBAD")) {
+		logErr("Protocol error");
+		sSetDisconnected(context);
+		return;
+	}
+	else if (USYNERGY_IS_PACKET("EBSY")) {
+		logErr("Other screen already connected with our name");
+		sSetDisconnected(context);
+		return;
+	}
 	else
 	{
 		// Unknown packet, could be any of these
@@ -593,17 +619,6 @@ static void sProcessMessage(uSynergyContext *context, const uint8_t *message)
 
 
 
-/**
-@brief Mark context as being disconnected
-**/
-static void sSetDisconnected(uSynergyContext *context)
-{
-	context->m_connected		= false;
-	context->m_hasReceivedHello = false;
-	context->m_isCaptured		= false;
-	context->m_replyCur			= context->m_replyBuffer + 4;
-	context->m_sequenceNumber	= 0;
-}
 
 
 
