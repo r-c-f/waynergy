@@ -3,13 +3,13 @@
 An unspeakably-horrible implementation of a synergy client for wlroots
 compositors. Based on the upstream uSynergy library (modified for more protocol
 support). Not ready for primetime (by any means) but maybe useful to somebody
-who -- not knowing C -- would be willing to try it. 
 
 ## Getting started
 
 ### Prerequisites
 
 * wayland, including wayland-scanner and the base protocols
+* libxkbcommon
 * A compositor making use of [wlroots](https://github.com/swaywm/wlroots)
 * [wl-clipboard](https://github.com/bugaevc/wl-clipboard) for clipboard support
 
@@ -55,19 +55,50 @@ what the command line option would do.
 
 #### Modifier keys
 
-Due to the annoying nature of the synergy protocol and an unwillingess to work 
-too much with xkbcommon, we support intrinsic masks for a given set of keys. 
-One scancode per line in the following files in the `intrinsic_mask` folder:
+Synergy has a habit of setting the modifier mask for a given key on *release*.
+To get around this, we support the notion of an intrinsic mask, where a given
+keycode will trigger the modifier mask update on its own. To make use of this,
+add one xkbcommon name per line in the following files in the `intrinsic_mask` 
+folder:
 
 * `alt`
 * `control`
+* `meta`
 * `shift`
 * `super`
+
+Decent-enough defaults would probably be
+##### alt
+```
+LALT
+RALT
+```
+##### control
+```
+LCTL
+RCTL
+```
+##### shift
+```
+LFSH
+RTSH
+```
+##### super
+```
+LWIN
+RWIN
+```
+
+I don't have a use for meta, but maybe somebody does. 
 
 #### General keymap
 
 There's also an xkb format keymap to provide, if the default is not sufficient;
-it it should be placed in `xkb_keymap`. 
+it should be placed in `xkb_keymap`. The easiest way to obtain this if the
+default is insufficient is to use the output of
+```
+setxkbmap -print
+```
 
 #### Screensaver
 
@@ -92,3 +123,16 @@ killing swayidle, and restarting swayidle.
 possible
 * wl-clipboard, because its watch mode turns it into a clipboard manager so I
 I don't have to.
+
+##TODO
+
+* use the wayland protocols for clipboard management. wl-clipboard already existed
+and is mostly fine, but Synergy specifies the format of the data (negating the 
+need to guess at mimetypes) and multi-process coordination is annoying. 
+* Proper support for network timeouts. This likely means rewriting the network
+handling code so that it's not just a crusty hack meant to play nice with 
+uSynergy, which could be changed to reflect the fact that we already read whole
+packets.
+* Improve idle handling
+* De-uglify. This was one of those let's-not-really-plan-this-out-but-write-vaguely-working-code
+sort of things, and it shows, quite noticeably. 
