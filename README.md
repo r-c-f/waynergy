@@ -124,7 +124,7 @@ possible
 * wl-clipboard, because its watch mode turns it into a clipboard manager so I
 I don't have to.
 
-##TODO
+## TODO
 
 * use the wayland protocols for clipboard management. wl-clipboard already existed
 and is mostly fine, but Synergy specifies the format of the data (negating the 
