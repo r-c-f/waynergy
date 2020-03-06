@@ -1,0 +1,3 @@
+pkill -9 swaylock
+pkill -9 swayidle
+swaymsg 'output * dpms on'
