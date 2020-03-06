@@ -44,6 +44,9 @@ USAGE: swaynergy [-h|--help] [-c|--host host] [-p|--port port] [-W|--width width
 	-N|--name name:
 		Name of client screen
 ```
+
+Also note that `SIGUSR1` triggers re-execution. Useful until proper recconect
+procedures exist. 
 ### Configuration
 
 The configuration files are stored in `$XDG_CONFIG_HOME/swaynergy`, which is
@@ -124,7 +127,7 @@ possible
 * wl-clipboard, because its watch mode turns it into a clipboard manager so I
 I don't have to.
 
-##TODO
+## TODO
 
 * use the wayland protocols for clipboard management. wl-clipboard already existed
 and is mostly fine, but Synergy specifies the format of the data (negating the 
