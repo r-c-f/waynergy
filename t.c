@@ -58,6 +58,14 @@ static void on_data_offer(void *data, struct zwlr_data_control_device_v1 *device
 static void on_selection(void *data, struct zwlr_data_control_device_v1 *device, struct zwlr_data_control_offer_v1 *id)
 {
 	fprintf(stderr, "on_selection\n");
+	if (!id) {
+		fprintf(stderr, "something fucky goes on\n");
+		return;
+	}
+	if (id != offer)
+		return;
+	
+	fprintf(stderr, "END OF DATA\n");
 }
 static void on_finished(void *data, struct zwlr_data_control_device_v1 *device)
 {
@@ -70,14 +78,18 @@ static void on_primary_selection(void *data, struct zwlr_data_control_device_v1 
 		fprintf(stderr, "something fucky goes on\n");
 		return;
 	}
+	if (id != offer)
+		return;
 	int fds[2];
 	pipe(fds);
-	zwlr_data_control_offer_v1_receive(id, "TEXT", fds[1]);
-	char buf[128];
+	zwlr_data_control_offer_v1_receive(id, "text/plain", fds[0]);
+	wl_display_dispatch(display);
+	wl_display_roundtrip(display);
+	char buf;
 	ssize_t count;
 	fprintf(stderr, "GOT DATA: FOLLOWS\n");
-	while ((count = read(fds[0], buf, 1)) > 0) {
-		write(STDERR_FILENO, buf, count);
+	while ((count = read(fds[1], &buf, 1)) > 0) {
+		write(STDERR_FILENO, &buf, 1);
 	}
 	fprintf(stderr, "END OF DATA\n");
 	close(fds[0]);
@@ -86,7 +98,7 @@ static void on_primary_selection(void *data, struct zwlr_data_control_device_v1 
 
 static struct zwlr_data_control_device_v1_listener data_control_listener = {
 	on_data_offer,
-	on_selection,
+	on_primary_selection,
 	on_finished,
 	on_primary_selection
 };	
