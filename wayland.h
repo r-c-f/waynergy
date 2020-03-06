@@ -13,6 +13,7 @@
 #include "wlr-virtual-pointer-unstable-v1.prot.h"
 #include "virtual-keyboard-unstable-v1.prot.h"
 #include "xdg-output-unstable-v1.prot.h"
+#include "wlr-data-control-unstable-v1.prot.h"
 #include "uSynergy.h"
 
 struct wlOutput
@@ -36,16 +37,13 @@ struct wlContext {
 	struct wl_registry *registry;
 	struct wl_display *display;
 	struct wl_seat *seat;
+	struct zwlr_data_control_manager *data_manager;
 	struct zwp_virtual_keyboard_manager_v1 *keyboard_manager;
 	struct zwlr_virtual_pointer_manager_v1 *pointer_manager;
 	struct zxdg_output_manager_v1 *output_manager;
 	struct zwlr_virtual_pointer_v1 *pointer;
 	struct zwp_virtual_keyboard_v1 *keyboard;
 	struct wlOutput *outputs;
-	//listeners
-	struct zxdg_output_v1_listener xdg_output_listener;
-	struct wl_output_listener output_listener;
-	struct wl_registry_listener registry_listener;
 	//state
 	int width;
 	int height;

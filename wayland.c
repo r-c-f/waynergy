@@ -253,6 +253,8 @@ static void handle_global(void *data, struct wl_registry *registry, uint32_t nam
 			xdg_output = NULL;
 		}
 		wlOutputAppend(&ctx->outputs, wl_output, xdg_output);
+	} else if (strcmp(interface, zwlr_data_control_manager_v1_interface.name) == 0) {
+		ctx->data_manager = wl_registry_bind(registry, name, &zwlr_data_control_manager_v1_interface, 2);
 	}
 
 }
