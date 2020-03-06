@@ -44,6 +44,9 @@ USAGE: swaynergy [-h|--help] [-c|--host host] [-p|--port port] [-W|--width width
 	-N|--name name:
 		Name of client screen
 ```
+
+Also note that `SIGUSR1` triggers re-execution. Useful until proper recconect
+procedures exist. 
 ### Configuration
 
 The configuration files are stored in `$XDG_CONFIG_HOME/swaynergy`, which is
