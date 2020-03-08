@@ -6,7 +6,7 @@
 #include <wayland-client-protocol.h>
 #include "wlr-data-control-unstable-v1.prot.h"
 #include "fdio_full.h"
-
+#include "os.h"
 
 static struct wl_seat *seat;
 static struct wl_display *display;
@@ -82,13 +82,17 @@ static void on_primary_selection(void *data, struct zwlr_data_control_device_v1 
 		return;
 	int fds[2];
 	pipe(fds);
-	zwlr_data_control_offer_v1_receive(id, "text/plain", fds[0]);
-	wl_display_dispatch(display);
-	wl_display_roundtrip(display);
+	int a = fcntl(fds[0], F_GETFL);
+	int b = fcntl(fds[1], F_GETFL);
+	fprintf(stderr, "%x - %x\n", a, b);
+	zwlr_data_control_offer_v1_receive(id, "text/plain", fds[1]);
 	char buf;
 	ssize_t count;
 	fprintf(stderr, "GOT DATA: FOLLOWS\n");
-	while ((count = read(fds[1], &buf, 1)) > 0) {
+	wl_display_roundtrip(display);
+	while ((count = read(fds[0], &buf, 1)) > 0) {
+		perror("test");
+		wl_display_dispatch(display);
 		write(STDERR_FILENO, &buf, 1);
 	}
 	fprintf(stderr, "END OF DATA\n");
