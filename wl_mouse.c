@@ -41,12 +41,12 @@ void wlMouseWheel(struct wlContext *ctx, signed short dx, signed short dy)
         zwlr_virtual_pointer_v1_axis_source(ctx->pointer, 0);
         if (dx < 0) {
                 zwlr_virtual_pointer_v1_axis_discrete(ctx->pointer, wlTS(ctx), 1, wl_fixed_from_int(15), 1);
-        }else {
+        }else if (dx > 0) {
                 zwlr_virtual_pointer_v1_axis_discrete(ctx->pointer, wlTS(ctx), 1, wl_fixed_from_int(-15), -1);
         }
         if (dy < 0) {
                 zwlr_virtual_pointer_v1_axis_discrete(ctx->pointer, wlTS(ctx), 0, wl_fixed_from_int(15),1);
-        } else {
+        } else if (dy > 0) {
                 zwlr_virtual_pointer_v1_axis_discrete(ctx->pointer, wlTS(ctx), 0, wl_fixed_from_int(-15), -1);
         }
         zwlr_virtual_pointer_v1_frame(ctx->pointer);
