@@ -33,11 +33,38 @@ struct wlOutput
 	struct wlOutput *next;
 };
 
+enum wlSelectionId {
+	WL_SELECTION_CLIPBOARD = 0,
+	WL_SELECTION_PRIMARY,
+	WL_SELECTION_MAX
+}; 
+enum wlSelectionFormat {
+	WL_SELECTION_FORMAT_TEXT = 0,
+//	WL_SELECTION_FORMAT_BITMAP, TODO
+//	WL_SELECTION_FORMAT_HTML, TODO
+	WL_SELECTION_FORMAT_MAX
+};
+#define WL_SELECTION_FORMAT_MIMES { "text/plain", NULL };
+extern  char **wlSelectionFormatMimes;
+
+struct wlSelectionBuffer {
+	unsigned char *data;
+	size_t pos;
+	size_t alloc;
+	int offer_fd;
+	bool complete;
+	wlSelectionId id;
+}
+
 struct wlContext {
 	struct wl_registry *registry;
 	struct wl_display *display;
 	struct wl_seat *seat;
 	struct zwlr_data_control_manager *data_manager;
+	struct zwlr_data_control_device_v1 *data_control;
+	struct zwlr_data_control_offer_v1 *data_offer;
+	bool data_offer_formats[WL_SELECTION_FORMAT_MAX];
+	struct wlSelection data_buffer[WL_SELECTION_MAX][WL_SELECTION_FORMAT_MAX];
 	struct zwp_virtual_keyboard_manager_v1 *keyboard_manager;
 	struct zwlr_virtual_pointer_manager_v1 *pointer_manager;
 	struct zxdg_output_manager_v1 *output_manager;

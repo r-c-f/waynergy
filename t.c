@@ -6,6 +6,7 @@
 #include <wayland-client-protocol.h>
 #include "wlr-data-control-unstable-v1.prot.h"
 #include "fdio_full.h"
+#include <poll.h>
 #include "os.h"
 
 static struct wl_seat *seat;
@@ -82,20 +83,36 @@ static void on_primary_selection(void *data, struct zwlr_data_control_device_v1 
 		return;
 	int fds[2];
 	pipe(fds);
-	int a = fcntl(fds[0], F_GETFL);
-	int b = fcntl(fds[1], F_GETFL);
-	fprintf(stderr, "%x - %x\n", a, b);
-	zwlr_data_control_offer_v1_receive(id, "text/plain", fds[1]);
+	zwlr_data_control_offer_v1_receive(id, "STRING", fds[1]);
 	char buf;
 	ssize_t count;
 	fprintf(stderr, "GOT DATA: FOLLOWS\n");
 	wl_display_roundtrip(display);
-	while ((count = read(fds[0], &buf, 1)) > 0) {
-		perror("test");
-		wl_display_dispatch(display);
-		write(STDERR_FILENO, &buf, 1);
+	struct pollfd pfd = {
+		fds[0],
+		POLLIN | POLLHUP,
+		0
+	};
+	int ret;
+	int recvd = 0;
+	while((ret = poll(&pfd, 1, 1)) > 0) {
+		if (pfd.revents & POLLIN) {
+			ret = read(fds[0], &buf, 1);
+			if (ret < 1) {
+				break;
+			}
+			++recvd;
+			putc(buf, stderr);
+		}if (pfd.revents & POLLHUP) {
+			break;
+		}
 	}
-	fprintf(stderr, "END OF DATA\n");
+
+	if (recvd) {
+		fprintf(stderr, "\nGOT %d BYTES\n", recvd);
+	} else {
+		fprintf(stderr, "Returned %d we fucked\n", ret);
+	}
 	close(fds[0]);
 	close(fds[1]);
 }

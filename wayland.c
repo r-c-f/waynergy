@@ -222,6 +222,55 @@ static struct wl_output_listener output_listener = {
 	.done = output_done,
 	.scale = output_scale
 };
+
+static void on_data_offer(void *data, struct zwlr_data_control_device_v1 *device, struct zwlr_data_control_offer_v1 *id)
+{
+	logDbg("Got data offer");
+	struct wlContext *ctx = data;
+	if (ctx->data_offer) {
+		/* we destroy the old offer */
+		zwlr_data_control_offer_v1_destroy(ctx->data_offer);
+	}
+	ctx->data_offer = id;
+	memset(ctx->data_offer_formats, 0, sizeof(ctx->data_offer_formats));
+	zwlr_data_control_offer_v1_add_listener(ctx->data_offer, &data_off_listener, ctx);
+}
+static void on_selection(void *data, struct zwlr_data_control_device_v1 *device, struct zwlr_data_control_offer_v1 *id)
+{
+	int sel, format, fds[2];
+	struct wlContext *ctx = data;
+	struct wlSelectionBuffer *buf;
+	if (!id) {
+		logErr("Got NULL selection");
+		return;
+	}
+	if (id != data->data_offer) {
+		logErr("Got selection with unknown offer");
+		return;
+	}
+	for (format = 0; format < WL_SELECTION_FORMAT_MAX; ++format) {
+		if (ctx->data_offer_formats[format]) {
+			buf = &(ctx->data_buffer[WL_SELECTION_CLIPBOARD][format]);
+			buf->pos = 0;
+			buf->complete = false;
+			buf->id = id;
+			if (pipe(fds) == -1) {
+				logErr("Selection pipe() failed: %s", strerror(errno));
+				return;
+			}
+			if (
+			buf->offer_fd = fds[0];
+			zwlr_data_control-offer_v1_receive(id, wlSelectionFormatMimes[format], fds[1]);
+			wl_display_roundtrip(ctx->display);
+
+
+
+static struct zwlr_data_control_device_v1_listener data_control_listener = {
+	on_data_offer,
+	on_selection,
+	on_finished,
+	on_primary_selection
+};
 static void handle_global(void *data, struct wl_registry *registry, uint32_t name, const char *interface, uint32_t version)
 {
 	struct wlContext *ctx = data;
