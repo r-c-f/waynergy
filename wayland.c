@@ -16,7 +16,7 @@
 #include "log.h"
 
 
-
+char *wlSelectionFormatMimes[] = WL_SELECTION_FORMAT_MIMES;
 
 void wlOutputAppend(struct wlOutput **outputs, struct wl_output *output, struct zxdg_output_v1 *xdg_output)
 {
@@ -223,6 +223,24 @@ static struct wl_output_listener output_listener = {
 	.scale = output_scale
 };
 
+static void on_data_offer_mime(void *data, struct zwlr_data_control_offer_v1 *id, const char *mime_type)
+{
+	int format;
+	struct wlContext *ctx = data;
+	if (ctx->data_offer != id) {
+		logErr("Got unknown offer in mime type event");
+		return;
+	}
+	for (format = 0; format < WL_SELECTION_FORMAT_MAX; ++format) {
+		if (!strcmp(wlSelectionFormatMimes[format], mime_type)) {
+			logDbg("Mime type %s matches format %d",mime_type, format);
+			ctx->data_offer_formats[format] = true;
+		}
+	}
+}
+static struct zwlr_data_control_offer_v1_listener data_offer_listener = {
+	on_data_offer_mime
+};
 static void on_data_offer(void *data, struct zwlr_data_control_device_v1 *device, struct zwlr_data_control_offer_v1 *id)
 {
 	logDbg("Got data offer");
@@ -233,24 +251,35 @@ static void on_data_offer(void *data, struct zwlr_data_control_device_v1 *device
 	}
 	ctx->data_offer = id;
 	memset(ctx->data_offer_formats, 0, sizeof(ctx->data_offer_formats));
-	zwlr_data_control_offer_v1_add_listener(ctx->data_offer, &data_off_listener, ctx);
+	zwlr_data_control_offer_v1_add_listener(ctx->data_offer, &data_offer_listener, ctx);
 }
-static void on_selection(void *data, struct zwlr_data_control_device_v1 *device, struct zwlr_data_control_offer_v1 *id)
+
+static void on_selection(wlSelectionId sel_id, void *data, struct zwlr_data_control_device_v1 *device, struct zwlr_data_control_offer_v1 *id)
 {
 	int sel, format, fds[2];
 	struct wlContext *ctx = data;
 	struct wlSelectionBuffer *buf;
 	if (!id) {
-		logErr("Got NULL selection");
+		logErr("Got NULL selection %d", sel_id);
 		return;
 	}
 	if (id != data->data_offer) {
-		logErr("Got selection with unknown offer");
+		logErr("Got selection %d with unknown offer", sel_id);
 		return;
 	}
 	for (format = 0; format < WL_SELECTION_FORMAT_MAX; ++format) {
 		if (ctx->data_offer_formats[format]) {
-			buf = &(ctx->data_buffer[WL_SELECTION_CLIPBOARD][format]);
+			logDbg("Got selection %d, format %d", sel_id, format);
+			buf = &(ctx->data_buffer[sel_id][format]);
+			/* close old fds */
+			if (buf->offer_fd != -1) {
+				close(buf->offer_fd);
+				buf->offer_fd = -1;
+			}
+			if (buf->offer_fd_write != -1) {
+				close(buf->offer_fd_write);
+				buf->offer_fd_write = -1;
+			}
 			buf->pos = 0;
 			buf->complete = false;
 			buf->id = id;
@@ -258,18 +287,47 @@ static void on_selection(void *data, struct zwlr_data_control_device_v1 *device,
 				logErr("Selection pipe() failed: %s", strerror(errno));
 				return;
 			}
-			if (
 			buf->offer_fd = fds[0];
 			zwlr_data_control-offer_v1_receive(id, wlSelectionFormatMimes[format], fds[1]);
 			wl_display_roundtrip(ctx->display);
-
+			/*FIXME: shouldn't need to do this stuff, but we do..
+			 * store write fd
+			 * store timestamp
+			*/
+			buf->offer_fd_write = fds[1];
+			buf->last_active = time(NULL);
+		}
+	}
+}
+static void on_selection_primary(void *data, struct zwlr_data_control_device_v1 *device, struct zwlr_data_control_offer_v1 *id)
+{
+	on_selection(WL_SELECTION_PRIMARY, data, device, id);
+}
+static void on_selection_clipboard(void *data, struct zwlr_data_control_device_v1 *device, struct zwlr_data_control_offer_v1 *id)
+{
+	on_selection(WL_SELECTION_PRIMARY, data, device, id);
+}
+static void on_data_finished(void *data, struct zwlr_data_control_device_v1 *deivce, struct zwlr_data_control_offer_v1 *id)
+{
+	int sel_id, format;
+	struct wlSelectionBuffer *buf;
+	struct wlContext *ctx = data;
+	if (ctx->data_offer != id) {
+		logErr("Got unknown offer in finished event");
+		return;
+	}
+	/* destroy the offer */
+	zwlr_data_control_offer_v1_destroy(id);
+	/* zero formats */
+	memset(ctx->data_offer_formats, 0, sizeof(ctx->data_offer_formats));
+}
 
 
 static struct zwlr_data_control_device_v1_listener data_control_listener = {
 	on_data_offer,
-	on_selection,
-	on_finished,
-	on_primary_selection
+	on_selection_clipboard,
+	on_data_finished,
+	on_selection_primary
 };
 static void handle_global(void *data, struct wl_registry *registry, uint32_t name, const char *interface, uint32_t version)
 {
@@ -348,6 +406,18 @@ int wlSetup(struct wlContext *ctx, int width, int height)
 	ctx->width = width;
 	ctx->height = height;
 	ctx->display = wl_display_connect(NULL);
+	/* set up selection buffers */
+	for (int sel = 0; sel < WL_SELECTION_MAX; ++sel) {
+		for (int form = 0; form < WL_SELECTION_FORMAT_MAX; ++form) {
+			ctx->data_buffer[sel][form].offer_fd = -1;
+			ctx->data_buffer[sel][form].offer_fd_write = -1;
+			//default to 1024
+			ctx->data_buffer[sel][form].alloc = 1024;
+			ctx->data_buffer[sel][form].data = xmalloc(1024);
+			ctx->data_buffer[sel][form].pos = 0;
+			ctx->data_buffer[sel][form].complete = true;
+		}
+	}
 	if (!ctx->display) {
 		printf("Couldn't connect, yo\n");
 		return 1;

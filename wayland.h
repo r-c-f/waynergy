@@ -47,13 +47,20 @@ enum wlSelectionFormat {
 #define WL_SELECTION_FORMAT_MIMES { "text/plain", NULL };
 extern  char **wlSelectionFormatMimes;
 
+extern 
+
 struct wlSelectionBuffer {
 	unsigned char *data;
 	size_t pos;
 	size_t alloc;
 	int offer_fd;
 	bool complete;
-	wlSelectionId id;
+	/* FIXME: need for hack purposes....
+	 * stores the last time any activity occured for this buffer*/
+	time_t last_active;
+	/* FIXME: this should not be fucking needed, but for some reason
+	 * we can't close the write end in our process */
+	int offer_fd_write;
 }
 
 struct wlContext {

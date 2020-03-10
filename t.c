@@ -81,6 +81,7 @@ static void on_primary_selection(void *data, struct zwlr_data_control_device_v1 
 	}
 	if (id != offer)
 		return;
+	bool write_closed = false;
 	int fds[2];
 	pipe(fds);
 	zwlr_data_control_offer_v1_receive(id, "STRING", fds[1]);
@@ -99,11 +100,13 @@ static void on_primary_selection(void *data, struct zwlr_data_control_device_v1 
 		if (pfd.revents & POLLIN) {
 			ret = read(fds[0], &buf, 1);
 			if (ret < 1) {
+				fprintf(stderr, "READ %d, breaking\n", ret);
 				break;
 			}
 			++recvd;
 			putc(buf, stderr);
 		}if (pfd.revents & POLLHUP) {
+			fprintf(stderr, "GOT HUP");
 			break;
 		}
 	}
