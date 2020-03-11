@@ -72,6 +72,10 @@ static void on_finished(void *data, struct zwlr_data_control_device_v1 *device)
 {
 	fprintf(stderr, "on_finished\n");
 }
+static int offer_fd[2] = {
+	-1,
+	-1
+};
 static void on_primary_selection(void *data, struct zwlr_data_control_device_v1 *device, struct zwlr_data_control_offer_v1 *id)
 {
 	fprintf(stderr, "on_primary_selection\n");
@@ -81,43 +85,17 @@ static void on_primary_selection(void *data, struct zwlr_data_control_device_v1 
 	}
 	if (id != offer)
 		return;
-	bool write_closed = false;
-	int fds[2];
-	pipe(fds);
-	zwlr_data_control_offer_v1_receive(id, "STRING", fds[1]);
-	char buf;
-	ssize_t count;
-	fprintf(stderr, "GOT DATA: FOLLOWS\n");
-	wl_display_roundtrip(display);
-	struct pollfd pfd = {
-		fds[0],
-		POLLIN | POLLHUP,
-		0
-	};
-	int ret;
-	int recvd = 0;
-	while((ret = poll(&pfd, 1, 1)) > 0) {
-		if (pfd.revents & POLLIN) {
-			ret = read(fds[0], &buf, 1);
-			if (ret < 1) {
-				fprintf(stderr, "READ %d, breaking\n", ret);
-				break;
-			}
-			++recvd;
-			putc(buf, stderr);
-		}if (pfd.revents & POLLHUP) {
-			fprintf(stderr, "GOT HUP");
-			break;
-		}
+	if (offer_fd[0]) {
+		fprintf(stderr, "CLOSING OLD OFFER FD %d\n", offer_fd[0]);
+		close(offer_fd[0]);
 	}
-
-	if (recvd) {
-		fprintf(stderr, "\nGOT %d BYTES\n", recvd);
-	} else {
-		fprintf(stderr, "Returned %d we fucked\n", ret);
+	if (offer_fd[1]) {
+		fprintf(stderr, "CLOSING OLD OFFER FD %d\n", offer_fd[1]);
+		close(offer_fd[1]);
 	}
-	close(fds[0]);
-	close(fds[1]);
+	pipe(offer_fd);
+	zwlr_data_control_offer_v1_receive(id, "STRING", offer_fd[1]);
+	fprintf(stderr, "GOT DATA\n");
 }
 
 static struct zwlr_data_control_device_v1_listener data_control_listener = {
@@ -143,7 +121,33 @@ int main(int argc, char **argv)
 	}
 	zwlr_data_control_device_v1_add_listener(data_control, &data_control_listener, NULL);
 	while (1) {
-		wl_display_dispatch(display);
+		int ret;
+		int nfds = 1;
+		struct pollfd pfd[2];
+		pfd[0].fd = wl_display_get_fd(display);
+		pfd[0].events = POLLIN;
+		if (offer_fd[0] != -1) {
+			pfd[1].fd = offer_fd[0];
+			pfd[1].events = POLLIN | POLLHUP;
+			nfds = 2;
+		}
+		if ((ret = poll(pfd, nfds, 1000)) < 0) {
+			return -1;
+		} else if (ret == 0) {
+			wl_display_flush(display);
+			continue;
+		}
+		if (pfd[0].revents & POLLIN) {
+			wl_display_dispatch(display);
+		}
+		if ((nfds > 1) && (pfd[1].revents & POLLIN)) {
+			char buf;
+			read(pfd[1].fd, &buf, 1);
+			putc(buf, stderr);
+		}
+		if ((nfds > 1) && pfd[1].revents & POLLHUP) {
+			fprintf(stderr, "GOT HANGUP ON DATA OFFER\n");
+		}
 	}
 	return 0;
 }

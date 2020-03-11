@@ -47,7 +47,6 @@ enum wlSelectionFormat {
 #define WL_SELECTION_FORMAT_MIMES { "text/plain", NULL };
 extern  char **wlSelectionFormatMimes;
 
-extern 
 
 struct wlSelectionBuffer {
 	unsigned char *data;
