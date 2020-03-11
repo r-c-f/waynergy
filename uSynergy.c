@@ -488,6 +488,7 @@ static void sProcessMessage(uSynergyContext *context, const uint8_t *message)
 	{
 		// Keepalive, reply with CALV and then CNOP
 		//		kMsgCKeepAlive		= "CALV"
+		logDbg("Got CALV");
 		sAddString(context, "CALV");
 		sSendReply(context);
 		// now reply with CNOP

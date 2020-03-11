@@ -25,12 +25,16 @@ extern struct wlContext wlContext;
 
 static bool syn_connect(uSynergyCookie cookie)
 {
+	struct addrinfo *h;
+	uSynergyContext *syn_ctx = cookie;
+	logDbg("syn_connect trying to connect");
 	synNetDisconnect();
-	for (; hostinfo; hostinfo = hostinfo->ai_next) {
-		if ((synsock = socket(hostinfo->ai_family, hostinfo->ai_socktype, hostinfo->ai_protocol)) == -1)
+	for (h = hostinfo; h; h = h->ai_next) {
+		if ((synsock = socket(h->ai_family, h->ai_socktype, h->ai_protocol)) == -1)
 			continue;
-		if (connect(synsock, hostinfo->ai_addr, hostinfo->ai_addrlen))
+		if (connect(synsock, h->ai_addr, h->ai_addrlen))
 			continue;
+		syn_ctx->m_lastMessageTime = syn_ctx->m_getTimeFunc();
 		return true;
 	}
 	return false;

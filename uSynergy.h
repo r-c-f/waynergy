@@ -28,6 +28,7 @@ freely, subject to the following restrictions:
 #include <stdio.h>
 #include <stdint.h>
 #include <stdbool.h>
+#include "log.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
