@@ -23,6 +23,7 @@ extern char *clipMonitorPath[2];
 /* wl-paste pids -- so we can kill them off later */
 extern pid_t clipMonitorPid[2];
 
+
 /* spawn wl-paste monitor processes */
 bool clipSpawnMonitors(void);
 /* convert a file descriptor to a clipboard ID */

@@ -3,6 +3,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <signal.h>
+#include <sys/types.h>
+#include <sys/wait.h>
 #include <poll.h>
 #include "xmem.h"
 #include "fdio_full.h"
@@ -107,13 +109,17 @@ void wl_output_update_cb(struct wlContext *context)
 	wlResUpdate(&wlContext, width, height);
 }
 
+static volatile sig_atomic_t cleaning_up = false;
 static void cleanup(void)
 {
+	cleaning_up = true;
 	wlIdleInhibit(&wlContext, false);
 	/* stop clipbpoard monitors */
 	for (int i = 0; i < 2; ++i) {
-		if (clipMonitorPid[i] != -1)
+		if (clipMonitorPid[i] != -1) {
 			kill(clipMonitorPid[i], SIGTERM);
+			waitpid(clipMonitorPid[i], NULL, 0);
+		}
 	}
 	/*close stuff*/
 	synNetDisconnect();
@@ -126,7 +132,7 @@ static void cleanup(void)
 static char **argv_reexec;
 static char *path_reexec;
 
-void sig_handle(int sig)
+void sig_handle(int sig, siginfo_t *si, void *context)
 {
 	switch (sig) {
 		case SIGTERM:
@@ -143,8 +149,21 @@ void sig_handle(int sig)
 			logErr("Could not rexec: %s", strerror(errno));
 			exit(1);
 		case SIGCHLD:
-			logErr("Somethine we spawned died.");
-			//FIXME: should probably use sigaction to get more info here
+			for(int i = 0; i < 2; ++i) {
+				if (clipMonitorPid[i] == si->si_pid) {
+					if (cleaning_up) {
+						logInfo("Monitor %d died as expected", si->si_pid);
+					} else {
+						logErr("Monitor %d died unexpectedly, code %d", si->si_pid, si->si_status);
+					}
+					return;
+				}
+			}
+			if (si->si_status) {
+				logInfo("Process %d died with code %d", si->si_pid, si->si_status);
+			} else {
+				logDbg("Process %d died with code %d", si->si_pid, si->si_status);
+			}
 			break;
 		default:
 			fprintf(stderr, "UNHANDLED SIGNAL: %d\n", sig);
@@ -161,6 +180,7 @@ int main(int argc, char **argv)
 	long optlong;
 	bool optshrt_valid, optlong_valid;
 	bool man_geom = false;
+	struct sigaction sa;
 
 	/* If we are run as swaynergy-clip-update, we're just supposed to write
 	 * to the FIFO */
@@ -246,11 +266,14 @@ opterror:
 		man_geom = true;
 	}
 	/* set up signal handler */
-	signal(SIGTERM, sig_handle);
-	signal(SIGINT, sig_handle);
-	signal(SIGQUIT, sig_handle);
-	signal(SIGUSR1, sig_handle);
-	signal(SIGCHLD, sig_handle);
+	sa.sa_sigaction = sig_handle;
+	sigemptyset(&sa.sa_mask);
+	sa.sa_flags = SA_SIGINFO | SA_RESTART;
+	sigaction(SIGTERM, &sa, NULL);
+	sigaction(SIGINT, &sa, NULL);
+	sigaction(SIGQUIT, &sa, NULL);
+	sigaction(SIGUSR1, &sa, NULL);
+	sigaction(SIGCHLD, &sa, NULL);
 	sigset_t set;
 	sigemptyset(&set);
 	sigaddset(&set, SIGUSR1);
