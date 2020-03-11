@@ -174,8 +174,8 @@ int main(int argc, char **argv)
 	argv_reexec = argv;
 	int opt, optind = 0, optcpos = 0;
 	char *optarg, *port, *name, *host, hostname[HOST_NAME_MAX] = {0};
-	char *logfile = NULL;
-	enum logLevel log_level = LOG_NONE;
+	char *log_path = NULL;
+	enum logLevel log_level;
 	short optshrt;
 	long optlong;
 	bool optshrt_valid, optlong_valid;
@@ -200,6 +200,8 @@ int main(int argc, char **argv)
 	path_reexec = configTryString("path_reexec", NULL);
 	synContext.m_clientWidth = configTryLong("width", 0);
 	synContext.m_clientHeight = configTryLong("height", 0);
+	log_path = configTryString("log/path", NULL);
+	log_level = configTryLong("log/level", LOG_NONE);
 	sopt_usage_set(optspec, argv[0], "Synergy client for wlroots compositors");
 	while ((opt = sopt_getopt(argc, argv, optspec, &optcpos, &optind, &optarg)) != -1) {
 		if (optarg) {
@@ -243,7 +245,7 @@ int main(int argc, char **argv)
 				log_level = optshrt;
 				break;
 			case 'l':
-				logfile = xstrdup(optarg);
+				log_path = xstrdup(optarg);
 				break;
 opterror:
 			default:
@@ -252,7 +254,7 @@ opterror:
 		}
 	}
 	/* set up logging */
-	logInit(log_level, logfile);
+	logInit(log_level, log_path);
 	/* now we decide if we should use manual geom */
 	if (synContext.m_clientWidth || synContext.m_clientHeight) {
 		if (!(synContext.m_clientWidth && synContext.m_clientHeight)) {

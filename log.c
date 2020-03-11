@@ -82,9 +82,6 @@ void logDbg(const char *fmt, ...)
 bool logInit(enum logLevel level, char *path)
 {
 	log_level = level;
-	if (!path) {
-		path = configTryString("log/path", NULL);
-	}
 	if (path) {
 		if (!(log_file = fopen(path, configTryString("log/mode", "w")))) {
 			logErr("Could not open extra logfile at path %s", path);
