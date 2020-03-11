@@ -13,6 +13,8 @@
 #include "os.h"
 #include "xmem.h"
 #include "fdio_full.h"
+#include <spawn.h>
+#include "log.h"
 
 /* wl-paste FIFO file descriptors -- -1, until spawned */
 extern int clipMonitorFd[2];

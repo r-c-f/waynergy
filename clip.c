@@ -5,11 +5,11 @@ char *clipMonitorPath[2];
 pid_t clipMonitorPid[2];
 
 extern uSynergyContext synContext;
+extern char **environ;
 
 /* spawn wl-paste watchers */
 bool clipSpawnMonitors(void)
 {
-	pid_t pid;
 	clipMonitorPath[0] = osGetRuntimePath("swaynergy-cb-fifo");
 	clipMonitorPath[1] = osGetRuntimePath("swaynergy-p-fifo");
 	char *argv_0[] = {
@@ -41,17 +41,11 @@ bool clipSpawnMonitors(void)
 			return false;
 		/* now we spawn */
 		errno = 0;
-		if ((pid = fork()) == -1) {
-			perror("fork");
+		if (posix_spawnp(clipMonitorPid + i,"wl-paste",NULL,NULL,argv[i],environ)) {
+			logErr("Spawn failed: %s", strerror(errno));
+			clipMonitorPid[i] = -1;
 			return false;
-		} else if (!pid) {
-			errno = 0;
-			execvp("wl-paste", argv[i]);
-			perror("execvp");
-			/* we should never arrive here */
-			abort();
 		}
-		clipMonitorPid[i] = pid;
 	}
 	return true;
 }
@@ -91,6 +85,19 @@ void clipMonitorPollProc(struct pollfd *pfd)
 bool clipWlCopy(enum uSynergyClipboardId id, const unsigned char *data, size_t len)
 {
 	pid_t pid;
+	posix_spawn_file_actions_t fa;
+	char *argv_0[] = { 
+			"wl-copy",
+			"-f",
+			NULL};
+
+	char *argv_1[] = {
+			"wl-copy",
+			"-f",
+			"--primary",
+			NULL
+		};
+	char **argv[] = {argv_0, argv_1};
 	/* create the pipe we will use to communicate with it */
 	int fd[2];
 	errno = 0;
@@ -98,27 +105,14 @@ bool clipWlCopy(enum uSynergyClipboardId id, const unsigned char *data, size_t l
 		perror("pipe");
 		return false;
 	}
-        /* now we can spawn and shit */
+	posix_spawn_file_actions_init(&fa);
+	posix_spawn_file_actions_adddup2(&fa, fd[0], STDIN_FILENO);
+	posix_spawn_file_actions_addclose(&fa, fd[1]);
+   	/* now we can spawn */	
 	errno = 0;
-        if ((pid = fork()) == -1) {
-		perror("fork");
-		return false;
-	} else if (!pid) {
-		close(fd[1]);
-		/* we want stdin from the pipe */
-		errno = 0;
-		if (dup2(fd[0], STDIN_FILENO) != STDIN_FILENO) {
-			perror("dup2");
-		}
-                errno = 0;
-                if (id) {
-                        execlp("wl-copy", "wl-copy", "-f", "--primary", NULL);
-                } else {
-                        execlp("wl-copy", "wl-copy", "-f", NULL);
-                }
-		perror("execlp");
-		abort();
-        }
+        if (posix_spawnp(&pid, "wl-copy", &fa, NULL, argv[id], environ)) {
+		logErr("wl-copy spawn failed: %s", strerror(errno));
+	}
 	close(fd[0]);
 	/* write to child process */
 	write_full(fd[1], data, len);
