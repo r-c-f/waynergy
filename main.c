@@ -142,6 +142,10 @@ void sig_handle(int sig)
 			execvp(argv_reexec[0], argv_reexec);
 			logErr("Could not rexec: %s", strerror(errno));
 			exit(1);
+		case SIGCHLD:
+			logErr("Somethine we spawned died.");
+			//FIXME: should probably use sigaction to get more info here
+			break;
 		default:
 			fprintf(stderr, "UNHANDLED SIGNAL: %d\n", sig);
 	}
@@ -246,6 +250,7 @@ opterror:
 	signal(SIGINT, sig_handle);
 	signal(SIGQUIT, sig_handle);
 	signal(SIGUSR1, sig_handle);
+	signal(SIGCHLD, sig_handle);
 	sigset_t set;
 	sigemptyset(&set);
 	sigaddset(&set, SIGUSR1);
