@@ -44,47 +44,41 @@ static bool syn_send(uSynergyCookie cookie, const uint8_t *buf, int len)
 enum net_pollfd_id {
 	POLLFD_WL,
 	POLLFD_SYN,
-	POLLFD_CB,
-	POLLFD_P,
+	POLLFD_SEL_0,
+	POLLFD_SEL_1,
 	POLLFD_COUNT
 };
 static bool syn_recv(uSynergyCookie cookie, uint8_t *buf, int max_len, int *out_len)
 {
 	uint32_t psize;
 	int wlfd = wlPrepareFd(&wlContext);
-	struct pollfd pollfds[] = {
-		/* POLLFD_WL */
-		{
-			.fd = wlfd,
-			.events = POLLIN | POLLHUP,
-			.revents = 0
-		},
-		/* POLLFD_SYN */
-		{
-			.fd = synsock,
-			.events = POLLIN | POLLHUP,
-			.revents = 0
-		},
-		/* POLLFD_CB */
-		{
-			.fd = clipMonitorFd[0],
-			.events = POLLIN | POLLHUP,
-			.revents = 0
-		},
-		/* POLLFD_P */
-		{
-			.fd = clipMonitorFd[1],
-			.events = POLLIN | POLLHUP,
-			.revents = 0
+	int clipfd[2];
+	clipPrepareFd(&wlContext, clipfd);
+	struct pollfd pollfds[POLLFD_COUNT]= {
+	int pfd_slot = POLLFD_SYN;
+	while (1) {
+		pollfds[POLLFD_WL].fd = wlfd;
+		pollfds[POLLFD_WL].events = POLLIN | POLLHUP;
+		pollfds[POLLFD_SYN].fd = synfd;
+		pollfds[POLLFD_SYN].events = POLLIN | POLLHUP;
+		pfd_slot = POLLFD_SYN;
+		for (int i = 0; i < 2; ++i) {
+			if (clipfd[i] != -1) {
+				++pfd_slot;
+				pollfds[pfd_slot].fd = clipfd[i];
+				pollfds[pfd_slot].events = POLLIN | POLLHUP;
+			}
 		}
-	};
-	while (poll(pollfds, POLLFD_COUNT, -1) > 0) {
+		if (poll(pollfds, pfd_slot + 1, -1) < 1) {
+			return false;
+		}
 		if (pollfds[POLLFD_SYN].revents & POLLIN) {
 			break;
 		}
 		wlPollProc(&wlContext, pollfds[POLLFD_WL].revents);
-		clipMonitorPollProc(&pollfds[POLLFD_CB]);
-		clipMonitorPollProc(&pollfds[POLLFD_P]);
+		for (int i = POLLFD_SEL_0; i < (pfd_slot + 1); ++i) {
+			clipPollProc(pollfds + i);
+		}
 	}
 	if (!read_full(synsock, &psize, sizeof(psize))) {
 		perror("read_full");
