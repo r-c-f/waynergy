@@ -1,4 +1,5 @@
 #include "log.h"
+#include "config.h"
 #include "xmem.h"
 #include <time.h>
 #include <stdint.h>
@@ -78,11 +79,18 @@ void logDbg(const char *fmt, ...)
 	log_out_v(LOG_DBG, fmt, ap);
 	va_end(ap);
 }
-bool logInit(enum logLevel level, FILE *logfile)
+bool logInit(enum logLevel level, char *path)
 {
 	log_level = level;
-	if (logfile)
-		log_file = logfile;
+	if (!path) {
+		path = configTryString("log/path", NULL);
+	}
+	if (path) {
+		if (!(log_file = fopen(path, configTryString("log/mode", "w")))) {
+			logErr("Could not open extra logfile at path %s", path);
+			return false;
+		}
+	}
 	logInfo("Log initialized at level %d\n", level);
 	return true;
 }

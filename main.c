@@ -174,7 +174,7 @@ int main(int argc, char **argv)
 	argv_reexec = argv;
 	int opt, optind = 0, optcpos = 0;
 	char *optarg, *port, *name, *host, hostname[HOST_NAME_MAX] = {0};
-	FILE *logfile = NULL;
+	char *logfile = NULL;
 	enum logLevel log_level = LOG_NONE;
 	short optshrt;
 	long optlong;
@@ -243,10 +243,8 @@ int main(int argc, char **argv)
 				log_level = optshrt;
 				break;
 			case 'l':
-				errno = 0;
-				if ((logfile = fopen(optarg, "w+")))
-					break;
-				perror("logfile open");
+				logfile = xstrdup(optarg);
+				break;
 opterror:
 			default:
 			       	sopt_usage_s();

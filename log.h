@@ -15,7 +15,7 @@ enum logLevel {
 	LOG_DBG,
 };
 
-bool logInit(enum logLevel level, FILE *logfile);
+bool logInit(enum logLevel level, char *path);
 void logOut(enum logLevel level, const char *fmt, ...);
 void logErr(const char *fmt, ...);
 void logInfo(const char *fmt, ...);
