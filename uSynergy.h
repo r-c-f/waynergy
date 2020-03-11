@@ -99,7 +99,7 @@ enum uSynergyClipboardFormat
 #define				USYNERGY_PROTOCOL_MAJOR			1				/* Major protocol version */
 #define				USYNERGY_PROTOCOL_MINOR			6				/* Minor protocol version */
 
-#define				USYNERGY_IDLE_TIMEOUT			2000			/* Timeout in milliseconds before reconnecting */
+#define				USYNERGY_IDLE_TIMEOUT			10000			/* Timeout in milliseconds before reconnecting */
 
 #define				USYNERGY_TRACE_BUFFER_SIZE		1024			/* Maximum length of traced message */
 #define				USYNERGY_REPLY_BUFFER_SIZE		1024			/* Maximum size of a reply packet */

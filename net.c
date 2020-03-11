@@ -50,7 +50,9 @@ enum net_pollfd_id {
 };
 static bool syn_recv(uSynergyCookie cookie, uint8_t *buf, int max_len, int *out_len)
 {
+	int ret;
 	uint32_t psize;
+	uSynergyContext *syn_ctx = cookie;
 	int wlfd = wlPrepareFd(&wlContext);
 	struct pollfd pollfds[] = {
 		/* POLLFD_WL */
@@ -78,27 +80,39 @@ static bool syn_recv(uSynergyCookie cookie, uint8_t *buf, int max_len, int *out_
 			.revents = 0
 		}
 	};
-	while (poll(pollfds, POLLFD_COUNT, -1) > 0) {
+	while ((ret = poll(pollfds, POLLFD_COUNT, USYNERGY_IDLE_TIMEOUT)) > 0) {
 		if (pollfds[POLLFD_SYN].revents & POLLIN) {
 			break;
 		}
 		wlPollProc(&wlContext, pollfds[POLLFD_WL].revents);
 		clipMonitorPollProc(&pollfds[POLLFD_CB]);
 		clipMonitorPollProc(&pollfds[POLLFD_P]);
+		if ((syn_ctx->m_getTimeFunc() - syn_ctx->m_lastMessageTime) > USYNERGY_IDLE_TIMEOUT) {
+			logErr("Synergy imeout encountered, read failed");
+			return false;
+		}
 	}
-	if (!read_full(synsock, &psize, sizeof(psize))) {
+	if (!ret) {
+		logErr("Synergy poll timeout");
+		return false;
+	}
+	alarm(USYNERGY_IDLE_TIMEOUT/1000);
+	if (!read_full_i(synsock, &psize, sizeof(psize))) {
 		perror("read_full");
 		return false;
 	}
+	alarm(0);
 	memmove(buf, &psize, sizeof(psize));
 	buf += 4;
 	max_len -=4;
 	*out_len = 4;
 	psize = ntohl(psize);
-	if (!read_full(synsock, buf, psize)) {
+	alarm(USYNERGY_IDLE_TIMEOUT/1000);
+	if (!read_full_i(synsock, buf, psize)) {
 		perror("read_full");
 		return false;
 	}
+	alarm(0);
 	*out_len += psize;
 	return true;
 }

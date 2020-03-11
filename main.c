@@ -135,6 +135,9 @@ static char *path_reexec;
 void sig_handle(int sig, siginfo_t *si, void *context)
 {
 	switch (sig) {
+		case SIGALRM:
+			logErr("Alarm timeout encountered -- probably disconnecting");
+			break;
 		case SIGTERM:
 		case SIGINT:
 		case SIGQUIT:
@@ -193,6 +196,7 @@ int main(int argc, char **argv)
 	gethostname(hostname, HOST_NAME_MAX - 1);
 
 	uSynergyInit(&synContext);
+	synContext.m_cookie = &synContext;
 	/* Load defaults for everything */
 	port = configTryString("port", "24800");
 	host = configTryString("host", "localhost");
@@ -268,7 +272,11 @@ opterror:
 	/* set up signal handler */
 	sa.sa_sigaction = sig_handle;
 	sigemptyset(&sa.sa_mask);
-	sa.sa_flags = SA_SIGINFO | SA_RESTART;
+	//alarm should trigger EINTR
+	sa.sa_flags = SA_SIGINFO;
+	sigaction(SIGALRM, &sa, NULL);
+	//otherse can restart
+	sa.sa_flags |= SA_RESTART;
 	sigaction(SIGTERM, &sa, NULL);
 	sigaction(SIGINT, &sa, NULL);
 	sigaction(SIGQUIT, &sa, NULL);
@@ -280,6 +288,7 @@ opterror:
 	sigaddset(&set, SIGTERM);
 	sigaddset(&set, SIGINT);
 	sigaddset(&set, SIGQUIT);
+	sigaddset(&set, SIGALRM);
 	sigprocmask(SIG_UNBLOCK, &set, NULL);
 	/* we can't override const, so set hostname here*/
 	synContext.m_clientName = name;
