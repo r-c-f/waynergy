@@ -113,7 +113,7 @@ bool clipWlCopy(enum uSynergyClipboardId id, const unsigned char *data, size_t l
         if (posix_spawnp(&pid, "wl-copy", &fa, NULL, argv[id], environ)) {
 		logErr("wl-copy spawn failed: %s", strerror(errno));
 		close(fd[0]);
-		clsoe(fd[1]);
+		close(fd[1]);
 		return false;
 	}
 	close(fd[0]);
