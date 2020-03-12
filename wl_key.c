@@ -28,89 +28,36 @@ static inline uint32_t wlModConvert(uint32_t smod)
         return xmod;
 }
 
-/* Code to handle intrinsic masks
+/* Code to track keyboard state for modifier masks
  * because the synergy protocol is less than ideal at sending us modifiers
 */
-static long *local_mod = NULL;
-static size_t local_mod_len = 0;
+static struct xkb_context *xkb_ctx;
+static struct xkb_keymap *xkb_map;
+static struct xkb_state *xkb_state;
+
 
 static bool local_mod_init(char *keymap_str) {
-#ifdef USE_INTRINSIC_MASK
-        char **lines;
-        size_t i, l, k;
-        long key;
-        char *conf[] = {
-                "intrinsic_mask/shift",
-                "intrinsic_mask/control",
-                "intrinsic_mask/alt",
-                "intrinsic_mask/meta",
-                "intrinsic_mask/super",
-                NULL
-        };
-        uint32_t masks[] = {
-                XMOD_SHIFT,
-                XMOD_CONTROL,
-                XMOD_ALT,
-                XMOD_META,
-                XMOD_SUPER,
-                0
-        };
-	struct xkb_context *ctx = xkb_context_new(XKB_CONTEXT_NO_FLAGS);
-	if (!ctx) {
+	xkb_ctx = xkb_context_new(XKB_CONTEXT_NO_FLAGS);
+	if (!xkb_ctx) {
 		return false;
 	}
-	struct xkb_keymap *map = xkb_keymap_new_from_string(ctx, keymap_str, XKB_KEYMAP_FORMAT_TEXT_V1, XKB_KEYMAP_COMPILE_NO_FLAGS);
-	if (!map) {
-		xkb_context_unref(ctx);
+	xkb_map = xkb_keymap_new_from_string(xkb_ctx, keymap_str, XKB_KEYMAP_FORMAT_TEXT_V1, XKB_KEYMAP_COMPILE_NO_FLAGS);
+	if (!xkb_map) {
+		xkb_context_unref(xkb_ctx);
 		return false;
 	}
-        //start off with something sensible -- 255 seems good
-        local_mod_len = 256;
-        local_mod = xcalloc(sizeof(*local_mod), local_mod_len);
-        for (i = 0; conf[i] && masks[i]; ++i) {
-                if (!(lines = configReadLines(conf[i])))
-                        continue;
-                for (l = 0; lines[l]; ++l) {
-			/* strip newlines */
-			for (k = 0; lines[l][k]; ++k) {
-				if (lines[l][k] == '\n') {
-					lines[l][k] = '\0';
-					break;
-				}
-			}
-                        key = xkb_keymap_key_by_name(map, lines[l]);
-                        if (key == XKB_KEYCODE_INVALID)
-                                continue;
-                        /* resize array if needed */
-                        if (key >= local_mod_len) {
-                                local_mod = xrealloc(local_mod, sizeof(*local_mod) * (key + 1));
-                                /* be sure to zero all that shit */
-                                memset(local_mod + local_mod_len, 0, (key + 1) - local_mod_len);
-                                local_mod_len = key + 1;
-                        }
-                        /* now we process as normal */
-                        local_mod[key] |= masks[i];
-			logDbg("Got intrinsic mask for key %s (%ld): %lx", lines[l], key, local_mod[key]);
-                }
-                strfreev(lines);
-        }
-	xkb_map_unref(map);
-	xkb_context_unref(ctx);
-#endif
+	xkb_state = xkb_state_new(xkb_map);
+	if (!xkb_state) {
+		xkb_map_unref(xkb_map);
+		xkb_context_unref(xkb_ctx);
+		return false;
+	}
+
         return true;
 }
 
 
 
-static inline long intrinsic_mask(int key)
-{
-#ifdef USE_INTRINSIC_MASK
-        if (key < local_mod_len) {
-                return local_mod[key];
-        }
-#endif
-        return 0;
-}
 /* create a layout file descriptor */
 int wlLoadConfLayout(struct wlContext *ctx)
 {
@@ -144,7 +91,6 @@ int wlLoadConfLayout(struct wlContext *ctx)
         }
         strcpy(ptr, keymap_str);
         zwp_virtual_keyboard_v1_keymap(ctx->keyboard, WL_KEYBOARD_KEYMAP_FORMAT_XKB_V1, fd, keymap_size);
-	/* intrinsic mask  hack initialize */
 	local_mod_init(keymap_str);
 done:
         free(keymap_str);
@@ -153,21 +99,13 @@ done:
 
 void wlKey(struct wlContext *ctx, int key, int state, uint32_t mask)
 {
-        key -= 8;
-        int xkb_sym;
-        uint32_t xmodmask = wlModConvert(mask);
-        if ((key & 0xE000) == 0xE000) {
-                xkb_sym = key + 0x1000;
-        } else {
-                xkb_sym = key;
-        }
-        logDbg("Got modifier mask: %" PRIx32, xmodmask);
-        xmodmask |= intrinsic_mask(key + 8);
-	logDbg("With intrinsic mask: %" PRIx32, xmodmask);
-        zwp_virtual_keyboard_v1_modifiers(ctx->keyboard, xmodmask, 0, 0, 0);
-        zwp_virtual_keyboard_v1_key(ctx->keyboard, wlTS(ctx), xkb_sym, state);
-        if (!state) {
-                zwp_virtual_keyboard_v1_modifiers(ctx->keyboard, 0, 0, 0, 0);
-        }
+	xkb_state_update_key(xkb_state, key, state);
+	xkb_mod_mask_t depressed = xkb_state_serialize_mods(xkb_state, XKB_STATE_MODS_DEPRESSED);
+	xkb_mod_mask_t latched = xkb_state_serialize_mods(xkb_state, XKB_STATE_MODS_LATCHED);
+        xkb_mod_mask_t locked = xkb_state_serialize_mods(xkb_state, XKB_STATE_MODS_LOCKED);
+	xkb_layout_index_t group = xkb_state_serialize_layout(xkb_state, XKB_STATE_LAYOUT_EFFECTIVE);
+	logDbg("depressed: %x latched: %x locked: %x group: %x", depressed, latched, locked, group);
+        zwp_virtual_keyboard_v1_modifiers(ctx->keyboard, depressed, latched, locked, group);
+	zwp_virtual_keyboard_v1_key(ctx->keyboard, wlTS(ctx), key - 8, state);
         wl_display_flush(ctx->display);
 }
