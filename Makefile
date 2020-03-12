@@ -1,4 +1,4 @@
-CFLAGS+=-DUSE_INTRINSIC_MASK -D_GNU_SOURCE -DUSYNERGY_LITTLE_ENDIAN
+CFLAGS+=-D_GNU_SOURCE -DUSYNERGY_LITTLE_ENDIAN
 LDFLAGS=-lwayland-client -lxkbcommon
 PROT_H=wlr-virtual-pointer-unstable-v1.prot.h virtual-keyboard-unstable-v1.prot.h xdg-output-unstable-v1.prot.h
 PROT_C=$(PROT_H:h=c)
