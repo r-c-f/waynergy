@@ -130,48 +130,45 @@ static void cleanup(void)
 }
 
 static char **argv_reexec;
-static char *path_reexec;
+
+void Exit()
+{
+	cleanup();
+	exit(EXIT_SUCCESS);
+}
+
+void Restart(void)
+{
+	cleanup();
+	errno = 0;
+	execvp(argv_reexec[0], argv_reexec);
+	logErr("Could not re-exec: %s", strerror(errno));
+	exit(EXIT_FAILURE);
+}
 
 void sig_handle(int sig, siginfo_t *si, void *context)
 {
+
 	switch (sig) {
 		case SIGALRM:
-			logErr("Alarm timeout encountered -- probably disconnecting");
+			logOutSig(LOG_ERR, "Alarm timeout encountered -- probably disconnecting");
 			break;
 		case SIGTERM:
 		case SIGINT:
 		case SIGQUIT:
-			logInfo("Received signal %d, cleaning up", sig);
-			cleanup();
-			exit(0);
+			sigDoExit = sig;
+			break;
 		case SIGUSR1:
-			logInfo("Receieved SIGUSR1, restarting as '%s'", argv_reexec[0]);
-			cleanup();
-			errno = 0;
-			execvp(argv_reexec[0], argv_reexec);
-			logErr("Could not rexec: %s", strerror(errno));
-			exit(1);
+			sigDoRestart = true;
+			break;
 		case SIGCHLD:
-			for(int i = 0; i < 2; ++i) {
-				if (clipMonitorPid[i] == si->si_pid) {
-					if (cleaning_up) {
-						logInfo("Monitor %d died as expected", si->si_pid);
-					} else {
-						logErr("Monitor %d died unexpectedly, code %d", si->si_pid, si->si_status);
-					}
-					return;
-				}
-			}
-			if (si->si_status) {
-				logInfo("Process %d died with code %d", si->si_pid, si->si_status);
-			} else {
-				logDbg("Process %d died with code %d", si->si_pid, si->si_status);
-			}
+			logOutSig(LOG_INFO, "Child died.");
 			break;
 		default:
-			fprintf(stderr, "UNHANDLED SIGNAL: %d\n", sig);
+			logOutSig(LOG_ERR, "Unhandled signal");
 	}
 }
+
 int main(int argc, char **argv)
 {
 	argv_reexec = argv;
@@ -201,7 +198,6 @@ int main(int argc, char **argv)
 	port = configTryString("port", "24800");
 	host = configTryString("host", "localhost");
 	name = configTryString("name", hostname);
-	path_reexec = configTryString("path_reexec", NULL);
 	synContext.m_clientWidth = configTryLong("width", 0);
 	synContext.m_clientHeight = configTryLong("height", 0);
 	log_path = configTryString("log/path", NULL);

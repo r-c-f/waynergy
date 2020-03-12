@@ -5,11 +5,11 @@
 #include <stdint.h>
 #include <inttypes.h>
 #include <assert.h>
-
+#include "fdio_full.h"
 static enum logLevel log_level = LOG_NONE;
 
 static FILE *log_file;
-
+static int log_file_fd;
 
 static void log_print_ts(FILE *out)
 {
@@ -30,7 +30,6 @@ static char *log_level_get_str(enum logLevel level)
 	assert(level < (sizeof(log_level_str)/sizeof(*log_level_str)));
 	return log_level_str[level];
 }
-
 static void log_out_v_(FILE *f, enum logLevel level, const char *fmt, va_list ap)
 {
 	size_t i;
@@ -50,6 +49,18 @@ static void log_out_v(enum logLevel level, const char *fmt, va_list ap)
 	if (log_file)
 		log_out_v_(log_file, level, fmt, ap);
 }
+static void log_out_ss(enum logLevel level, const char *msg)
+{
+	char lf = '\n';
+	if (level > log_level)
+		return;
+	write_full(STDERR_FILENO, msg, strlen(msg));
+	write_full(STDERR_FILENO, &lf, 1);
+	if (log_file) {
+		write_full(log_file_fd, msg, strlen(msg));
+		write_full(log_file_fd, &lf, 1);
+	}
+}
 
 void logOut(enum logLevel level, const char *fmt, ...)
 {
@@ -57,6 +68,10 @@ void logOut(enum logLevel level, const char *fmt, ...)
 	va_start(ap, fmt);
 	log_out_v(level, fmt, ap);
 	va_end(ap);
+}
+void logOutSig(enum logLevel level, const char *msg)
+{
+	log_out_ss(level, msg);
 }
 void logErr(const char *fmt, ...)
 {
@@ -87,6 +102,7 @@ bool logInit(enum logLevel level, char *path)
 			logErr("Could not open extra logfile at path %s", path);
 			return false;
 		}
+		log_file_fd = fileno(log_file);
 	}
 	logInfo("Log initialized at level %d\n", level);
 	return true;

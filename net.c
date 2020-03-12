@@ -18,6 +18,9 @@
 #include <netdb.h>
 #include <time.h>
 
+volatile sig_atomic_t sigDoExit = 0;
+volatile sig_atomic_t sigDoRestart = 0;
+
 static struct addrinfo *hostinfo;
 static int synsock = -1;
 extern struct wlContext wlContext;
@@ -85,16 +88,32 @@ static bool syn_recv(uSynergyCookie cookie, uint8_t *buf, int max_len, int *out_
 		}
 	};
 	while ((ret = poll(pollfds, POLLFD_COUNT, USYNERGY_IDLE_TIMEOUT)) > 0) {
+		if (sigDoExit || sigDoRestart) 
+			break;
 		if (pollfds[POLLFD_SYN].revents & POLLIN) {
 			break;
 		}
 		wlPollProc(&wlContext, pollfds[POLLFD_WL].revents);
+		if (sigDoExit || sigDoRestart) 
+			break;
 		clipMonitorPollProc(&pollfds[POLLFD_CB]);
+		if (sigDoExit || sigDoRestart) 
+			break;
 		clipMonitorPollProc(&pollfds[POLLFD_P]);
+		if (sigDoExit || sigDoRestart) 
+			break;
 		if ((syn_ctx->m_getTimeFunc() - syn_ctx->m_lastMessageTime) > USYNERGY_IDLE_TIMEOUT) {
 			logErr("Synergy imeout encountered, read failed");
 			return false;
 		}
+	}
+	if (sigDoExit) {
+		logInfo("Exit signal %d received, exiting...", (int)sigDoExit);
+		Exit();
+	}
+	if (sigDoRestart) {
+		logInfo("Restart signal received, restarting...");
+		Restart();
 	}
 	if (!ret) {
 		logErr("Synergy poll timeout");

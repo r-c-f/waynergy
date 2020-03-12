@@ -17,6 +17,8 @@ enum logLevel {
 
 bool logInit(enum logLevel level, char *path);
 void logOut(enum logLevel level, const char *fmt, ...);
+/* signal-safe version of logOut */
+void logOutSig(enum logLevel level, const char *msg);
 void logErr(const char *fmt, ...);
 void logInfo(const char *fmt, ...);
 void logDbg(const char *fmt, ...);
