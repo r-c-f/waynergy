@@ -56,45 +56,7 @@ each file named for the setting, because parsing is for those who are not lazy.
 The basics are `port`, `host`, `name`, `width`, and `height`, which do exactly
 what the command line option would do. 
 
-#### Modifier keys
-
-Synergy has a habit of setting the modifier mask for a given key on *release*.
-To get around this, we support the notion of an intrinsic mask, where a given
-keycode will trigger the modifier mask update on its own. To make use of this,
-add one xkbcommon name per line in the following files in the `intrinsic_mask` 
-folder:
-
-* `alt`
-* `control`
-* `meta`
-* `shift`
-* `super`
-
-Decent-enough defaults would probably be
-##### alt
-```
-LALT
-RALT
-```
-##### control
-```
-LCTL
-RCTL
-```
-##### shift
-```
-LFSH
-RTSH
-```
-##### super
-```
-LWIN
-RWIN
-```
-
-I don't have a use for meta, but maybe somebody does. 
-
-#### General keymap
+#### Keymap
 
 There's also an xkb format keymap to provide, if the default is not sufficient;
 it should be placed in `xkb_keymap`. The easiest way to obtain this if the
