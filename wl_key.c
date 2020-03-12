@@ -89,6 +89,9 @@ done:
 
 void wlKey(struct wlContext *ctx, int key, int state)
 {
+	if (!key_press_counts[key] && !state) {
+		return;
+	}
 	key_press_counts[key] += state ? 1 : -1;
 	xkb_state_update_key(xkb_state, key, state);
 	xkb_mod_mask_t depressed = xkb_state_serialize_mods(xkb_state, XKB_STATE_MODS_DEPRESSED);
@@ -104,7 +107,9 @@ void wlKeyReleaseAll(struct wlContext *ctx)
 {
 	size_t i;
 	for (i = 0; i < key_press_len; ++i) {
-		while (key_press_counts[i])
+		while (key_press_counts[i]) {
+			logDbg("Release all: key %zd, pressed %d times", i, key_press_counts[i]);
 			wlKey(ctx, i, 0);
+		}
 	}
 }
