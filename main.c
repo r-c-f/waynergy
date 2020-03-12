@@ -57,7 +57,7 @@ static void syn_mouse_move_cb(uSynergyCookie cookie, bool rel, int16_t x, int16_
 static void syn_key_cb(uSynergyCookie cookie, uint16_t key, uint16_t mod, bool down, bool repeat)
 {
 	if (!repeat)
- 		wlKey(&wlContext, key, down, mod);
+ 		wlKey(&wlContext, key, down);
 }
 static void syn_trace(uSynergyCookie cookie, const char *text)
 {

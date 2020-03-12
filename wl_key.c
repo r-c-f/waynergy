@@ -3,30 +3,6 @@
 #include "log.h"
 #include <xkbcommon/xkbcommon.h>
 
-#define XMOD_SHIFT              0x0001
-#define XMOD_CONTROL            0x0004
-#define XMOD_ALT                0x0008
-#define XMOD_META               0x0008
-#define XMOD_SUPER              0x0040
-
-static uint32_t smod_to_xmod[][2] = {
-        {USYNERGY_MODIFIER_SHIFT, XMOD_SHIFT},
-        {USYNERGY_MODIFIER_CTRL, XMOD_CONTROL},
-        {USYNERGY_MODIFIER_ALT, XMOD_ALT},
-        {USYNERGY_MODIFIER_META, XMOD_META},
-        {USYNERGY_MODIFIER_WIN, XMOD_SUPER},
-        {0,0}
-};
-static inline uint32_t wlModConvert(uint32_t smod)
-{
-        uint32_t xmod = 0;
-        int i;
-        for (i = 0; smod_to_xmod[i][0] && smod_to_xmod[i][1]; ++i) {
-                if (smod & smod_to_xmod[i][0])
-                        xmod |= smod_to_xmod[i][1];
-        }
-        return xmod;
-}
 
 /* Code to track keyboard state for modifier masks
  * because the synergy protocol is less than ideal at sending us modifiers
@@ -97,7 +73,7 @@ done:
         return ret;
 }
 
-void wlKey(struct wlContext *ctx, int key, int state, uint32_t mask)
+void wlKey(struct wlContext *ctx, int key, int state)
 {
 	xkb_state_update_key(xkb_state, key, state);
 	xkb_mod_mask_t depressed = xkb_state_serialize_mods(xkb_state, XKB_STATE_MODS_DEPRESSED);
