@@ -68,4 +68,5 @@ extern void wlMouseButtonDown(struct wlContext *context, int button);
 extern void wlMouseButtonUp(struct wlContext *context, int button);
 extern void wlMouseWheel(struct wlContext *context, signed short dx, signed short dy);
 extern void wlKey(struct wlContext *context, int key, int state);
+extern void wlKeyReleaseAll(struct wlContext *context);
 extern void wlIdleInhibit(struct wlContext *context, bool on);

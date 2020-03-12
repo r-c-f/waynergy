@@ -4,6 +4,15 @@
 #include <xkbcommon/xkbcommon.h>
 
 
+
+/* keep track of every key pressed, and how many times it has been pressed. 
+ * This will allow us to avoid the problem of stuck keys should we exit the
+ * screen with something still pressed for some reason, which you wouldn't
+ * encounter with the mouse, but with the keyboard shortcut? Probably*/
+static int *key_press_counts;
+static size_t key_press_len;
+
+
 /* Code to track keyboard state for modifier masks
  * because the synergy protocol is less than ideal at sending us modifiers
 */
@@ -28,7 +37,12 @@ static bool local_mod_init(char *keymap_str) {
 		xkb_context_unref(xkb_ctx);
 		return false;
 	}
-
+	/* initialize keystats */
+	if (key_press_counts) {
+		free(key_press_counts);
+	}
+	key_press_len = xkb_keymap_max_keycode(xkb_map) + 1;
+	key_press_counts = xcalloc(key_press_len, sizeof(*key_press_counts));
         return true;
 }
 
@@ -75,6 +89,7 @@ done:
 
 void wlKey(struct wlContext *ctx, int key, int state)
 {
+	key_press_counts[key] += state ? 1 : -1;
 	xkb_state_update_key(xkb_state, key, state);
 	xkb_mod_mask_t depressed = xkb_state_serialize_mods(xkb_state, XKB_STATE_MODS_DEPRESSED);
 	xkb_mod_mask_t latched = xkb_state_serialize_mods(xkb_state, XKB_STATE_MODS_LATCHED);
@@ -84,4 +99,12 @@ void wlKey(struct wlContext *ctx, int key, int state)
         zwp_virtual_keyboard_v1_modifiers(ctx->keyboard, depressed, latched, locked, group);
 	zwp_virtual_keyboard_v1_key(ctx->keyboard, wlTS(ctx), key - 8, state);
         wl_display_flush(ctx->display);
+}
+void wlKeyReleaseAll(struct wlContext *ctx)
+{
+	size_t i;
+	for (i = 0; i < key_press_len; ++i) {
+		while (key_press_counts[i])
+			wlKey(ctx, i, 0);
+	}
 }

@@ -108,6 +108,12 @@ void wl_output_update_cb(struct wlContext *context)
 	uSynergyUpdateRes(&synContext, width, height);
 	wlResUpdate(&wlContext, width, height);
 }
+static void syn_active_cb(uSynergyCookie cookie, bool active)
+{
+	if (!active) {
+		wlKeyReleaseAll(&wlContext);
+	}
+}
 
 static volatile sig_atomic_t cleaning_up = false;
 static void cleanup(void)
@@ -300,6 +306,7 @@ opterror:
 	synContext.m_traceFunc = syn_trace;
 	synContext.m_clipboardCallback = syn_clip_cb;
 	synContext.m_screensaverCallback = syn_screensaver_cb;
+	synContext.m_screenActiveCallback = syn_active_cb;
 	/* wayland context events */
 	//first zero everything
 	memset(&wlContext, 0, sizeof(wlContext));
