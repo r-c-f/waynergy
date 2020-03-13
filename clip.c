@@ -7,6 +7,33 @@ pid_t clipMonitorPid[2];
 extern uSynergyContext synContext;
 extern char **environ;
 
+/* check for wl-clipboard's presence */
+bool clipHaveWlClipboard(void)
+{
+	pid_t pid;
+	int ret;
+	char *argv_0[] = {
+		"wl-paste",
+		"-v",
+		NULL
+	};
+	char *argv_1[] = {
+		"wl-copy",
+		"-v",
+		NULL
+	};
+	char **argv[] = {argv_0, argv_1};
+	for (int i = 0; i < 2; ++i) {
+		if (posix_spawnp(&pid, argv[i][0], NULL, NULL, argv[i], environ))
+			return false;
+		if (waitpid(pid, &ret, 0) != pid)
+			return false;
+		if (ret)
+			return false;
+	}
+	return true;
+}
+
 /* spawn wl-paste watchers */
 bool clipSpawnMonitors(void)
 {

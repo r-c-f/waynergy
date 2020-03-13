@@ -11,6 +11,7 @@
 enum logLevel {
 	LOG_NONE = 0,
 	LOG_ERR,
+	LOG_WARN,
 	LOG_INFO,
 	LOG_DBG,
 };
@@ -20,6 +21,7 @@ void logOut(enum logLevel level, const char *fmt, ...);
 /* signal-safe version of logOut */
 void logOutSig(enum logLevel level, const char *msg);
 void logErr(const char *fmt, ...);
+void logWarn(const char *fmt, ...);
 void logInfo(const char *fmt, ...);
 void logDbg(const char *fmt, ...);
 void logClose(void);

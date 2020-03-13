@@ -24,6 +24,7 @@ static char *log_level_get_str(enum logLevel level)
 	static char *log_level_str[] = {
 		"NONE",
 		"ERROR",
+		"WARN",
 		"INFO",
 		"DEBUG"
 	};
@@ -78,6 +79,13 @@ void logErr(const char *fmt, ...)
 	va_list ap;
 	va_start(ap, fmt);
 	log_out_v(LOG_ERR, fmt, ap);
+	va_end(ap);
+}
+void logWarn(const char *fmt, ...)
+{
+	va_list ap;
+	va_start(ap, fmt);
+	log_out_v(LOG_WARN, fmt, ap);
 	va_end(ap);
 }
 void logInfo(const char *fmt, ...)

@@ -147,7 +147,7 @@ int main(int argc, char **argv)
 	synContext.m_clientWidth = configTryLong("width", 0);
 	synContext.m_clientHeight = configTryLong("height", 0);
 	log_path = configTryString("log/path", NULL);
-	log_level = configTryLong("log/level", LOG_NONE);
+	log_level = configTryLong("log/level", LOG_WARN);
 	sopt_usage_set(optspec, argv[0], "Synergy client for wlroots compositors");
 	while ((opt = sopt_getopt(argc, argv, optspec, &optcpos, &optind, &optarg)) != -1) {
 		if (optarg) {
@@ -225,7 +225,6 @@ opterror:
 	synContext.m_mouseWheelCallback = syn_mouse_wheel_cb;
 	synContext.m_keyboardCallback = syn_key_cb;
 	synContext.m_traceFunc = syn_trace;
-	synContext.m_clipboardCallback = syn_clip_cb;
 	synContext.m_screensaverCallback = syn_screensaver_cb;
 	synContext.m_screenActiveCallback = syn_active_cb;
 	/* wayland context events */
@@ -234,8 +233,13 @@ opterror:
 	//now callbacks
 	wlContext.on_output_update = man_geom ? NULL : wl_output_update_cb;
 	/*run*/
-	if(!clipSpawnMonitors())
-		return 3;
+	if (clipHaveWlClipboard()) {
+		synContext.m_clipboardCallback = syn_clip_cb;
+		if(!clipSpawnMonitors())
+			return 3;
+	} else {
+		logWarn("wl-clipboard not found, no clipboard synchronization support");
+	}
 	wlSetup(&wlContext, synContext.m_clientWidth, synContext.m_clientHeight);
 	wlIdleInhibit(&wlContext, true);
 	while(1) uSynergyUpdate(&synContext);

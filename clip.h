@@ -5,6 +5,7 @@
 #include <fcntl.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/wait.h>
 #include <unistd.h>
 #include <poll.h>
 #include <stdint.h>
@@ -24,6 +25,8 @@ extern char *clipMonitorPath[2];
 extern pid_t clipMonitorPid[2];
 
 
+/* check if wl-clipboard is even present */
+bool clipHaveWlClipboard(void);
 /* spawn wl-paste monitor processes */
 bool clipSpawnMonitors(void);
 /* convert a file descriptor to a clipboard ID */
