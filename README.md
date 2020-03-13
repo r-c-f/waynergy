@@ -11,7 +11,6 @@ support). Not ready for primetime (by any means) but maybe useful to somebody
 * wayland, including wayland-scanner and the base protocols
 * libxkbcommon
 * A compositor making use of [wlroots](https://github.com/swaywm/wlroots)
-* [wl-clipboard](https://github.com/bugaevc/wl-clipboard) for clipboard support
 
 ### Building
 
@@ -93,13 +92,8 @@ hiding.
 * [uSynergy](https://github.com/symless/synergy-micro-client) for the protocol library
 * The swaywm people, who've provided the protocols to make something like this
 possible
-* wl-clipboard, because its watch mode turns it into a clipboard manager so I
-I don't have to.
 
 ## TODO
 
-* use the wayland protocols for clipboard management. wl-clipboard already existed
-and is mostly fine, but Synergy specifies the format of the data (negating the 
-need to guess at mimetypes) and multi-process coordination is annoying. 
 * De-uglify. This was one of those let's-not-really-plan-this-out-but-write-vaguely-working-code
 sort of things, and it shows, quite noticeably. 

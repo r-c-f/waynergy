@@ -15,6 +15,7 @@
 #include "virtual-keyboard-unstable-v1.prot.h"
 #include "xdg-output-unstable-v1.prot.h"
 #include "idle.prot.h"
+#include "wlr-data-control-unstable-v1.prot.h"
 #include "uSynergy.h"
 
 struct wlOutput
@@ -35,6 +36,12 @@ struct wlOutput
 	struct wlOutput *next;
 };
 
+#define CLIP_FORMAT_COUNT 1
+#define CLIP_COUNT 2
+
+/* mimetypes matching up with uSynergyClipboardFormat enums */
+#define CLIP_FORMAT_MIMES_TEXT {"text/plain", "text/plain;charset=utf-8", "TEXT", "STRING", "UTF8_STRING", NULL}
+
 struct wlContext {
 	struct wl_registry *registry;
 	struct wl_display *display;
@@ -51,6 +58,18 @@ struct wlContext {
 	struct xkb_context *xkb_ctx;
 	struct xkb_keymap *xkb_map;
 	struct xkb_state *xkb_state;
+	struct zwlr_data_control_manager_v1 *data_manager;
+	struct zwlr_data_control_device_v1 *data_device;
+	struct zwlr_data_control_offer_v1 *data_offer;
+	char *data_offer_mimes[CLIP_FORMAT_COUNT];
+	struct zwlr_data_control_source_v1 *data_source[CLIP_COUNT];
+	bool data_source_types[CLIP_COUNT][CLIP_FORMAT_COUNT];
+	char *data_source_buf[CLIP_COUNT][CLIP_FORMAT_COUNT];
+	size_t data_source_len[CLIP_COUNT][CLIP_FORMAT_COUNT];
+	//listeners
+	struct zxdg_output_v1_listener xdg_output_listener;
+	struct wl_output_listener output_listener;
+	struct wl_registry_listener registry_listener;
 	//state
 	int width;
 	int height;
@@ -60,6 +79,7 @@ struct wlContext {
 };
 
 extern int wlKeySetConfigLayout(struct wlContext *ctx);
+extern bool wlClipAll(struct wlContext *context, enum uSynergyClipboardId id, char **data, size_t *len);
 extern int wlSetup(struct wlContext *context, int width, int height);
 extern uint32_t wlTS(struct wlContext *context);
 extern void wlResUpdate(struct wlContext *context, int width, int height);

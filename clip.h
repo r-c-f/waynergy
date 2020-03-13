@@ -24,8 +24,6 @@ extern int clipMonitorFd;
 extern struct sockaddr_un clipMonitorAddr;
 extern pid_t clipMonitorPid[2];
 
-/* check if wl-clipboard is even present */
-bool clipHaveWlClipboard(void);
 /* spawn wl-paste monitor processes */
 bool clipSetupSockets(void);
 bool clipSpawnMonitors(void);
@@ -33,7 +31,5 @@ bool clipSpawnMonitors(void);
 enum uSynergyClipboardId clipIdFromFd(int fd);
 /* process poll data */
 void clipMonitorPollProc(struct pollfd *pfd);
-/* run wl-copy, with given data */
-bool clipWlCopy(enum uSynergyClipboardId id, const unsigned char *data, size_t len);
 /* write all of stdin to the clipboard monitor FIFO */
 int clipWriteToSocket(char *path, char cid);

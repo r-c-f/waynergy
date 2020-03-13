@@ -8,13 +8,14 @@
 #include <wayland-client.h>
 #include <wayland-client-protocol.h>
 #include <sys/mman.h>
+#include <spawn.h>
 #include "config.h"
 #include "os.h"
 #include "xmem.h"
 #include "wayland.h"
 #include <stdbool.h>
 #include "log.h"
-
+#include "clip.h"
 
 
 
@@ -245,9 +246,243 @@ static void xdg_output_desc(void *data, struct zxdg_output_v1 *xdg_output, const
 	output->desc = xstrdup(desc);
 }
 
+static char *clip_format_mimes_text[] = CLIP_FORMAT_MIMES_TEXT;
+static char **clip_format_mimes[] = {clip_format_mimes_text};
+static enum uSynergyClipboardFormat clip_format_from_mime(const char *mime)
+{
+	for (int fmt = 0; fmt < CLIP_FORMAT_COUNT; ++fmt) {
+		for (int i = 0; clip_format_mimes[fmt][i]; ++i) {
+			if (!strcmp(mime, clip_format_mimes[fmt][i]))
+				return fmt;
+		}
+	}
+	return -1;
+}
+static char *get_static_mime_string(const char *mime_type)
+{
+	enum uSynergyClipboardFormat fmt = clip_format_from_mime(mime_type);
+	if (fmt < 0)
+		return NULL;
+	for (int i = 0; clip_format_mimes[fmt][i]; ++i) {
+		if (!strcmp(clip_format_mimes[fmt][i], mime_type)) {
+			return clip_format_mimes[fmt][i];
+		}
+	}
+	return NULL;
+}
 
+static void on_offer_mime(void *data, struct zwlr_data_control_offer_v1 *offer, const char *mime_type)
+{
+	struct wlContext *ctx = data;
+	if (ctx->data_offer != offer) {
+		logErr("Got MIME type for unknown offer");
+		return;
+	}
+	enum uSynergyClipboardFormat fmt;
+	fmt = clip_format_from_mime(mime_type);
+	if (fmt == -1) {
+		logWarn("Unsupported mime type %s", mime_type);
+		return;
+	}
+	if (ctx->data_offer_mimes[fmt]) {
+		logDbg("Already have format %s, ignoring %s", ctx->data_offer_mimes[fmt], mime_type);
+		return;
+	}
+	ctx->data_offer_mimes[fmt] = get_static_mime_string(mime_type);
+}
+static struct zwlr_data_control_offer_v1_listener data_offer_listener = {
+	on_offer_mime
+};
+static void on_data_offer(void *data, struct zwlr_data_control_device_v1 *device, struct zwlr_data_control_offer_v1 *offer)
+{
+	logDbg("Got data offer");
+	struct wlContext *ctx = data;
+	if (ctx->data_offer) {
+		for (int i = 0; i < CLIP_FORMAT_COUNT; ++i) {
+			ctx->data_offer_mimes[i] = NULL;
+		}
+		zwlr_data_control_offer_v1_destroy(ctx->data_offer);
+	}
+	ctx->data_offer = offer;
+	zwlr_data_control_offer_v1_add_listener(offer, &data_offer_listener, ctx);
+	wl_display_roundtrip(ctx->display);
+}
+static void on_finished(void *data, struct zwlr_data_control_device_v1 *device)
+{
+	logWarn("Data control device invalid");
+}
+extern char **environ;
+static void on_selection(void *data, struct zwlr_data_control_device_v1 *device, struct zwlr_data_control_offer_v1 *offer, enum uSynergyClipboardId id)
+{
+	pid_t pid;
+	posix_spawn_file_actions_t fa;
+	int fd[2];
+	struct wlContext *ctx = data;
+	if (offer != ctx->data_offer) {
+		logErr("Unknown offer selected");
+		return;
+	}
+	logDbg("Trying to receive");
+	for (int i = 0; i < CLIP_FORMAT_COUNT; ++i) {
+		if (!ctx->data_offer_mimes[i]) {
+			continue;
+		}
+		char *argv[] = {
+			"swaynergy-clip-update",
+			clipMonitorPath[id],
+			ctx->data_offer_mimes[i],
+			NULL
+		};
+		pipe(fd);
+		posix_spawn_file_actions_init(&fa);
+		posix_spawn_file_actions_adddup2(&fa, fd[0], STDIN_FILENO);
+		posix_spawn_file_actions_addclose(&fa, fd[1]);
+		zwlr_data_control_offer_v1_receive(offer, ctx->data_offer_mimes[i], fd[1]);
+		posix_spawnp(&pid, "swaynergy-clip-update", &fa, NULL, argv, environ);
+		close(fd[0]);
+		close(fd[1]);
+		logDbg("Spawned updater for clipboard %d, type %s", id, ctx->data_offer_mimes[i]);
+	}
+}
+static void on_clipboard(void *data, struct zwlr_data_control_device_v1 *device, struct zwlr_data_control_offer_v1 *offer)
+{
+	on_selection(data, device, offer, SYNERGY_CLIPBOARD_CLIPBOARD);
+}
+static void on_primary(void *data, struct zwlr_data_control_device_v1 *device, struct zwlr_data_control_offer_v1 *offer)
+{
+	on_selection(data, device, offer, SYNERGY_CLIPBOARD_SELECTION);
+}
+static enum uSynergyClipboardId clip_id_from_data_source(struct wlContext *ctx, struct zwlr_data_control_source_v1 *source)
+{
+	for (int i = 0; i < CLIP_COUNT; ++i) {
+		if (ctx->data_source[i] == source)
+			return i;
+	}
+	return -1;
+}
+static void on_send(void *data, struct zwlr_data_control_source_v1 *source, const char *mime_type, int32_t fd)
+{
+	struct zwlr_data_control_source_v1 *ctx_source = NULL;
+	struct wlContext *ctx = data;
+	enum uSynergyClipboardId id;
+	enum uSynergyClipboardFormat fmt = clip_format_from_mime(mime_type);
+	if (fmt == -1) {
+		logErr("Got unknown mime type in source send: %s", mime_type);
+		return;
+	}
+	if ((id = clip_id_from_data_source(ctx, source)) < 0) {
+		logErr("Got unknown data source in send event");
+		return;
+	}
+	if (!ctx->data_source_types[id][fmt]) {
+		logErr("Got unsupported mime type in request for %d: %s", id, mime_type);
+		return;
+	}
+	/* we do something dumb here*/
+	logDbg("Forking to send, because... fuck me");
+	if (!fork()) {
 
+		bool ret;
+		ret = write_full(fd, ctx->data_source_buf[id][fmt], ctx->data_source_len[id][fmt]);
+		close(fd);
+		if (!ret) {
+			logErr("FORKING SEND FAILED");
+			exit(EXIT_FAILURE);
+		}
+		logDbg("FORKING SEND SUCCEEDED");
+		exit(EXIT_SUCCESS);
+	}
+	close(fd);
+}
+static void on_cancelled(void *data, struct zwlr_data_control_source_v1 *source)
+{
+	enum uSynergyClipboardId id;
+	struct wlContext *ctx = data;
+	logInfo("Got cancel request");
+	if ((id = clip_id_from_data_source(ctx, source)) < 0) {
+		logErr("Got unknown data source in cancel event");
+		return;
+	}
+	if (id == SYNERGY_CLIPBOARD_CLIPBOARD) {
+		zwlr_data_control_device_v1_set_selection(ctx->data_device, NULL);
+	} else if (id == SYNERGY_CLIPBOARD_SELECTION) {
+		zwlr_data_control_device_v1_set_primary_selection(ctx->data_device, NULL);
+	}
 
+	zwlr_data_control_source_v1_destroy(ctx->data_source[id]);
+	for (int fmt = 0; fmt < CLIP_FORMAT_COUNT; ++fmt) {
+		if (ctx->data_source_types[id][fmt]) {
+			free(ctx->data_source_buf[id][fmt]);
+			ctx->data_source_buf[id][fmt] = NULL;
+			ctx->data_source_types[id][fmt] = false;
+		}
+	}
+	ctx->data_source[id] = NULL;
+	wl_display_roundtrip(ctx->display);
+}
+static struct zwlr_data_control_source_v1_listener data_source_listener = {
+	.send = on_send,
+	.cancelled = on_cancelled
+};
+
+static void source_offer_all_mimes(struct zwlr_data_control_source_v1 *src, enum uSynergyClipboardFormat fmt)
+{
+	for (int i = 0; clip_format_mimes[fmt][i]; ++i) {
+		zwlr_data_control_source_v1_offer(src, clip_format_mimes[fmt][i]);
+	}
+}
+static bool clip_data_changed(struct wlContext *ctx, enum uSynergyClipboardId id, char **data, size_t *len)
+{
+	for (int fmt = 0; fmt < CLIP_FORMAT_COUNT; ++fmt) {
+		if (ctx->data_source_len[id][fmt] != len[fmt]) {
+			logDbg("Size differs, data has changed: %d %d", ctx->data_source_len[id][fmt], len[fmt]);
+			return true;
+		}
+		if (memcmp(ctx->data_source_buf[id][fmt], data[fmt], len[fmt])) {
+			logDbg("Data differs, has changed");
+			return true;
+		}
+	}
+	logDbg("Data is identical");
+	return false;
+}
+bool wlClipAll(struct wlContext *ctx, enum uSynergyClipboardId id, char **data, size_t *len)
+{
+	if (!clip_data_changed(ctx, id, data, len)) {
+		logDbg("Duplicate data, not copying");
+		return false;
+	}
+	if (!ctx->data_manager)
+		return false;
+	if (ctx->data_source[id]) {
+		logInfo("Destroying old data source, id %d", id);
+		on_cancelled(ctx, ctx->data_source[id]);
+	}
+	ctx->data_source[id] = zwlr_data_control_manager_v1_create_data_source(ctx->data_manager);
+	zwlr_data_control_source_v1_add_listener(ctx->data_source[id], &data_source_listener, ctx);
+	for (int fmt = 0; fmt < CLIP_FORMAT_COUNT; ++fmt) {
+		if (data[fmt]) {
+			ctx->data_source_types[id][fmt] = true;
+			ctx->data_source_len[id][fmt] = len[fmt];
+			source_offer_all_mimes(ctx->data_source[id], fmt);
+			ctx->data_source_buf[id][fmt] = xmalloc(len[fmt]);
+			memmove(ctx->data_source_buf[id][fmt], data[fmt], len[fmt]);
+		}
+	}
+	if (id == SYNERGY_CLIPBOARD_CLIPBOARD) {
+		zwlr_data_control_device_v1_set_selection(ctx->data_device, ctx->data_source[id]);
+	} else if (id == SYNERGY_CLIPBOARD_SELECTION) {
+		zwlr_data_control_device_v1_set_primary_selection(ctx->data_device, ctx->data_source[id]);
+	}
+	return true;
+}
+
+static struct zwlr_data_control_device_v1_listener data_device_listener = {
+	on_data_offer,
+	on_clipboard,
+	on_finished,
+	on_primary
+};
 static struct zxdg_output_v1_listener xdg_output_listener = {
 	.logical_position = xdg_output_pos,
 	.logical_size = xdg_output_size,
@@ -295,6 +530,8 @@ static void handle_global(void *data, struct wl_registry *registry, uint32_t nam
 	} else if (strcmp(interface, org_kde_kwin_idle_interface.name) == 0) {
 		logDbg("Got idle manager");
 		ctx->idle_manager = wl_registry_bind(registry, name, &org_kde_kwin_idle_interface, version);
+	} else if (strcmp(interface, zwlr_data_control_manager_v1_interface.name) == 0) {
+		ctx->data_manager = wl_registry_bind(registry, name, &zwlr_data_control_manager_v1_interface, 2);
 	}
 }
 
@@ -357,7 +594,10 @@ int wlSetup(struct wlContext *ctx, int width, int height)
 	wl_registry_add_listener(ctx->registry, &registry_listener, ctx);
 	wl_display_dispatch(ctx->display);
 	wl_display_roundtrip(ctx->display);
-
+	if (ctx->data_manager) {
+		ctx->data_device = zwlr_data_control_manager_v1_get_data_device(ctx->data_manager, ctx->seat);
+		zwlr_data_control_device_v1_add_listener(ctx->data_device, &data_device_listener, ctx);
+	}
 	ctx->pointer = zwlr_virtual_pointer_manager_v1_create_virtual_pointer(ctx->pointer_manager, ctx->seat);
 	wl_display_dispatch(ctx->display);
 	wl_display_roundtrip(ctx->display);

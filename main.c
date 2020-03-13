@@ -64,7 +64,10 @@ static void syn_key_cb(uSynergyCookie cookie, uint16_t key, uint16_t mod, bool d
 }
 static void syn_clip_cb(uSynergyCookie cookie, enum uSynergyClipboardId id, uint32_t format, const uint8_t *data, uint32_t size)
 {
-	clipWlCopy(id, data, size);
+	//TODO: make a better interface for this, supporting multiple formats
+	char *all_data[] = {data, NULL, NULL, NULL};
+	size_t all_len[] = {size, 0, 0, 0};
+	wlClipAll(&wlContext, id, all_data, all_len);
 }
 static void syn_screensaver_cb(uSynergyCookie cookie, bool state)
 {
@@ -234,17 +237,11 @@ opterror:
 	//now callbacks
 	wlContext.on_output_update = man_geom ? NULL : wl_output_update_cb;
 	/*run*/
-	if (clipHaveWlClipboard() && use_clipboard) {
-		synContext.m_clipboardCallback = syn_clip_cb;
-		if (!clipSetupSockets())
-			return 4;
-		if(!clipSpawnMonitors())
-			return 3;
-	} else if (use_clipboard) {
-		logInfo("Clipboard sync disabled by command line");
-	} else {
-		logWarn("wl-clipboard not found, no clipboard synchronization support");
-	}
+	synContext.m_clipboardCallback = syn_clip_cb;
+	if (!clipSetupSockets())
+		return 4;
+	if(!clipSpawnMonitors())
+		return 3;
 	wlSetup(&wlContext, synContext.m_clientWidth, synContext.m_clientHeight);
 	wlIdleInhibit(&wlContext, true);
 	netPollInit();

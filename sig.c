@@ -17,13 +17,6 @@ static char **argv_reexec;
 static void cleanup(void)
 {
         wlIdleInhibit(&wlContext, false);
-        /* stop clipbpoard monitors */
-        for (int i = 0; i < 2; ++i) {
-                if (clipMonitorPid[i] != -1) {
-                        kill(clipMonitorPid[i], SIGTERM);
-                        waitpid(clipMonitorPid[i], NULL, 0);
-                }
-        }
         /*close stuff*/
         synNetDisconnect(&synNetContext);
         logClose();
@@ -60,13 +53,6 @@ static void sig_handle(int sig, siginfo_t *si, void *context)
                 case SIGUSR1:
                         sigDoRestart = true;
                         break;
-                case SIGCHLD:
-			if (si->si_status) {
-				logOutSig(LOG_WARN, "Child died with nonzero status");
-			} else {
-				logOutSig(LOG_INFO, "Child died -- successful status");
-			}
-                        break;
                 default:
                         logOutSig(LOG_ERR, "Unhandled signal");
         }
@@ -89,7 +75,8 @@ void sigHandleInit(char **argv)
         sigaction(SIGINT, &sa, NULL);
         sigaction(SIGQUIT, &sa, NULL);
         sigaction(SIGUSR1, &sa, NULL);
-        sigaction(SIGCHLD, &sa, NULL);
+	//ignore SIGCHLD -- we don't care, and the zombies, they are evil
+	signal(SIGCHLD, SIG_IGN);
         sigemptyset(&set);
         sigaddset(&set, SIGUSR1);
         sigaddset(&set, SIGTERM);

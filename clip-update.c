@@ -6,6 +6,7 @@
 #include "clip.h"
 #include "net.h"
 #include "fdio_full.h"
+#include <signal.h>
 
 /* read file into a buffer, resizing as needed */
 static bool buf_append_file(char **buf, size_t *len, size_t *pos, FILE *f)
@@ -19,9 +20,20 @@ static bool buf_append_file(char **buf, size_t *len, size_t *pos, FILE *f)
         }
         return true;
 }
+static void clip_update_sig_handle(int sig)
+{
+	if (sig == SIGALRM) {
+		exit(1);
+	}
+}
 int clipWriteToSocket(char *path, char cid)
 {
 	char *buf;
+	struct sigaction sa;
+	sigemptyset(&sa.sa_mask);
+	sa.sa_handler = clip_update_sig_handle;
+	sa.sa_flags &= ~SA_RESTART;
+	sigaction(SIGALRM, &sa, NULL);
 	size_t len = 4000;
 	size_t pos = 0;
 	struct sockaddr_un sa = {0};
