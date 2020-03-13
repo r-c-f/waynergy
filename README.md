@@ -30,7 +30,7 @@ output:
 ```
 swaynergy: Synergy client for wlroots compositors
 
-USAGE: swaynergy [-h|--help] [-c|--host host] [-p|--port port] [-W|--width width] [-H|--height height] [-N|--name name]
+USAGE: swaynergy [-h|--help] [-c|--host host] [-p|--port port] [-W|--width width] [-H|--height height] [-N|--name name] [-l|--logfile file] [-L|--loglevel level]
 	-h|--help:
 		Help text
 	-c|--host host:
@@ -38,11 +38,17 @@ USAGE: swaynergy [-h|--help] [-c|--host host] [-p|--port port] [-W|--width width
 	-p|--port port:
 		Port
 	-W|--width width:
-		Width of screen in pixels
+		Width of screen in pixels (manual override, must be given with height)
 	-H|--height height:
-		Height of screen in pixels
+		Height of screen in pixels (manual override, must be given with width)
 	-N|--name name:
 		Name of client screen
+	-l|--logfile file:
+		Name of logfile to use
+	-L|--loglevel level:
+		Log level -- number, increasing from 0 for more verbosity
+	
+
 ```
 
 Also note that `SIGUSR1` triggers re-execution. Useful until proper recconect
@@ -94,10 +100,6 @@ I don't have to.
 * use the wayland protocols for clipboard management. wl-clipboard already existed
 and is mostly fine, but Synergy specifies the format of the data (negating the 
 need to guess at mimetypes) and multi-process coordination is annoying. 
-* Proper support for network timeouts. This likely means rewriting the network
-handling code so that it's not just a crusty hack meant to play nice with 
-uSynergy, which could be changed to reflect the fact that we already read whole
-packets.
 * Improve idle handling
 * De-uglify. This was one of those let's-not-really-plan-this-out-but-write-vaguely-working-code
 sort of things, and it shows, quite noticeably. 
