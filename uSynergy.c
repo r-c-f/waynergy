@@ -29,6 +29,7 @@ freely, subject to the following restrictions:
 #include "xmem.h"
 #include <stdlib.h>
 #include "log.h"
+#include <inttypes.h>
 
 //---------------------------------------------------------------------------------------------------------------------
 //	Internal helpers
@@ -62,17 +63,6 @@ static int32_t sNetToNative32(const unsigned char *value)
 #endif
 }
 
-
-
-/**
-@brief Trace text to client
-**/
-static void sTrace(uSynergyContext *context, const char* text)
-{
-	// Don't trace if we don't have a trace function
-	if (context->m_traceFunc != 0L)
-		context->m_traceFunc(context->m_cookie, text);
-}
 
 
 
@@ -286,18 +276,48 @@ static void sSetDisconnected(uSynergyContext *context)
 }
 
 /**
+@brief Check if the given message contains a valid welcome message, to allow for
+barrier compatibility
+**/
+static char *sImplementations[] = {
+	"Barrier",
+	"Synergy",
+	NULL
+};
+static char *sIsWelcome(const unsigned char *msg)
+{
+	char **i;
+	/* check length -- the original test was probably a bad idea as it did
+	 * not make sure the message was even 7 characters long....*/
+	uint32_t mlen = sNetToNative32(msg);
+	for (i = sImplementations; *i; ++i) {
+		if (strlen(*i) > mlen)
+			continue;
+		if (memcmp(msg + 4, *i, strlen(*i)) == 0)
+			return *i;
+	}
+	return NULL;
+}
+
+/**
 @brief Parse a single client message, update state, send callbacks and send replies
 **/
 #define USYNERGY_IS_PACKET(pkt_id)	memcmp(message+4, pkt_id, 4)==0
 static void sProcessMessage(uSynergyContext *context, const uint8_t *message)
 {
 	// We have a packet!
-	if (memcmp(message+4, "Synergy", 7)==0)
+	const char *imp;
+	if ((imp = sIsWelcome(message)))
 	{
 		// Welcome message
 		//		kMsgHello			= "Synergy%2i%2i"
 		//		kMsgHelloBack		= "Synergy%2i%2i%s"
-		sAddString(context, "Synergy");
+		const unsigned char *parse_msg = message + 4 + strlen(imp);
+		uint16_t server_major = sNetToNative16(parse_msg);
+		parse_msg += 2;
+		uint16_t server_minor = sNetToNative16(parse_msg);
+		logInfo("Server is %s %" PRIu16 ".%" PRIu16, imp, server_major, server_minor);
+		sAddString(context, imp);
 		sAddUInt16(context, USYNERGY_PROTOCOL_MAJOR);
 		sAddUInt16(context, USYNERGY_PROTOCOL_MINOR);
 		sAddUInt32(context, (uint32_t)strlen(context->m_clientName));
@@ -305,17 +325,16 @@ static void sProcessMessage(uSynergyContext *context, const uint8_t *message)
 		if (!sSendReply(context))
 		{
 			// Send reply failed, let's try to reconnect
-			sTrace(context, "SendReply failed, trying to reconnect in a second");
+			logErr("SendReply failed, trying to reconnect in a second");
 			context->m_connected = false;
 			context->m_sleepFunc(context->m_cookie, 1000);
 		}
 		else
 		{
 			// Let's assume we're connected
-			char buffer[256+1];
-			sprintf(buffer, "Connected as client \"%s\"", context->m_clientName);
-			sTrace(context, buffer);
+			logInfo("Connected as client \"%s\"", context->m_clientName);
 			context->m_hasReceivedHello = true;
+			context->m_implementation = imp;
 		}
 		return;
 	}
@@ -607,9 +626,7 @@ static void sProcessMessage(uSynergyContext *context, const uint8_t *message)
 		//		kMsgEBusy 			= "EBSY"
 		//		kMsgEUnknown		= "EUNK"
 		//		kMsgEBad			= "EBAD"
-		char buffer[64];
-		sprintf(buffer, "Unknown packet '%c%c%c%c'", message[4], message[5], message[6], message[7]);
-		sTrace(context, buffer);
+		logWarn("Unknown packet '%c%c%c%c'", message[4], message[5], message[6], message[7]);
 		return;
 	}
 	// Reply with CNOP maybe?
@@ -635,9 +652,7 @@ static void sUpdateContext(uSynergyContext *context)
 	if (context->m_receiveFunc(context->m_cookie, context->m_receiveBuffer + context->m_receiveOfs, receive_size, &num_received) == false)
 	{
 		/* Receive failed, let's try to reconnect */
-		char buffer[128];
-		sprintf(buffer, "Receive failed (%d bytes asked, %d bytes received), trying to reconnect in a second", receive_size, num_received);
-		sTrace(context, buffer);
+		logErr("Receive failed (%d bytes asked, %d bytes received), trying to reconnect in a second", receive_size, num_received);
 		sSetDisconnected(context);
 		context->m_sleepFunc(context->m_cookie, 1000);
 		return;
@@ -684,9 +699,7 @@ static void sUpdateContext(uSynergyContext *context)
 	if (packlen > USYNERGY_RECEIVE_BUFFER_SIZE)
 	{
 		/* Oversized packet, ditch tail end */
-		char buffer[128];
-		sprintf(buffer, "Oversized packet: '%c%c%c%c' (length %d)", context->m_receiveBuffer[4], context->m_receiveBuffer[5], context->m_receiveBuffer[6], context->m_receiveBuffer[7], packlen);
-		sTrace(context, buffer);
+		logWarn("Oversized packet: '%c%c%c%c' (length %d)", context->m_receiveBuffer[4], context->m_receiveBuffer[5], context->m_receiveBuffer[6], context->m_receiveBuffer[7], packlen);
 		num_received = context->m_receiveOfs-4; // 4 bytes for the size field
 		while (num_received != packlen)
 		{
@@ -696,7 +709,7 @@ static void sUpdateContext(uSynergyContext *context)
 			if (context->m_receiveFunc(context->m_cookie, context->m_receiveBuffer, to_receive, &ditch_received) == false)
 			{
 				/* Receive failed, let's try to reconnect */
-				sTrace(context, "Receive failed, trying to reconnect in a second");
+				logErr("Receive failed, trying to reconnect in a second");
 				sSetDisconnected(context);
 				context->m_sleepFunc(context->m_cookie, 1000);
 				break;

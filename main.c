@@ -60,10 +60,6 @@ static void syn_key_cb(uSynergyCookie cookie, uint16_t key, uint16_t mod, bool d
 	if (!repeat)
  		wlKey(&wlContext, key, down);
 }
-static void syn_trace(uSynergyCookie cookie, const char *text)
-{
-	logInfo("%s\n", text);
-}
 static void syn_clip_cb(uSynergyCookie cookie, enum uSynergyClipboardId id, uint32_t format, const uint8_t *data, uint32_t size)
 {
 	clipWlCopy(id, data, size);
@@ -224,7 +220,6 @@ opterror:
 	synContext.m_mouseButtonUpCallback = syn_mouse_button_up_cb;
 	synContext.m_mouseWheelCallback = syn_mouse_wheel_cb;
 	synContext.m_keyboardCallback = syn_key_cb;
-	synContext.m_traceFunc = syn_trace;
 	synContext.m_screensaverCallback = syn_screensaver_cb;
 	synContext.m_screenActiveCallback = syn_active_cb;
 	/* wayland context events */

@@ -213,21 +213,6 @@ have occured. The time base should be a cyclic millisecond time value.
 typedef uint32_t	(*uSynergyGetTimeFunc)();
 
 
-
-/**
-@brief Trace function
-
-This function is called when uSynergy wants to trace something. It is optional to show these messages, but they
-are often useful when debugging. uSynergy only traces major events like connecting and disconnecting. Usually
-only a single trace is shown when the connection is established and no more trace are called.
-
-@param cookie		Cookie supplied in the Synergy context
-@param text			Text to be traced
-**/
-typedef void		(*uSynergyTraceFunc)(uSynergyCookie cookie, const char *text);
-
-
-
 /**
 @brief Screen active callback
 
@@ -339,7 +324,6 @@ typedef struct uSynergyContext
 
 	/* Optional configuration data, filled in by client */
 	uSynergyCookie					m_cookie;										/* Cookie pointer passed to callback functions (can be NULL) */
-	uSynergyTraceFunc				m_traceFunc;									/* Function for tracing status (can be NULL) */
 	uSynergyScreenActiveCallback	m_screenActiveCallback;							/* Callback for entering and leaving screen */
 	uSynergyScreensaverCallback m_screensaverCallback;
 	uSynergyMouseWheelCallback 		m_mouseWheelCallback;
@@ -351,6 +335,7 @@ typedef struct uSynergyContext
 	uSynergyClipboardCallback		m_clipboardCallback;							/* Callback for clipboard events */
 
 	/* State data, used internall by client, initialized by uSynergyInit() */
+	const char* 						m_implementation; /*implementation of the protocol -- usually "Synergy" or "Barrier" */
 	bool					m_connected;									/* Is our socket connected? */
 	bool					m_hasReceivedHello;								/* Have we received a 'Hello' from the server? */
 	bool 					m_infoCurrent; /* whether we've gotten an acknowledge from our information message */
