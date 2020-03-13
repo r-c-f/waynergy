@@ -18,13 +18,14 @@
 
 
 
-void wlOutputAppend(struct wlOutput **outputs, struct wl_output *output, struct zxdg_output_v1 *xdg_output)
+void wlOutputAppend(struct wlOutput **outputs, struct wl_output *output, struct zxdg_output_v1 *xdg_output, uint32_t wl_name)
 {
 	struct wlOutput *l;
 	struct wlOutput *n = xmalloc(sizeof(*n));
 	memset(n, 0, sizeof(*n));
 	n->wl_output = output;
 	n->xdg_output = xdg_output;
+	n->wl_name = wl_name;
 	if (!*outputs) {
 		*outputs = n;
 	} else {
@@ -34,7 +35,7 @@ void wlOutputAppend(struct wlOutput **outputs, struct wl_output *output, struct 
 }
 struct wlOutput *wlOutputGet(struct wlOutput *outputs, struct wl_output *wl_output)
 {
-	struct wlOutput *l;
+	struct wlOutput *l = NULL;
 	for (l = outputs; l; l = l->next) {
 		if (l->wl_output == wl_output) {
 			break;
@@ -44,13 +45,52 @@ struct wlOutput *wlOutputGet(struct wlOutput *outputs, struct wl_output *wl_outp
 }
 struct wlOutput *wlOutputGetXdg(struct wlOutput *outputs, struct zxdg_output_v1 *xdg_output)
 {
-	struct wlOutput *l;
+	struct wlOutput *l = NULL;
 	for (l = outputs; l; l = l->next) {
 		if (l->xdg_output == xdg_output)
 			break;
 	}
 	return l;
 }
+struct wlOutput *wlOutputGetWlName(struct wlOutput *outputs, uint32_t wl_name)
+{
+	struct wlOutput *l = NULL;
+	for (l = outputs; l; l = l->next) {
+		if (l->wl_name == wl_name)
+			break;
+	}
+	return l;
+}
+void wlOutputRemove(struct wlOutput **outputs, struct wlOutput *output)
+{
+	struct wlOutput *prev = NULL;
+	if (!outputs)
+		return;
+	if (*outputs != output) {
+		for (prev = *outputs; prev; prev = prev->next) {
+			if (prev->next == output)
+				break;
+		}
+		if (!prev) {
+			logErr("Tried to remove unknown output");
+			return;
+		}
+		prev->next = prev->next->next;
+	} else {
+		*outputs = NULL;
+	}
+	free(output->name);
+	free(output->desc);
+	if (output->xdg_output) {
+		zxdg_output_v1_destroy(output->xdg_output);
+	}
+	if (output->wl_output) {
+		wl_output_destroy(output->wl_output);
+	}
+	free(output);
+}
+
+
 
 static void output_geometry(void *data, struct wl_output *wl_output, int32_t x, int32_t y, int32_t physical_width, int32_t physical_height, int32_t subpixel, const char *make, const char *model, int32_t transform)
 {
@@ -252,13 +292,24 @@ static void handle_global(void *data, struct wl_registry *registry, uint32_t nam
 		} else {
 			xdg_output = NULL;
 		}
-		wlOutputAppend(&ctx->outputs, wl_output, xdg_output);
+		wlOutputAppend(&ctx->outputs, wl_output, xdg_output, name);
 	}
 
 }
+
 static void handle_global_remove(void *data, struct wl_registry *registry, uint32_t name)
 {
-	//nothing here mf
+	int i;
+	struct wlContext *ctx = data;
+	/* possible objects */
+	struct wlOutput *output;
+	/* for now we only handle the case of outputs going away */
+	output = wlOutputGetWlName(ctx->outputs, name);
+	if (output) {
+		logInfo("Lost output %s", output->name ? output->name : "");
+		wlOutputRemove(&ctx->outputs, output);
+		ctx->on_output_update(ctx);
+	}
 }
 
 static const struct wl_registry_listener registry_listener = {

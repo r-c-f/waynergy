@@ -17,6 +17,7 @@
 
 struct wlOutput
 {
+	uint32_t wl_name;
 	struct wl_output *wl_output;
 	struct zxdg_output_v1 *xdg_output;
 	int32_t x;
