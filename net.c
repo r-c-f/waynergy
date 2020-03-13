@@ -88,33 +88,23 @@ static bool syn_recv(uSynergyCookie cookie, uint8_t *buf, int max_len, int *out_
 		}
 	};
 	while ((ret = poll(pollfds, POLLFD_COUNT, USYNERGY_IDLE_TIMEOUT)) > 0) {
-		if (sigDoExit || sigDoRestart) 
-			break;
+		sigHandleRun();
 		if (pollfds[POLLFD_SYN].revents & POLLIN) {
 			break;
 		}
+		sigHandleRun();
 		wlPollProc(&wlContext, pollfds[POLLFD_WL].revents);
-		if (sigDoExit || sigDoRestart) 
-			break;
+		sigHandleRun();
 		clipMonitorPollProc(&pollfds[POLLFD_CB]);
-		if (sigDoExit || sigDoRestart) 
-			break;
+		sigHandleRun();
 		clipMonitorPollProc(&pollfds[POLLFD_P]);
-		if (sigDoExit || sigDoRestart) 
-			break;
+		sigHandleRun();
 		if ((syn_ctx->m_getTimeFunc() - syn_ctx->m_lastMessageTime) > USYNERGY_IDLE_TIMEOUT) {
 			logErr("Synergy imeout encountered, read failed");
 			return false;
 		}
 	}
-	if (sigDoExit) {
-		logInfo("Exit signal %d received, exiting...", (int)sigDoExit);
-		Exit();
-	}
-	if (sigDoRestart) {
-		logInfo("Restart signal received, restarting...");
-		Restart();
-	}
+	sigHandleRun();
 	if (!ret) {
 		logErr("Synergy poll timeout");
 		return false;
@@ -122,6 +112,7 @@ static bool syn_recv(uSynergyCookie cookie, uint8_t *buf, int max_len, int *out_
 	alarm(USYNERGY_IDLE_TIMEOUT/1000);
 	if (!read_full_i(synsock, &psize, sizeof(psize))) {
 		perror("read_full");
+		sigHandleRun();
 		return false;
 	}
 	alarm(0);
@@ -133,6 +124,7 @@ static bool syn_recv(uSynergyCookie cookie, uint8_t *buf, int max_len, int *out_
 	alarm(USYNERGY_IDLE_TIMEOUT/1000);
 	if (!read_full_i(synsock, buf, psize)) {
 		perror("read_full");
+		sigHandleRun();
 		return false;
 	}
 	alarm(0);

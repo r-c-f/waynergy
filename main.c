@@ -15,6 +15,7 @@
 #include "config.h"
 #include "clip.h"
 #include "log.h"
+#include "sig.h"
 
 
 static struct sopt optspec[] = {

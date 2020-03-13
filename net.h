@@ -18,12 +18,9 @@
 #include <netdb.h>                                                              
 #include <time.h>
 #include <signal.h>
+#include "sig.h"
 
 bool synNetConfig(uSynergyContext *context, char *host, char *port);
 bool netPollLoop(void);
 bool synNetDisconnect(void);
 
-extern volatile sig_atomic_t sigDoExit;
-extern volatile sig_atomic_t sigDoRestart;
-void Exit(void);
-void Restart(void);
