@@ -1,13 +1,16 @@
 #pragma once
 #include <signal.h>
 #include <stdbool.h>
+#include <sys/wait.h>
+#include "wayland.h"
 #include "log.h"
-
+#include "net.h"
 
 extern volatile sig_atomic_t sigDoExit;
 extern volatile sig_atomic_t sigDoRestart;
 void Exit(void);
 void Restart(void);
+void sigHandleInit(char **argv);
 
 static inline bool sigHandleCheck(void)
 {

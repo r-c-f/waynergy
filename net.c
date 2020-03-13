@@ -18,8 +18,6 @@
 #include <netdb.h>
 #include <time.h>
 
-volatile sig_atomic_t sigDoExit = 0;
-volatile sig_atomic_t sigDoRestart = 0;
 
 static struct addrinfo *hostinfo;
 static int synsock = -1;
