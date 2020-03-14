@@ -99,8 +99,8 @@ void wlKey(struct wlContext *ctx, int key, int state)
         xkb_mod_mask_t locked = xkb_state_serialize_mods(xkb_state, XKB_STATE_MODS_LOCKED);
 	xkb_layout_index_t group = xkb_state_serialize_layout(xkb_state, XKB_STATE_LAYOUT_EFFECTIVE);
 	logDbg("depressed: %x latched: %x locked: %x group: %x", depressed, latched, locked, group);
-        zwp_virtual_keyboard_v1_modifiers(ctx->keyboard, depressed, latched, locked, group);
 	zwp_virtual_keyboard_v1_key(ctx->keyboard, wlTS(ctx), key - 8, state);
+        zwp_virtual_keyboard_v1_modifiers(ctx->keyboard, depressed, latched, locked, group);
         wl_display_flush(ctx->display);
 }
 void wlKeyReleaseAll(struct wlContext *ctx)
