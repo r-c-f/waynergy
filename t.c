@@ -8,6 +8,7 @@
 #include "fdio_full.h"
 #include <poll.h>
 #include "os.h"
+#include "xmem.h"
 
 static struct wl_seat *seat;
 static struct wl_display *display;
@@ -85,17 +86,16 @@ static void on_primary_selection(void *data, struct zwlr_data_control_device_v1 
 	}
 	if (id != offer)
 		return;
-	if (offer_fd[0]) {
-		fprintf(stderr, "CLOSING OLD OFFER FD %d\n", offer_fd[0]);
-		close(offer_fd[0]);
+	int fd[2];
+	pipe(fd);
+	zwlr_data_control_offer_v1_receive(id, "text/plain", fd[1]);
+	if (!fork()) {
+		close(fd[1]);
+		dup2(fd[0], STDIN_FILENO);
+		execlp("cat", "cat", NULL);
 	}
-	if (offer_fd[1]) {
-		fprintf(stderr, "CLOSING OLD OFFER FD %d\n", offer_fd[1]);
-		close(offer_fd[1]);
-	}
-	pipe(offer_fd);
-	zwlr_data_control_offer_v1_receive(id, "STRING", offer_fd[1]);
-	fprintf(stderr, "GOT DATA\n");
+	close(fd[0]);
+	close(fd[1]);
 }
 
 static struct zwlr_data_control_device_v1_listener data_control_listener = {
@@ -105,7 +105,55 @@ static struct zwlr_data_control_device_v1_listener data_control_listener = {
 	on_primary_selection
 };	
 
+static struct zwlr_data_control_source_v1 *data_source;
+static char *data_source_buf;
+static size_t data_source_len;
+static void on_send(void *data, struct zwlr_data_control_source_v1 *source, const char *mime_type, int32_t fd)
+{
+	if (source != data_source) {
+		fprintf(stderr, "UNKNOWN SOURCE");
+	}
+	fprintf(stderr, "SENDING MIME TYPE %s", mime_type);
+	if (!write_full(fd, data_source_buf, data_source_len)) {
+		fprintf(stderr, "COULD NOT SEND");
+	}
+	write_full(STDERR_FILENO, data_source_buf, data_source_len);
+	close(fd);
+}
+static void on_cancelled(void *data, struct zwlr_data_control_source_v1 *source)
+{
+	if (source == data_source) {
+		free(data_source_buf);
+		data_source_buf = NULL;
+		data_source_len = 0;
+		zwlr_data_control_source_v1_destroy(data_source);
+		data_source = NULL;
+	}
+}
+static struct zwlr_data_control_source_v1_listener source_listener = {
+	.send = on_send,
+	.cancelled = on_cancelled
+};
+
 static struct zwlr_data_control_device_v1 *data_control;
+static void wl_clip(char *data, size_t len)
+{
+	if (data_source) {
+		on_cancelled(NULL, data_source);
+	}
+	data_source = zwlr_data_control_manager_v1_create_data_source(data_manager);
+	data_source_buf = xmalloc(len);
+	data_source_len = len;
+	memmove(data_source_buf, data, len);
+	zwlr_data_control_source_v1_add_listener(data_source, &source_listener, NULL);
+	zwlr_data_control_source_v1_offer(data_source, "text/plain");
+	zwlr_data_control_source_v1_offer(data_source, "text/plain;charset=utf-8");
+	zwlr_data_control_source_v1_offer(data_source, "TEXT");
+	zwlr_data_control_source_v1_offer(data_source, "STRING");
+	zwlr_data_control_source_v1_offer(data_source, "UTF8_STRING");
+	zwlr_data_control_device_v1_set_selection(data_control, data_source);
+	wl_display_roundtrip(display);
+}
 int main(int argc, char **argv)
 {
  	display = wl_display_connect(NULL);
@@ -120,34 +168,11 @@ int main(int argc, char **argv)
 		return 2;
 	}
 	zwlr_data_control_device_v1_add_listener(data_control, &data_control_listener, NULL);
+	wl_display_roundtrip(display);
+	wl_clip(argv[1], strlen(argv[1]));
+	wl_display_roundtrip(display);
 	while (1) {
-		int ret;
-		int nfds = 1;
-		struct pollfd pfd[2];
-		pfd[0].fd = wl_display_get_fd(display);
-		pfd[0].events = POLLIN;
-		if (offer_fd[0] != -1) {
-			pfd[1].fd = offer_fd[0];
-			pfd[1].events = POLLIN | POLLHUP;
-			nfds = 2;
-		}
-		if ((ret = poll(pfd, nfds, 1000)) < 0) {
-			return -1;
-		} else if (ret == 0) {
-			wl_display_flush(display);
-			continue;
-		}
-		if (pfd[0].revents & POLLIN) {
-			wl_display_dispatch(display);
-		}
-		if ((nfds > 1) && (pfd[1].revents & POLLIN)) {
-			char buf;
-			read(pfd[1].fd, &buf, 1);
-			putc(buf, stderr);
-		}
-		if ((nfds > 1) && pfd[1].revents & POLLHUP) {
-			fprintf(stderr, "GOT HANGUP ON DATA OFFER\n");
-		}
+		wl_display_dispatch(display);
 	}
 	return 0;
 }
