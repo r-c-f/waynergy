@@ -27,7 +27,7 @@ static bool syn_connect(uSynergyCookie cookie)
 	logDbg("syn_connect trying to connect");
 	synNetDisconnect(snet_ctx);
 	for (h = snet_ctx->hostinfo; h; h = h->ai_next) {
-		if ((snet_ctx->fd = socket(h->ai_family, h->ai_socktype, h->ai_protocol)) == -1)
+		if ((snet_ctx->fd = socket(h->ai_family, h->ai_socktype | SOCK_CLOEXEC, h->ai_protocol)) == -1)
 			continue;
 		if (connect(snet_ctx->fd, h->ai_addr, h->ai_addrlen))
 			continue;

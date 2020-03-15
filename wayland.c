@@ -366,6 +366,11 @@ int wlSetup(struct wlContext *ctx, int width, int height)
 	if(wlLoadConfLayout(ctx)) {
 		return 1;
 	}
+	/* set FD_CLOEXEC */
+	int fd = wl_display_get_fd(ctx->display);
+	int flags = fcntl(fd, F_GETFD);
+	flags |= FD_CLOEXEC;
+	fcntl(fd, F_SETFD, flags);
 	return 0;
 }
 void wlResUpdate(struct wlContext *ctx, int width, int height)

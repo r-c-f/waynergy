@@ -7,10 +7,10 @@
 
 int osGetAnonFd(void)
 {
-	#ifdef HAVE_MEMFD
+	#ifdef __linux__
 	return memfd_create("swaynergy-anon-fd", MFD_CLOEXEC);
 	#endif
-	#ifdef HAVE_SHM_ANON
+	#ifdef __FreeBSD__
 	return shm_open(SHM_ANON, O_RDWR | O_CREAT, 0600);
 	#endif
 	return fileno(tmpfile());
