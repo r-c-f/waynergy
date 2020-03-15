@@ -134,7 +134,7 @@ static uint32_t syn_get_time(void)
 	return ms;
 }
 
-bool synNetInit(struct synNetContext *sn_ctx, uSynergyContext *context, const char *host, const char *port)
+bool synNetInit(struct synNetContext *snet_ctx, uSynergyContext *context, const char *host, const char *port)
 {
 	/* trim away any newline garbage */
 	char host_noline[strlen(host) + 1];
@@ -145,27 +145,27 @@ bool synNetInit(struct synNetContext *sn_ctx, uSynergyContext *context, const ch
 			break;
 		}
 	}
-	if (getaddrinfo(host_noline, port, NULL, &sn_ctx->hostinfo))
+	if (getaddrinfo(host_noline, port, NULL, &snet_ctx->hostinfo))
 		return false;
-	sn_ctx->syn_ctx = context;
-	sn_ctx->fd = -1;
+	snet_ctx->syn_ctx = context;
+	snet_ctx->fd = -1;
 	context->m_connectFunc = syn_connect;
 	context->m_sendFunc = syn_send;
 	context->m_receiveFunc = syn_recv;
 	context->m_sleepFunc = syn_sleep;
 	context->m_getTimeFunc = syn_get_time;
-	context->m_cookie = sn_ctx;
+	context->m_cookie = snet_ctx;
 	return true;
 }
 
-bool synNetDisconnect(struct synNetContext *sn_ctx)
+bool synNetDisconnect(struct synNetContext *snet_ctx)
 {
-	if (sn_ctx->fd == -1)
+	if (snet_ctx->fd == -1)
 		return false;
-	shutdown(sn_ctx->fd, SHUT_RDWR);
-	close(sn_ctx->fd);
-	sn_ctx->fd = -1;
-	sn_ctx->syn_ctx->m_connected = false;
+	shutdown(snet_ctx->fd, SHUT_RDWR);
+	close(snet_ctx->fd);
+	snet_ctx->fd = -1;
+	snet_ctx->syn_ctx->m_connected = false;
 	return true;
 }
 

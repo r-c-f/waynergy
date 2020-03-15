@@ -237,6 +237,8 @@ opterror:
 		synContext.m_clipboardCallback = syn_clip_cb;
 		if(!clipSpawnMonitors())
 			return 3;
+	} else if (use_clipboard) {
+		logInfo("Clipboard sync disabled by command line");
 	} else {
 		logWarn("wl-clipboard not found, no clipboard synchronization support");
 	}
@@ -245,7 +247,6 @@ opterror:
 	while(1) {
 		if (!synContext.m_connected) {
 			/* always try updating first so we initially connect */
-			uSynergyUpdate(&synContext);
 			uSynergyUpdate(&synContext);
 		} else {
 			netPoll(&synNetContext, &wlContext);
