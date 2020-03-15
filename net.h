@@ -20,7 +20,12 @@
 #include <signal.h>
 #include "sig.h"
 
-bool synNetConfig(uSynergyContext *context, char *host, char *port);
-bool netPollLoop(void);
-bool synNetDisconnect(void);
+struct synNetContext {
+	uSynergyContext *syn_ctx;
+	struct addrinfo *hostinfo;
+	int fd;
+};
+bool synNetInit(struct synNetContext *net_ctx, uSynergyContext *syn_ctx, const char *host, const char *port);
+void netPoll(struct synNetContext *snet_ctx, struct wlContext *wl_ctx);
+bool synNetDisconnect(struct synNetContext *snet_ctx);
 

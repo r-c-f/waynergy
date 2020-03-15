@@ -77,7 +77,7 @@ The uSynergyCookie type is an opaque type that is used by uSynergy to communicat
 callback functions as context.
 **/
 //typedef struct { int ignored; } *					uSynergyCookie;
-typedef struct uSynergyContext *uSynergyCookie;
+typedef void *uSynergyCookie;
 
 
 /**

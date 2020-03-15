@@ -11,6 +11,7 @@ volatile sig_atomic_t sigDoExit = 0;
 volatile sig_atomic_t sigDoRestart = 0;
 extern struct wlContext wlContext;
 extern uSynergyContext synContext;
+extern struct synNetContext synNetContext;
 
 static char **argv_reexec;
 static void cleanup(void)
@@ -24,7 +25,7 @@ static void cleanup(void)
                 }
         }
         /*close stuff*/
-        synNetDisconnect();
+        synNetDisconnect(&synNetContext);
         logClose();
         wlClose(&wlContext);
         /*unmask any caught signals*/

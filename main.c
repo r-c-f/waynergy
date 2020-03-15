@@ -27,12 +27,14 @@ static struct sopt optspec[] = {
 	SOPT_INIT_ARGL('N', "name", "name", "Name of client screen"),
 	SOPT_INIT_ARGL('l', "logfile", "file", "Name of logfile to use"),
 	SOPT_INIT_ARGL('L', "loglevel", "level", "Log level -- number, increasing from 0 for more verbosity"),
+	SOPT_INITL('n', "no-clip", "Don't synchronize the clipboard"),
 	SOPT_INIT_END
 };
 
 
 uSynergyContext synContext;
 struct wlContext wlContext;
+struct synNetContext synNetContext;
 
 static void syn_mouse_wheel_cb(uSynergyCookie cookie, int16_t x, int16_t y)
 {
@@ -122,6 +124,7 @@ int main(int argc, char **argv)
 	long optlong;
 	bool optshrt_valid, optlong_valid;
 	bool man_geom = false;
+	bool use_clipboard = true;
 	struct sigaction sa;
 
 	/* If we are run as swaynergy-clip-update, we're just supposed to write
@@ -135,7 +138,6 @@ int main(int argc, char **argv)
 	gethostname(hostname, HOST_NAME_MAX - 1);
 
 	uSynergyInit(&synContext);
-	synContext.m_cookie = &synContext;
 	/* Load defaults for everything */
 	port = configTryString("port", "24800");
 	host = configTryString("host", "localhost");
@@ -189,6 +191,9 @@ int main(int argc, char **argv)
 			case 'l':
 				log_path = xstrdup(optarg);
 				break;
+			case 'n':
+				use_clipboard = false;
+				break;
 opterror:
 			default:
 			       	sopt_usage_s();
@@ -212,7 +217,7 @@ opterror:
 	/* we can't override const, so set hostname here*/
 	synContext.m_clientName = name;
 
-	if (!synNetConfig(&synContext, host, port))
+	if (!synNetInit(&synNetContext, &synContext, host, port))
 		return 2;
 	/* populate events */
 	synContext.m_mouseMoveCallback = syn_mouse_move_cb;
@@ -228,7 +233,7 @@ opterror:
 	//now callbacks
 	wlContext.on_output_update = man_geom ? NULL : wl_output_update_cb;
 	/*run*/
-	if (clipHaveWlClipboard()) {
+	if (clipHaveWlClipboard() && use_clipboard) {
 		synContext.m_clipboardCallback = syn_clip_cb;
 		if(!clipSpawnMonitors())
 			return 3;
@@ -237,7 +242,15 @@ opterror:
 	}
 	wlSetup(&wlContext, synContext.m_clientWidth, synContext.m_clientHeight);
 	wlIdleInhibit(&wlContext, true);
-	while(1) uSynergyUpdate(&synContext);
+	while(1) {
+		if (!synContext.m_connected) {
+			/* always try updating first so we initially connect */
+			uSynergyUpdate(&synContext);
+			uSynergyUpdate(&synContext);
+		} else {
+			netPoll(&synNetContext, &wlContext);
+		}
+	}
 	return 0;
 }
 

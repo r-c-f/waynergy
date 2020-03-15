@@ -19,21 +19,17 @@
 #include <time.h>
 
 
-static struct addrinfo *hostinfo;
-static int synsock = -1;
-extern struct wlContext wlContext;
-
-
 static bool syn_connect(uSynergyCookie cookie)
 {
 	struct addrinfo *h;
-	uSynergyContext *syn_ctx = cookie;
+	struct synNetContext *snet_ctx = cookie;
+	uSynergyContext *syn_ctx = snet_ctx->syn_ctx;
 	logDbg("syn_connect trying to connect");
-	synNetDisconnect();
-	for (h = hostinfo; h; h = h->ai_next) {
-		if ((synsock = socket(h->ai_family, h->ai_socktype, h->ai_protocol)) == -1)
+	synNetDisconnect(snet_ctx);
+	for (h = snet_ctx->hostinfo; h; h = h->ai_next) {
+		if ((snet_ctx->fd = socket(h->ai_family, h->ai_socktype, h->ai_protocol)) == -1)
 			continue;
-		if (connect(synsock, h->ai_addr, h->ai_addrlen))
+		if (connect(snet_ctx->fd, h->ai_addr, h->ai_addrlen))
 			continue;
 		syn_ctx->m_lastMessageTime = syn_ctx->m_getTimeFunc();
 		return true;
@@ -43,90 +39,83 @@ static bool syn_connect(uSynergyCookie cookie)
 
 static bool syn_send(uSynergyCookie cookie, const uint8_t *buf, int len)
 {
-	return write_full(synsock, buf, len);
+	struct synNetContext *snet_ctx = cookie;
+	return write_full(snet_ctx->fd, buf, len);
 }
 
 enum net_pollfd_id {
-	POLLFD_WL,
 	POLLFD_SYN,
+	POLLFD_WL,
 	POLLFD_CB,
 	POLLFD_P,
 	POLLFD_COUNT
 };
-static bool syn_recv(uSynergyCookie cookie, uint8_t *buf, int max_len, int *out_len)
+void netPoll(struct synNetContext *snet_ctx, struct wlContext *wl_ctx)
 {
 	int ret;
-	uint32_t psize;
-	uSynergyContext *syn_ctx = cookie;
-	int wlfd = wlPrepareFd(&wlContext);
-	struct pollfd pollfds[] = {
-		/* POLLFD_WL */
+	uSynergyContext *syn_ctx = snet_ctx->syn_ctx;
+	if (snet_ctx->fd == -1) {
+		logErr("INVALID FILE DESCRIPTOR for synergy context");
+	}
+	int wlfd = wlPrepareFd(wl_ctx);
+	struct pollfd pfd[] = {
+		{
+			.fd = snet_ctx->fd,
+			.events = POLLIN | POLLHUP
+		},
 		{
 			.fd = wlfd,
-			.events = POLLIN | POLLHUP,
-			.revents = 0
+			.events = POLLIN | POLLHUP
 		},
-		/* POLLFD_SYN */
-		{
-			.fd = synsock,
-			.events = POLLIN | POLLHUP,
-			.revents = 0
-		},
-		/* POLLFD_CB */
 		{
 			.fd = clipMonitorFd[0],
-			.events = POLLIN | POLLHUP,
-			.revents = 0
+			.events = POLLIN | POLLHUP
 		},
-		/* POLLFD_P */
 		{
 			.fd = clipMonitorFd[1],
-			.events = POLLIN | POLLHUP,
-			.revents = 0
+			.events = POLLIN | POLLHUP
 		}
 	};
-	while ((ret = poll(pollfds, POLLFD_COUNT, USYNERGY_IDLE_TIMEOUT)) > 0) {
+	int nfd = syn_ctx->m_connected ? POLLFD_COUNT : 1;
+	while ((ret = poll(pfd, nfd, USYNERGY_IDLE_TIMEOUT)) > 0) {
 		sigHandleRun();
-		if (pollfds[POLLFD_SYN].revents & POLLIN) {
-			break;
+		if (pfd[POLLFD_SYN].revents & POLLIN) {
+			uSynergyUpdate(syn_ctx);
 		}
-		sigHandleRun();
-		wlPollProc(&wlContext, pollfds[POLLFD_WL].revents);
-		sigHandleRun();
-		clipMonitorPollProc(&pollfds[POLLFD_CB]);
-		sigHandleRun();
-		clipMonitorPollProc(&pollfds[POLLFD_P]);
-		sigHandleRun();
 		if ((syn_ctx->m_getTimeFunc() - syn_ctx->m_lastMessageTime) > USYNERGY_IDLE_TIMEOUT) {
-			logErr("Synergy imeout encountered, read failed");
-			return false;
+			logErr("Synergy imeout encountered -- disconnecting");
+			synNetDisconnect(snet_ctx);
+			return;
 		}
+		sigHandleRun();
+		/* ignore everything else until synergy is ready */
+		if (syn_ctx->m_connected) {
+			wlPollProc(wl_ctx, pfd[POLLFD_WL].revents);
+			sigHandleRun();
+			clipMonitorPollProc(&pfd[POLLFD_CB]);
+			sigHandleRun();
+			clipMonitorPollProc(&pfd[POLLFD_P]);
+			sigHandleRun();
+		}
+		nfd = syn_ctx->m_connected ? POLLFD_COUNT : 1;
+	}
+	if (!ret) {
+		logErr("Poll timeout encountered -- disconnectin synergy");
+		synNetDisconnect(snet_ctx);
 	}
 	sigHandleRun();
-	if (!ret) {
-		logErr("Synergy poll timeout");
-		return false;
-	}
+}
+
+
+
+static bool syn_recv(uSynergyCookie cookie, uint8_t *buf, int max_len, int *out_len)
+{
+	struct synNetContext *snet_ctx = cookie;
 	alarm(USYNERGY_IDLE_TIMEOUT/1000);
-	if (!read_full_i(synsock, &psize, sizeof(psize))) {
-		perror("read_full");
-		sigHandleRun();
-		return false;
-	}
+	*out_len = read(snet_ctx->fd, buf, max_len);
 	alarm(0);
-	memmove(buf, &psize, sizeof(psize));
-	buf += 4;
-	max_len -=4;
-	*out_len = 4;
-	psize = ntohl(psize);
-	alarm(USYNERGY_IDLE_TIMEOUT/1000);
-	if (!read_full_i(synsock, buf, psize)) {
-		perror("read_full");
-		sigHandleRun();
+	if (*out_len < 1)
 		return false;
-	}
-	alarm(0);
-	*out_len += psize;
 	return true;
 }
 
@@ -145,31 +134,38 @@ static uint32_t syn_get_time(void)
 	return ms;
 }
 
-bool synNetConfig(uSynergyContext *context, char *host, char *port)
+bool synNetInit(struct synNetContext *sn_ctx, uSynergyContext *context, const char *host, const char *port)
 {
 	/* trim away any newline garbage */
-	for (char *c = host; *c; ++c) {
+	char host_noline[strlen(host) + 1];
+	strcpy(host_noline, host);
+	for (char *c = host_noline; *c; ++c) {
 		if (*c == '\n') {
 			*c = '\0';
 			break;
 		}
 	}
-	if (getaddrinfo(host, port, NULL, &hostinfo))
+	if (getaddrinfo(host_noline, port, NULL, &sn_ctx->hostinfo))
 		return false;
+	sn_ctx->syn_ctx = context;
+	sn_ctx->fd = -1;
 	context->m_connectFunc = syn_connect;
 	context->m_sendFunc = syn_send;
 	context->m_receiveFunc = syn_recv;
 	context->m_sleepFunc = syn_sleep;
 	context->m_getTimeFunc = syn_get_time;
+	context->m_cookie = sn_ctx;
 	return true;
 }
 
-bool synNetDisconnect(void)
+bool synNetDisconnect(struct synNetContext *sn_ctx)
 {
-	if (synsock == -1)
+	if (sn_ctx->fd == -1)
 		return false;
-	shutdown(synsock, SHUT_RDWR);
-	close(synsock);
+	shutdown(sn_ctx->fd, SHUT_RDWR);
+	close(sn_ctx->fd);
+	sn_ctx->fd = -1;
+	sn_ctx->syn_ctx->m_connected = false;
 	return true;
 }
 
