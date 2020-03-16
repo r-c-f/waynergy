@@ -295,7 +295,7 @@ static struct zwlr_data_control_offer_v1_listener data_offer_listener = {
 };
 static void on_data_offer(void *data, struct zwlr_data_control_device_v1 *device, struct zwlr_data_control_offer_v1 *offer)
 {
-	logDbg("Got data offer");
+	logDbg("Got data offer at %p", (void*)offer);
 	struct wlContext *ctx = data;
 	if (ctx->data_offer) {
 		for (int i = 0; i < CLIP_FORMAT_COUNT; ++i) {
@@ -319,7 +319,9 @@ static void on_selection(void *data, struct zwlr_data_control_device_v1 *device,
 	int fd[2];
 	struct wlContext *ctx = data;
 	if (offer != ctx->data_offer) {
-		logErr("Unknown offer selected");
+		logWarn("Unknown offer selected (this one is at %p)", (void*)offer);
+		logWarn("Trying anyway, with *our* offer at %p", (void*)ctx->data_offer);
+		offer = ctx->data_offer;
 		return;
 	}
 	logDbg("Trying to receive");
@@ -383,7 +385,7 @@ static void on_send(void *data, struct zwlr_data_control_source_v1 *source, cons
 	if (!fork()) {
 
 		bool ret;
-		ret = write_full(fd, ctx->data_source_buf[id][fmt], ctx->data_source_len[id][fmt]);
+		ret = write_full(fd, ctx->data_source_buf[id][fmt], ctx->data_source_len[id][fmt], 0);
 		close(fd);
 		if (!ret) {
 			logErr("FORKING SEND FAILED");
@@ -403,6 +405,9 @@ static void on_cancelled(void *data, struct zwlr_data_control_source_v1 *source)
 		logErr("Got unknown data source in cancel event");
 		return;
 	}
+	/*NECESSARY TO PREVENT WEIRD RACE CONDITIONS*/
+	wl_display_roundtrip(ctx->display);
+
 	if (id == SYNERGY_CLIPBOARD_CLIPBOARD) {
 		zwlr_data_control_device_v1_set_selection(ctx->data_device, NULL);
 	} else if (id == SYNERGY_CLIPBOARD_SELECTION) {
