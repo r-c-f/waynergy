@@ -33,16 +33,20 @@ static char *log_level_get_str(enum logLevel level)
 }
 static void log_out_v_(FILE *f, enum logLevel level, const char *fmt, va_list ap)
 {
+	int fd;
 	size_t i;
 	va_list aq;
 	if (level > log_level)
 		return;
+	fd = fileno(f);
+	lockf(fd, F_LOCK, 0);
 	log_print_ts(f);
 	fprintf(f, ": [%s] ", log_level_get_str(level));
 	va_copy(aq, ap);
 	vfprintf(f, fmt, aq);
 	putc('\n', f);
 	fflush(f);
+	lockf(fd, F_ULOCK, 0);
 }
 static void log_out_v(enum logLevel level, const char *fmt, va_list ap)
 {
