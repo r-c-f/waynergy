@@ -95,12 +95,12 @@ void clipMonitorPollProc(struct pollfd *pfd)
 	if (id < 0)
 		return;
 	if (pfd->revents & POLLIN) {
-		if (!read_full(pfd->fd, &len, sizeof(len))) {
+		if (!read_full(pfd->fd, &len, sizeof(len), 0)) {
 			abort();
 			return;
 		}
 		char buf[len];
-		if (!read_full(pfd->fd, buf, len)) {
+		if (!read_full(pfd->fd, buf, len, 0)) {
 			abort();
 		}
 		uSynergyUpdateClipBuf(&synContext, id, len, buf);
@@ -145,7 +145,7 @@ bool clipWlCopy(enum uSynergyClipboardId id, const unsigned char *data, size_t l
 	}
 	close(fd[0]);
 	/* write to child process */
-	write_full(fd[1], data, len);
+	write_full(fd[1], data, len, 0);
 	close(fd[1]);
 	return true;
 }

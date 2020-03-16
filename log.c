@@ -55,11 +55,11 @@ static void log_out_ss(enum logLevel level, const char *msg)
 	char lf = '\n';
 	if (level > log_level)
 		return;
-	write_full(STDERR_FILENO, msg, strlen(msg));
-	write_full(STDERR_FILENO, &lf, 1);
+	write_full(STDERR_FILENO, msg, strlen(msg), 0);
+	write_full(STDERR_FILENO, &lf, 1, 0);
 	if (log_file) {
-		write_full(log_file_fd, msg, strlen(msg));
-		write_full(log_file_fd, &lf, 1);
+		write_full(log_file_fd, msg, strlen(msg), 0);
+		write_full(log_file_fd, &lf, 1, 0);
 	}
 }
 

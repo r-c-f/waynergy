@@ -40,7 +40,7 @@ static bool syn_connect(uSynergyCookie cookie)
 static bool syn_send(uSynergyCookie cookie, const uint8_t *buf, int len)
 {
 	struct synNetContext *snet_ctx = cookie;
-	return write_full(snet_ctx->fd, buf, len);
+	return write_full(snet_ctx->fd, buf, len, 0);
 }
 
 enum net_pollfd_id {
