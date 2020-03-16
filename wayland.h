@@ -42,6 +42,16 @@ struct wlOutput
 /* mimetypes matching up with uSynergyClipboardFormat enums */
 #define CLIP_FORMAT_MIMES_TEXT {"text/plain", "text/plain;charset=utf-8", "TEXT", "STRING", "UTF8_STRING", NULL}
 
+struct wlDataOffer {
+	struct zwlr_data_control_offer_v1 *offer;
+	char *mimes[CLIP_FORMAT_COUNT];
+	enum uSynergyClipboardId id;
+	struct wlDataOffer *prev;
+	struct wlDataOffer *next;
+};
+bool wlDataOfferAdd(struct wlDataOffer **offers, struct zwlr_data_control_offer_v1 *offer);
+bool wlDataOfferDel(struct wlDataOffer **offers, struct zwlr_data_control_offer_v1 *offer);
+struct wlDataOffer *wlDataOfferGet(struct wlDataOffer *offers, struct zwlr_data_control_offer_v1 *offer);
 struct wlContext {
 	struct wl_registry *registry;
 	struct wl_display *display;
@@ -60,8 +70,7 @@ struct wlContext {
 	struct xkb_state *xkb_state;
 	struct zwlr_data_control_manager_v1 *data_manager;
 	struct zwlr_data_control_device_v1 *data_device;
-	struct zwlr_data_control_offer_v1 *data_offer;
-	char *data_offer_mimes[CLIP_FORMAT_COUNT];
+	struct wlDataOffer *data_offers;
 	struct zwlr_data_control_source_v1 *data_source[CLIP_COUNT];
 	bool data_source_types[CLIP_COUNT][CLIP_FORMAT_COUNT];
 	char *data_source_buf[CLIP_COUNT][CLIP_FORMAT_COUNT];

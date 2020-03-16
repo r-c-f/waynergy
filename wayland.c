@@ -246,6 +246,92 @@ static void xdg_output_desc(void *data, struct zxdg_output_v1 *xdg_output, const
 	output->desc = xstrdup(desc);
 }
 
+
+struct wlDataOffer *wlDataOfferGet(struct wlDataOffer *offers, struct zwlr_data_control_offer_v1 *wlr_offer)
+{
+	struct wlDataOffer *offer;
+	for (offer = offers; offer; offer = offer->next) {
+		if (offer->offer = wlr_offer)
+			return offer;
+	}
+	return NULL;
+}
+struct wlDataOffer *wlDataOfferGetById(struct wlDataOffer *offers, enum uSynergyClipboardId id)
+{
+	struct wlDataOffer *offer;
+	for (offer = offers; offer; offer = offer->next) {
+		if (offer->id == id)
+			return offer;
+	}
+	return NULL;
+}
+bool wlDataOfferAdd(struct wlDataOffer **offers, struct zwlr_data_control_offer_v1 *wlr_offer)
+{
+	struct wlDataOffer *n;
+	struct wlDataOffer *offer = wlDataOfferGet(*offers, wlr_offer);
+	if (offer) {
+		logWarn("Attempting to add duplicate offer to offer list");
+		return false;
+	}
+	n = xmalloc(sizeof(*n));
+	for (int i = 0; i < CLIP_FORMAT_COUNT; ++i) {
+		n->mimes[i] = NULL;
+	}
+	n->offer = wlr_offer;
+	n->id = -1;
+	n->next = NULL;
+	n->prev = NULL;
+
+	if (!*offers) {
+		*offers = n;
+		return true;
+	}
+	for (offer = *offers; offer->next; offer = offer->next);
+	offer->next = n;
+	n->prev = offer;
+	return true;
+}
+bool wlDataOfferDel(struct wlDataOffer **offers, struct zwlr_data_control_offer_v1 *wlr_offer)
+{
+	struct wlDataOffer *offer = wlDataOfferGet(*offers, wlr_offer);
+	if (!offer) {
+		logErr("Trying to remove nonexistent offer");
+		return false;
+	}
+	if (offer->next) {
+		offer->next->prev = NULL;
+	}
+	if (offer->prev) {
+		offer->prev->next = offer->next;
+	}
+	if (offer == *offers) {
+		*offers = NULL;
+	}
+	if (offer->id != -1) {
+		//destroy the offer -- this will be called upon selection
+		for (int i = 0; i < CLIP_FORMAT_COUNT; ++i) {
+			offer->mimes[i] = NULL;
+		}
+		zwlr_data_control_offer_v1_destroy(offer->offer);
+	}
+	free(offer);
+	return true;
+}
+bool wlDataOfferPromote(struct wlDataOffer **offers, struct zwlr_data_control_offer_v1 *wlr_offer, enum uSynergyClipboardId id)
+{
+	struct wlDataOffer *offer = wlDataOfferGet(*offers, wlr_offer);
+	if (!offer) {
+		logErr("Trying to promote nonexistent offer");
+		return false;
+	}
+	struct wlDataOffer *old_offer = wlDataOfferGetById(*offers, id);
+	if (old_offer) {
+		wlDataOfferDel(offers, old_offer->offer);
+	}
+	offer->id = id;
+	return true;
+}
+
 static char *clip_format_mimes_text[] = CLIP_FORMAT_MIMES_TEXT;
 static char **clip_format_mimes[] = {clip_format_mimes_text};
 static enum uSynergyClipboardFormat clip_format_from_mime(const char *mime)
@@ -271,10 +357,11 @@ static char *get_static_mime_string(const char *mime_type)
 	return NULL;
 }
 
-static void on_offer_mime(void *data, struct zwlr_data_control_offer_v1 *offer, const char *mime_type)
+static void on_offer_mime(void *data, struct zwlr_data_control_offer_v1 *wlr_offer, const char *mime_type)
 {
 	struct wlContext *ctx = data;
-	if (ctx->data_offer != offer) {
+	struct wlDataOffer *offer = wlDataOfferGet(ctx->data_offers, wlr_offer);
+	if (!offer) {
 		logErr("Got MIME type for unknown offer");
 		return;
 	}
@@ -284,27 +371,21 @@ static void on_offer_mime(void *data, struct zwlr_data_control_offer_v1 *offer, 
 		logWarn("Unsupported mime type %s", mime_type);
 		return;
 	}
-	if (ctx->data_offer_mimes[fmt]) {
-		logDbg("Already have format %s, ignoring %s", ctx->data_offer_mimes[fmt], mime_type);
+	if (offer->mimes[fmt]) {
+		logDbg("Already have format %s, ignoring %s", offer->mimes[fmt], mime_type);
 		return;
 	}
-	ctx->data_offer_mimes[fmt] = get_static_mime_string(mime_type);
+	offer->mimes[fmt] = get_static_mime_string(mime_type);
 }
 static struct zwlr_data_control_offer_v1_listener data_offer_listener = {
 	on_offer_mime
 };
-static void on_data_offer(void *data, struct zwlr_data_control_device_v1 *device, struct zwlr_data_control_offer_v1 *offer)
+static void on_data_offer(void *data, struct zwlr_data_control_device_v1 *device, struct zwlr_data_control_offer_v1 *wlr_offer)
 {
-	logDbg("Got data offer at %p", (void*)offer);
+	logDbg("Got data offer at %p", (void*)wlr_offer);
 	struct wlContext *ctx = data;
-	if (ctx->data_offer) {
-		for (int i = 0; i < CLIP_FORMAT_COUNT; ++i) {
-			ctx->data_offer_mimes[i] = NULL;
-		}
-		zwlr_data_control_offer_v1_destroy(ctx->data_offer);
-	}
-	ctx->data_offer = offer;
-	zwlr_data_control_offer_v1_add_listener(offer, &data_offer_listener, ctx);
+	wlDataOfferAdd(&ctx->data_offers, wlr_offer);
+	zwlr_data_control_offer_v1_add_listener(wlr_offer, &data_offer_listener, ctx);
 	wl_display_roundtrip(ctx->display);
 }
 static void on_finished(void *data, struct zwlr_data_control_device_v1 *device)
@@ -312,38 +393,38 @@ static void on_finished(void *data, struct zwlr_data_control_device_v1 *device)
 	logWarn("Data control device invalid");
 }
 extern char **environ;
-static void on_selection(void *data, struct zwlr_data_control_device_v1 *device, struct zwlr_data_control_offer_v1 *offer, enum uSynergyClipboardId id)
+static void on_selection(void *data, struct zwlr_data_control_device_v1 *device, struct zwlr_data_control_offer_v1 *wlr_offer, enum uSynergyClipboardId id)
 {
 	pid_t pid;
 	posix_spawn_file_actions_t fa;
 	int fd[2];
 	struct wlContext *ctx = data;
-	if (offer != ctx->data_offer) {
-		logWarn("Unknown offer selected (this one is at %p)", (void*)offer);
-		logWarn("Trying anyway, with *our* offer at %p", (void*)ctx->data_offer);
-		offer = ctx->data_offer;
+	struct wlDataOffer *offer = wlDataOfferGet(ctx->data_offers, wlr_offer);
+	if (!offer) { 
+		logErr("Unknown offer selected");
 		return;
 	}
+	wlDataOfferPromote(&ctx->data_offers, wlr_offer, id);
 	logDbg("Trying to receive");
 	for (int i = 0; i < CLIP_FORMAT_COUNT; ++i) {
-		if (!ctx->data_offer_mimes[i]) {
+		if (!offer->mimes[i]) {
 			continue;
 		}
 		char *argv[] = {
 			"swaynergy-clip-update",
 			clipMonitorPath[id],
-			ctx->data_offer_mimes[i],
+			offer->mimes[i],
 			NULL
 		};
 		pipe(fd);
 		posix_spawn_file_actions_init(&fa);
 		posix_spawn_file_actions_adddup2(&fa, fd[0], STDIN_FILENO);
 		posix_spawn_file_actions_addclose(&fa, fd[1]);
-		zwlr_data_control_offer_v1_receive(offer, ctx->data_offer_mimes[i], fd[1]);
+		zwlr_data_control_offer_v1_receive(offer->offer, offer->mimes[i], fd[1]);
 		posix_spawnp(&pid, "swaynergy-clip-update", &fa, NULL, argv, environ);
 		close(fd[0]);
 		close(fd[1]);
-		logDbg("Spawned updater for clipboard %d, type %s", id, ctx->data_offer_mimes[i]);
+		logDbg("Spawned updater for clipboard %d, type %s", id, offer->mimes[i]);
 	}
 }
 static void on_clipboard(void *data, struct zwlr_data_control_device_v1 *device, struct zwlr_data_control_offer_v1 *offer)
