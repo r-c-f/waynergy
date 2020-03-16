@@ -148,7 +148,6 @@ static void output_scale(void *data, struct wl_output *wl_output, int32_t factor
 	output->complete = false;
 	output->scale = factor;
 }
-void (*wlOnOutputsUpdated)(struct wlOutput *outputs) = NULL;
 static void output_done(void *data, struct wl_output *wl_output)
 {
 	struct wlContext *ctx = data;
