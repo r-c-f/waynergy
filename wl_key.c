@@ -82,6 +82,8 @@ int wlLoadConfLayout(struct wlContext *ctx)
         strcpy(ptr, keymap_str);
         zwp_virtual_keyboard_v1_keymap(ctx->keyboard, WL_KEYBOARD_KEYMAP_FORMAT_XKB_V1, fd, keymap_size);
 	local_mod_init(keymap_str);
+	/* get our idle inhibition key */
+	ctx->idle_inhibit_key = xkb_keymap_key_by_name(xkb_map, configTryString("idle-inhibit/keyname", "HYPR"));
 done:
         free(keymap_str);
         return ret;

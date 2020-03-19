@@ -1,6 +1,7 @@
 CFLAGS+=-D_GNU_SOURCE -DUSYNERGY_LITTLE_ENDIAN
 LDFLAGS=-lwayland-client -lxkbcommon
-PROT_H=wlr-virtual-pointer-unstable-v1.prot.h virtual-keyboard-unstable-v1.prot.h xdg-output-unstable-v1.prot.h
+PROT:=idle.xml wlr-virtual-pointer-unstable-v1.xml virtual-keyboard-unstable-v1.xml xdg-output-unstable-v1.xml
+PROT_H=$(PROT:xml=prot.h)
 PROT_C=$(PROT_H:h=c)
 PROT_O=$(PROT_H:h=o)
 SRCFILES_H:=clip.h config.h net.h os.h  sig.h wayland.h uSynergy.h log.h

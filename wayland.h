@@ -13,6 +13,7 @@
 #include "wlr-virtual-pointer-unstable-v1.prot.h"
 #include "virtual-keyboard-unstable-v1.prot.h"
 #include "xdg-output-unstable-v1.prot.h"
+#include "idle.prot.h"
 #include "uSynergy.h"
 
 struct wlOutput
@@ -43,10 +44,9 @@ struct wlContext {
 	struct zwlr_virtual_pointer_v1 *pointer;
 	struct zwp_virtual_keyboard_v1 *keyboard;
 	struct wlOutput *outputs;
-	//listeners
-	struct zxdg_output_v1_listener xdg_output_listener;
-	struct wl_output_listener output_listener;
-	struct wl_registry_listener registry_listener;
+	struct org_kde_kwin_idle *idle_manager;
+	struct org_kde_kwin_idle_timeout *idle_timeout;
+	int idle_inhibit_key;
 	//state
 	int width;
 	int height;
