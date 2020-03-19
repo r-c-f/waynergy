@@ -79,13 +79,16 @@ it when it is deactivated.
 
 #### Idle inhibition hack
 
-`idle-inhibit` should contain a 'start' and a 'stop' file, with commands to
-be run to stop whatever idle monitor is working when swaynergy starts, and 
-to restart it before swaynergy exits. This is to bypass the problem of needing
-an active surface to inhibit idle in the actual underlying protocols, which 
-we must do in order to prevent the screensaver/lock screen/whatever from being
-triggered except by the Synergy screensaver message. In my case, this means
-killing swayidle, and restarting swayidle.
+Due to issues with the idle inhibition protocol, idle is actually inhibited by
+sending an ideally-unused keycode at a set interval. `idle-inhibit/keyname` 
+should contain the xkb-style keyname (HYPR by default) while
+`idle-inhibit/interval` should contain an interval to send it in seconds 
+(30 by default) when the session is idle.  
+
+This is a vast improvement over the previous solution, which was to allow a
+command to kill swayidle. Now the screensaver command can be something along
+the lines of `pkill -SIGUSR1 swayidle` using the existing swayidle command 
+started in the normal sway config. 
 
 ## Acknowledgements
 
@@ -100,6 +103,5 @@ I don't have to.
 * use the wayland protocols for clipboard management. wl-clipboard already existed
 and is mostly fine, but Synergy specifies the format of the data (negating the 
 need to guess at mimetypes) and multi-process coordination is annoying. 
-* Improve idle handling
 * De-uglify. This was one of those let's-not-really-plan-this-out-but-write-vaguely-working-code
 sort of things, and it shows, quite noticeably. 
