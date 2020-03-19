@@ -80,11 +80,27 @@ char **configReadLines(char *name)
 
 
 
-char *configTryString(char *name, char *def)
+char *configTryStringFull(char *name, char *def)
 {
 	char *output = configReadFile(name);
 	return output ? output : (def ? xstrdup(def) : NULL);
 }
+char *configTryString(char *name, char *def)
+{
+	char *output = configReadFile(name);
+	if (!output)
+		return xstrdup(def);
+	/* remove the newline */
+	for (char *c = output; *c; ++c) {
+		if (*c == '\n') {
+			//terminate it.
+			*c = '\0';
+			break;
+		}
+	}
+	return output;
+}
+
 long configTryLong(char *name, long def)
 {
 	char *s;

@@ -140,16 +140,7 @@ bool synNetInit(struct synNetContext *snet_ctx, uSynergyContext *context, const 
 		.ai_family = AF_UNSPEC,
 		.ai_socktype = SOCK_STREAM
 	};
-	/* trim away any newline garbage */
-	char host_noline[strlen(host) + 1];
-	strcpy(host_noline, host);
-	for (char *c = host_noline; *c; ++c) {
-		if (*c == '\n') {
-			*c = '\0';
-			break;
-		}
-	}
-	if (getaddrinfo(host_noline, port, &hints, &snet_ctx->hostinfo))
+	if (getaddrinfo(host, port, &hints, &snet_ctx->hostinfo))
 		return false;
 	snet_ctx->syn_ctx = context;
 	snet_ctx->fd = -1;
