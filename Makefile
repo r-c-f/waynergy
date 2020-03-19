@@ -5,7 +5,7 @@ PROT_H=$(PROT:xml=prot.h)
 PROT_C=$(PROT_H:h=c)
 PROT_O=$(PROT_H:h=o)
 SRCFILES_H:=clip.h config.h net.h os.h  sig.h wayland.h uSynergy.h log.h
-SRCFILES_C=$(SRCFILES_H:h=c) wl_key.c wl_mouse.c main.c clip-update.c
+SRCFILES_C=$(SRCFILES_H:h=c) wl_idle.c wl_key.c wl_mouse.c main.c clip-update.c
 SRCFILES_O=$(SRCFILES_C:c=o)
 
 all: swaynergy swaynergy-clip-update
