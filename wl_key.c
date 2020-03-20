@@ -46,20 +46,18 @@ static bool local_mod_init(struct wlContext *wl_ctx, char *keymap_str) {
 
 
 /* create a layout file descriptor */
-int wlKeySetLayout(struct wlContext *ctx, char *keymap_str)
+int wlKeySetConfigLayout(struct wlContext *ctx)
 {
         int ret = 0;
         int fd;
         char nul = 0;
-	if (!keymap_str) {
-		keymap_str = "xkb_keymap { \
+	char *keymap_str = configTryStringFull("xkb_keymap", "xkb_keymap { \
 		xkb_keycodes  { include \"xfree86+aliases(qwerty)\"     }; \
 		xkb_types     { include \"complete\"    }; \
 		xkb_compat    { include \"complete\"    }; \
 		xkb_symbols   { include \"pc+us+inet(evdev)\"   }; \
 		xkb_geometry  { include \"pc(pc105)\"   }; \
-};";
-	}
+};");
         if ((fd = osGetAnonFd()) == -1) {
                 ret = 1;
                 goto done;

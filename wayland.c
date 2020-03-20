@@ -364,7 +364,7 @@ int wlSetup(struct wlContext *ctx, int width, int height)
 	ctx->keyboard = zwp_virtual_keyboard_manager_v1_create_virtual_keyboard(ctx->keyboard_manager, ctx->seat);
 	wl_display_dispatch(ctx->display);
 	wl_display_roundtrip(ctx->display);
-	if(wlKeySetLayout(ctx, configTryStringFull("xkb_keymap", NULL))) {
+	if(wlKeySetConfigLayout(ctx)) {
 		return 1;
 	}
 	/* set FD_CLOEXEC */

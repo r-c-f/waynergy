@@ -59,7 +59,7 @@ struct wlContext {
 	void (*on_output_update)(struct wlContext *ctx);
 };
 
-extern int wlKeySetLayout(struct wlContext *ctx, char *keymap_str);
+extern int wlKeySetConfigLayout(struct wlContext *ctx);
 extern int wlSetup(struct wlContext *context, int width, int height);
 extern uint32_t wlTS(struct wlContext *context);
 extern void wlResUpdate(struct wlContext *context, int width, int height);
