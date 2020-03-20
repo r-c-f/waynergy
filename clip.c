@@ -96,15 +96,19 @@ void clipMonitorPollProc(struct pollfd *pfd)
 		return;
 	if (pfd->revents & POLLIN) {
 		if (!read_full(pfd->fd, &len, sizeof(len), 0)) {
-			abort();
-			return;
+			logErr("Clipboard monitor could not read size: %s", strerror(errno));
+			goto error;
 		}
 		char buf[len];
 		if (!read_full(pfd->fd, buf, len, 0)) {
-			abort();
+			logErr("Clipboard monitor could not read data: %s", strerror(errno));
+			goto error;
 		}
 		uSynergyUpdateClipBuf(&synContext, id, len, buf);
 	}
+error:
+	/* instead of aborting, or cleaning up gracefully, just restart */
+	kill(getpid(), SIGUSR1);
 }
 
 

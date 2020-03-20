@@ -569,10 +569,11 @@ static void sProcessMessage(uSynergyContext *context, const uint8_t *message)
 			}
 		} else if (mark == SYN_DATA_CHUNK && context->m_clipInStream[id]) {
 			if (((parse_msg - message) + len) > USYNERGY_RECEIVE_BUFFER_SIZE) {
-				abort();
+				logErr("Malformed clipboard chunk");
+				return;
 			}
 			if ((context->m_clipPos[id] + len) > context->m_clipPosExpect[id]) {
-				fprintf(stderr, "Packet too long!\n");
+				logErr(("Packet too long!");
 				return;
 			}
 
