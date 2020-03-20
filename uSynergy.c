@@ -573,7 +573,7 @@ static void sProcessMessage(uSynergyContext *context, const uint8_t *message)
 				return;
 			}
 			if ((context->m_clipPos[id] + len) > context->m_clipPosExpect[id]) {
-				logErr(("Packet too long!");
+				logErr("Packet too long!");
 				return;
 			}
 
