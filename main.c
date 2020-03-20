@@ -70,6 +70,7 @@ static void syn_screensaver_cb(uSynergyCookie cookie, bool state)
 {
 	size_t i;
 	int ret;
+	wlIdleInhibit(&wlContext, !state);
 	char **cmd = configReadLines(state ? "screensaver/start" : "screensaver/stop");
 	if (!cmd)
 		return;

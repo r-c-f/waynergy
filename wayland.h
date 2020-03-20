@@ -4,6 +4,7 @@
 #include <stdbool.h>
 #include <poll.h>
 #include <sys/mman.h>
+#include <xkbcommon/xkbcommon.h>
 #include "os.h"
 #include "xmem.h"
 #include "config.h"
@@ -46,7 +47,10 @@ struct wlContext {
 	struct wlOutput *outputs;
 	struct org_kde_kwin_idle *idle_manager;
 	struct org_kde_kwin_idle_timeout *idle_timeout;
-	int idle_inhibit_key;
+	// keyboard layout handling
+	struct xkb_context *xkb_ctx;
+	struct xkb_keymap *xkb_map;
+	struct xkb_state *xkb_state;
 	//state
 	int width;
 	int height;
@@ -55,7 +59,7 @@ struct wlContext {
 	void (*on_output_update)(struct wlContext *ctx);
 };
 
-extern int wlLoadConfLayout(struct wlContext *ctx);
+extern int wlKeySetLayout(struct wlContext *ctx, char *keymap_str);
 extern int wlSetup(struct wlContext *context, int width, int height);
 extern uint32_t wlTS(struct wlContext *context);
 extern void wlResUpdate(struct wlContext *context, int width, int height);

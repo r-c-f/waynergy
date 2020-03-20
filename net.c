@@ -136,6 +136,7 @@ static uint32_t syn_get_time(void)
 
 bool synNetInit(struct synNetContext *snet_ctx, uSynergyContext *context, const char *host, const char *port)
 {
+	logInfo("Going to connect to %s at port %s", host, port);
 	struct addrinfo hints = {
 		.ai_family = AF_UNSPEC,
 		.ai_socktype = SOCK_STREAM

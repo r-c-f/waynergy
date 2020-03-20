@@ -80,15 +80,13 @@ it when it is deactivated.
 #### Idle inhibition hack
 
 Due to issues with the idle inhibition protocol, idle is actually inhibited by
-sending an ideally-unused keycode at a set interval. `idle-inhibit/keyname` 
-should contain the xkb-style keyname (HYPR by default) while
-`idle-inhibit/interval` should contain an interval to send it in seconds 
-(30 by default) when the session is idle.  
+sending a hopefully-meaningless event to the compositor: if `idle-inhibit/method`
+is `key`, the key associated with the xkb-style name in `idle-inhibit/keyname` is
+pressed (defaults to `HYPR`). If `idle-inhbibit/method` is `mouse`, then a relative 
+move of 0,0 is sent (this is the default). 
 
-This is a vast improvement over the previous solution, which was to allow a
-command to kill swayidle. Now the screensaver command can be something along
-the lines of `pkill -SIGUSR1 swayidle` using the existing swayidle command 
-started in the normal sway config. 
+The mouse approach prevents any clashes with keys, but will prevent cursor
+hiding.
 
 ## Acknowledgements
 
