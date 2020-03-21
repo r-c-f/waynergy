@@ -106,6 +106,7 @@ void clipMonitorPollProc(struct pollfd *pfd)
 		}
 		uSynergyUpdateClipBuf(&synContext, id, len, buf);
 	}
+	return;
 error:
 	/* instead of aborting, or cleaning up gracefully, just restart */
 	kill(getpid(), SIGUSR1);
