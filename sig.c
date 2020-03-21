@@ -48,7 +48,6 @@ void Restart(void)
 
 static void sig_handle(int sig, siginfo_t *si, void *context)
 {
-
         switch (sig) {
                 case SIGALRM:
                         logOutSig(LOG_ERR, "Alarm timeout encountered -- probably disconnecting");
@@ -62,7 +61,11 @@ static void sig_handle(int sig, siginfo_t *si, void *context)
                         sigDoRestart = true;
                         break;
                 case SIGCHLD:
-                        logOutSig(LOG_INFO, "Child died.");
+			if (si->si_status) {
+				logOutSig(LOG_WARN, "Child died with nonzero status");
+			} else {
+				logOutSig(LOG_INFO, "Child died -- successful status");
+			}
                         break;
                 default:
                         logOutSig(LOG_ERR, "Unhandled signal");
