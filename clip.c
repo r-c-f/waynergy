@@ -1,8 +1,13 @@
 #include "clip.h"
 #include "wayland.h"
+#include "net.h"
 
 extern uSynergyContext synContext;
 extern char **environ;
+
+int clipMonitorFd;
+struct sockaddr_un clipMonitorAddr;
+pid_t clipMonitorPid[2];
 
 /* check for wl-clipboard's presence */
 bool clipHaveWlClipboard(void)
@@ -31,25 +36,39 @@ bool clipHaveWlClipboard(void)
 	return true;
 }
 
+/* set up sockets */
+bool wlClipSetupSockets()
+{
+	strncpy(clipMonitorAddr.sun_path, osGetRuntimePath("swaynergy-clip-sock"), sizeof(clipMonitorAddr.sun_path));
+	unlink(clipMonitorAddr.sun_path);
+	if ((clipMonitorFd = socket(AF_UNIX, SOCK_STREAM, 0)) == -1) {
+		logErr("Socket call failed: %s", strerror(errno));
+		return false;
+	}
+	if (bind(clipMonitorFd, (struct sockaddr *)&clipMonitorAddr, sizeof(clipMonitorAddr)) == -1) {
+		logErr("Bind call failed: %s", strerror(errno));
+		return false;
+	}
+	if (listen(clipMonitorFd, 8) == -1) {
+		logErr("Could not listen: %s", strerror(errno));
+		return false;
+	}
+	for (int i = POLLFD_CLIP_UPDATER; i < POLLFD_COUNT; ++i) {
+		netPollFd[i].fd = -1;
+	}
+	return true;
+}
+
 /* spawn wl-paste watchers */
 bool clipSpawnMonitors(void)
 {
-	clipMonitorPath[0] = osGetRuntimePath("swaynergy-cb-fifo");
-	clipMonitorPath[1] = osGetRuntimePath("swaynergy-p-fifo");
-	struct sockaddr_un sa[2] = {
-		{
-			.sun_family = AF_UNIX,
-		},
-		{
-			.sun_family = AF_UNIX,
-		}
-	};
 	char *argv_0[] = {
 			"wl-paste",
 			"-n",
 			"-w",
 			"swaynergy-clip-update",
-			clipMonitorPath[0],
+			"c",
+			clipMonitorAddr.sun_path,
 			NULL
 	};
 	char *argv_1[] = {
@@ -58,62 +77,67 @@ bool clipSpawnMonitors(void)
 			"--primary",
 			"-w",
 			"swaynergy-clip-update",
-			clipMonitorPath[1],
+			"p",
+			clipMonitorAddr.sun_path,
 			NULL
 	};
 	char **argv[] = { argv_0, argv_1 };
 	for (int i = 0; i < 2; ++i) {
-		unlink(clipMonitorPath[i]);
-		errno = 0;
-		if ((clipMonitorFd[i] = socket(AF_UNIX, SOCK_STREAM, 0)) == -1) {
-			logErr("Socket call failed: %s", strerror(errno));
-			return false;
-		}
-		strncpy(sa.sun_path, clipMonitorPath[i], sizeof(sa.sun_path));
-		if (bind(clipMonitorFd[i], (struct sockaddr *)(sa + i), sizeof(sa[i])) == 1) {
-			logErr("Bind error: %s", strerror(errno));
-			return false;
-		}
-		while (
-		/* now we spawn */
-		errno = 0;
 		if (posix_spawnp(clipMonitorPid + i,"wl-paste",NULL,NULL,argv[i],environ)) {
 			logErr("Spawn failed: %s", strerror(errno));
-			clipMonitorPid[i] = -1;
 			return false;
 		}
 	}
 	return true;
 }
 
-/* get clipboard ID from fd */
-enum uSynergyClipboardId clipIdFromFd(int fd)
-{
-	for (int i = 0; i < 2; ++i) {
-		if (clipMonitorFd[i] == fd)
-			return i;
-	}
-	return -1;
-}
-
 /* process poll data */
 void clipMonitorPollProc(struct pollfd *pfd)
 {
 	size_t len;
-	int id = clipIdFromFd(pfd->fd);
-	if (id < 0)
-		return;
+	char c_id;
+	enum uSynergyClipboardId id;
 	if (pfd->revents & POLLIN) {
-		if (!read_full(pfd->fd, &len, sizeof(len), 0)) {
-			logErr("Clip monitor poll proc failed");
-			return;
+		if ((netPollFd + POLLFD_CLIP_MON) == pfd) {
+			for (int i = POLLFD_CLIP_UPDATER; i < POLLFD_COUNT; ++i) {
+				if (netPollFd[i].fd == -1) {
+					netPollFd[i].fd = accept(clipMonitorFd, NULL, NULL);
+					if (netPollFd[i].fd == -1) {
+						logErr("Could not accept connection: %s", strerror(errno));
+					}
+					return;
+				}
+			}
+			logErr("No free updater file descriptors -- doing nothing");
+		} else {
+			if (!read_full(pfd->fd, &c_id, 1, 0)) {
+				logErr("Could not read clipboard ID: %s", strerror(errno));
+				goto done;
+			}
+			if (!read_full(pfd->fd, &len, sizeof(len), 0)) {
+				logErr("Could not read clipboard data length: %s", strerror(errno));
+				goto done;
+			}
+			char *buf = xmalloc(len);
+			if (!read_full(pfd->fd, buf, len, 0)) {
+				logErr("Could not read clipboard data: %s", strerror(errno));
+				goto done;
+			}
+			if (c_id == 'p') {
+				id = SYNERGY_CLIPBOARD_SELECTION;
+			} else if (c_id == 'c') {
+				id = SYNERGY_CLIPBOARD_CLIPBOARD;
+			} else {
+				logErr("Unknown clipboard ID %c", c_id);
+				goto done;
+			}
+			uSynergyUpdateClipBuf(&synContext, id , len, buf);
+done:
+			shutdown(pfd->fd, SHUT_RDWR);
+			close(pfd->fd);
+			pfd->fd = -1;
+			free(buf);
 		}
-		char buf[len];
-		if (!read_full(pfd->fd, buf, len, 0)) {
-			logErr("Clipboard monitor could not read data: %s", strerror(errno));
-			goto error;
-		}
-		uSynergyUpdateClipBuf(&synContext, id, len, buf);
 	}
 	return;
 error:

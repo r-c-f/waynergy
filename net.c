@@ -42,14 +42,14 @@ static bool syn_send(uSynergyCookie cookie, const uint8_t *buf, int len)
 	struct synNetContext *snet_ctx = cookie;
 	return write_full(snet_ctx->fd, buf, len, 0);
 }
-
-enum net_pollfd_id {
-	POLLFD_SYN,
-	POLLFD_WL,
-	POLLFD_CB,
-	POLLFD_P,
-	POLLFD_COUNT
-};
+struct pollfd netPollFd[POLLFD_COUNT];
+void netPollInit(void)
+{
+	for (int i = 0; i < POLLFD_COUNT; ++i) {
+		netPollFd[i].events = POLLIN;
+		netPollFd[i].fd = -1;
+	}
+}
 void netPoll(struct synNetContext *snet_ctx, struct wlContext *wl_ctx)
 {
 	int ret;
@@ -58,28 +58,13 @@ void netPoll(struct synNetContext *snet_ctx, struct wlContext *wl_ctx)
 		logErr("INVALID FILE DESCRIPTOR for synergy context");
 	}
 	int wlfd = wlPrepareFd(wl_ctx);
-	struct pollfd pfd[] = {
-		{
-			.fd = snet_ctx->fd,
-			.events = POLLIN | POLLHUP
-		},
-		{
-			.fd = wlfd,
-			.events = POLLIN | POLLHUP
-		},
-		{
-			.fd = clipMonitorFd[0],
-			.events = POLLIN | POLLHUP
-		},
-		{
-			.fd = clipMonitorFd[1],
-			.events = POLLIN | POLLHUP
-		}
-	};
+	netPollFd[POLLFD_SYN].fd = snet_ctx->fd;
+	netPollFd[POLLFD_WL].fd = wlfd;
+	netPollFd[POLLFD_CLIP_MON].fd = clipMonitorFd;
 	int nfd = syn_ctx->m_connected ? POLLFD_COUNT : 1;
-	while ((ret = poll(pfd, nfd, USYNERGY_IDLE_TIMEOUT)) > 0) {
+	while ((ret = poll(netPollFd, nfd, USYNERGY_IDLE_TIMEOUT)) > 0) {
 		sigHandleRun();
-		if (pfd[POLLFD_SYN].revents & POLLIN) {
+		if (netPollFd[POLLFD_SYN].revents & POLLIN) {
 			uSynergyUpdate(syn_ctx);
 		}
 		if ((syn_ctx->m_getTimeFunc() - syn_ctx->m_lastMessageTime) > USYNERGY_IDLE_TIMEOUT) {
@@ -90,12 +75,14 @@ void netPoll(struct synNetContext *snet_ctx, struct wlContext *wl_ctx)
 		sigHandleRun();
 		/* ignore everything else until synergy is ready */
 		if (syn_ctx->m_connected) {
-			wlPollProc(wl_ctx, pfd[POLLFD_WL].revents);
+			wlPollProc(wl_ctx, netPollFd[POLLFD_WL].revents);
 			sigHandleRun();
-			clipMonitorPollProc(&pfd[POLLFD_CB]);
+			clipMonitorPollProc(&netPollFd[POLLFD_CLIP_MON]);
 			sigHandleRun();
-			clipMonitorPollProc(&pfd[POLLFD_P]);
-			sigHandleRun();
+			for (int i = POLLFD_CLIP_UPDATER; i < POLLFD_COUNT; ++i) {
+				clipMonitorPollProc(netPollFd + i);
+				sigHandleRun();
+			}
 		}
 		nfd = syn_ctx->m_connected ? POLLFD_COUNT : 1;
 	}

@@ -16,14 +16,13 @@
 #include "fdio_full.h"
 #include <spawn.h>
 #include "log.h"
+#include "net.h"
 
-/* wl-paste FIFO file descriptors -- -1, until spawned */
-extern int clipMonitorFd[2];
-/* wl-paste FIFO paths -- NULL, until spawned */
-extern char *clipMonitorPath[2];
-/* wl-paste pids -- so we can kill them off later */
+
+#define CLIP_UPDATER_FD_COUNT 8
+extern int clipMonitorFd;
+extern struct sockaddr_un clipMonitorAddr;
 extern pid_t clipMonitorPid[2];
-
 
 /* check if wl-clipboard is even present */
 bool clipHaveWlClipboard(void);
