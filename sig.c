@@ -6,6 +6,7 @@
 
 
 
+
 volatile sig_atomic_t sigDoExit = 0;
 volatile sig_atomic_t sigDoRestart = 0;
 extern struct wlContext wlContext;
@@ -60,6 +61,9 @@ static void sig_handle(int sig, siginfo_t *si, void *context)
                 case SIGUSR1:
                         sigDoRestart = true;
                         break;
+                case SIGCHLD:
+                        logOutSig(LOG_INFO, "Child died.");
+                        break;
                 default:
                         logOutSig(LOG_ERR, "Unhandled signal");
         }
@@ -82,8 +86,8 @@ void sigHandleInit(char **argv)
         sigaction(SIGINT, &sa, NULL);
         sigaction(SIGQUIT, &sa, NULL);
         sigaction(SIGUSR1, &sa, NULL);
-        signal(SIGCHLD, SIG_IGN);
-	sigemptyset(&set);
+        sigaction(SIGCHLD, &sa, NULL);
+        sigemptyset(&set);
         sigaddset(&set, SIGUSR1);
         sigaddset(&set, SIGTERM);
         sigaddset(&set, SIGINT);
