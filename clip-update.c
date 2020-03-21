@@ -4,6 +4,8 @@
 #include <stdbool.h>
 #include "xmem.h"
 #include "clip.h"
+#include "net.h"
+#include "fdio_full.h"
 
 /* read file into a buffer, resizing as needed */
 static bool buf_append_file(char **buf, size_t *len, size_t *pos, FILE *f)
@@ -17,27 +19,36 @@ static bool buf_append_file(char **buf, size_t *len, size_t *pos, FILE *f)
         }
         return true;
 }
-int clipWriteToFifo(char *path)
+int clipWriteToSocket(char *path, char cid)
 {
 	char *buf;
-	FILE *fifo;
 	size_t len = 4000;
 	size_t pos = 0;
+	struct sockaddr_un sa = {0};
+	int sock;
 	buf = xmalloc(len);
-	if (!(fifo = fopen(path, "w")))
-		return EXIT_FAILURE;
 	if (!buf_append_file(&buf, &len, &pos, stdin))
 		return EXIT_FAILURE;
-	/* write out the clipboard sequence -- size_t for size, then data */
-	lockf(fileno(fifo), F_LOCK, 0);
-	/* NOTE: if we can't write consistent data, never releasing the lock is
-	 * actually what we want, to avoid crashing the main process */ 
-	if (fwrite(&pos, sizeof(pos), 1, fifo) != 1)
+	/* write out the clipboard sequence -- char for ID, size_t for size, then data */
+	strncpy(sa.sun_path, path, sizeof(sa.sun_path));
+	sa.sun_family = AF_UNIX;
+	if ((sock = socket(AF_UNIX, SOCK_STREAM, 0)) == -1) {
 		return EXIT_FAILURE;
-	if (fwrite(buf, pos, 1, fifo) != 1)
+	}
+	if (connect(sock, (struct sockaddr *)&sa, sizeof(sa)) == -1) {
 		return EXIT_FAILURE;
-	lockf(fileno(fifo), F_ULOCK, 0);
-	fclose(fifo);
+	}
+	if (!write_full(sock, &cid, 1, 0)) {
+		return EXIT_FAILURE;
+	}
+	if (!write_full(sock, &pos, sizeof(pos), 0)) {
+		return EXIT_FAILURE;
+	}
+	if (!write_full(sock, buf, pos, 0)) {
+		return EXIT_FAILURE;
+	}
+	shutdown(sock, SHUT_RDWR);
+	close(sock);
 	return EXIT_SUCCESS;
 }
 

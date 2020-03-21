@@ -131,7 +131,7 @@ int main(int argc, char **argv)
 	/* If we are run as swaynergy-clip-update, we're just supposed to write
 	 * to the FIFO */
 	if (strstr(argv[0], "swaynergy-clip-update")) {
-		return clipWriteToFifo(argv[1]);
+		return clipWriteToSocket(argv[2], argv[1][0]);
 	}
 	/*  proceed as the main process */
 
@@ -245,6 +245,7 @@ opterror:
 	}
 	wlSetup(&wlContext, synContext.m_clientWidth, synContext.m_clientHeight);
 	wlIdleInhibit(&wlContext, true);
+	netPollInit();
 	while(1) {
 		if (!synContext.m_connected) {
 			/* always try updating first so we initially connect */

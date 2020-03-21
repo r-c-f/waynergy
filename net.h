@@ -43,6 +43,7 @@ struct synNetContext {
 	int fd;
 };
 bool synNetInit(struct synNetContext *net_ctx, uSynergyContext *syn_ctx, const char *host, const char *port);
+void netPollInit(void);
 void netPoll(struct synNetContext *snet_ctx, struct wlContext *wl_ctx);
 bool synNetDisconnect(struct synNetContext *snet_ctx);
 
