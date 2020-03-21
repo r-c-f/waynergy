@@ -236,6 +236,8 @@ opterror:
 	/*run*/
 	if (clipHaveWlClipboard() && use_clipboard) {
 		synContext.m_clipboardCallback = syn_clip_cb;
+		if (!clipSetupSockets())
+			return 4;
 		if(!clipSpawnMonitors())
 			return 3;
 	} else if (use_clipboard) {

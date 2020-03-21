@@ -37,10 +37,11 @@ bool clipHaveWlClipboard(void)
 }
 
 /* set up sockets */
-bool wlClipSetupSockets()
+bool clipSetupSockets()
 {
 	strncpy(clipMonitorAddr.sun_path, osGetRuntimePath("swaynergy-clip-sock"), sizeof(clipMonitorAddr.sun_path));
 	unlink(clipMonitorAddr.sun_path);
+	clipMonitorAddr.sun_family = AF_UNIX;
 	if ((clipMonitorFd = socket(AF_UNIX, SOCK_STREAM, 0)) == -1) {
 		logErr("Socket call failed: %s", strerror(errno));
 		return false;
@@ -98,9 +99,10 @@ void clipMonitorPollProc(struct pollfd *pfd)
 	char c_id;
 	enum uSynergyClipboardId id;
 	if (pfd->revents & POLLIN) {
-		if ((netPollFd + POLLFD_CLIP_MON) == pfd) {
+		if (pfd->fd == clipMonitorFd) {
 			for (int i = POLLFD_CLIP_UPDATER; i < POLLFD_COUNT; ++i) {
 				if (netPollFd[i].fd == -1) {
+					logDbg("Accepting");
 					netPollFd[i].fd = accept(clipMonitorFd, NULL, NULL);
 					if (netPollFd[i].fd == -1) {
 						logErr("Could not accept connection: %s", strerror(errno));
@@ -131,6 +133,7 @@ void clipMonitorPollProc(struct pollfd *pfd)
 				logErr("Unknown clipboard ID %c", c_id);
 				goto done;
 			}
+			logDbg("Clipboard data read for %c: %zd bytes", c_id, len);
 			uSynergyUpdateClipBuf(&synContext, id , len, buf);
 done:
 			shutdown(pfd->fd, SHUT_RDWR);
