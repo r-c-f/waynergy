@@ -27,6 +27,7 @@ extern pid_t clipMonitorPid[2];
 /* check if wl-clipboard is even present */
 bool clipHaveWlClipboard(void);
 /* spawn wl-paste monitor processes */
+bool clipSetupSockets(void);
 bool clipSpawnMonitors(void);
 /* convert a file descriptor to a clipboard ID */
 enum uSynergyClipboardId clipIdFromFd(int fd);
