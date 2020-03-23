@@ -143,9 +143,6 @@ done:
 		}
 	}
 	return;
-error:
-	/* instead of aborting, or cleaning up gracefully, just restart */
-	kill(getpid(), SIGUSR1);
 }
 
 
