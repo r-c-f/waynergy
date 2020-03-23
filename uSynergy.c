@@ -26,6 +26,7 @@ freely, subject to the following restrictions:
 #include "uSynergy.h"
 #include <stdio.h>
 #include <string.h>
+#include "sig.h"
 #include "xmem.h"
 #include <stdlib.h>
 #include "log.h"
@@ -119,6 +120,18 @@ static void sAddUInt32(uSynergyContext *context, uint32_t value)
 }
 
 
+/**
+@brief Mark context as being disconnected
+**/
+static void sSetDisconnected(uSynergyContext *context, enum uSynergyError err)
+{
+	context->m_connected		= false;
+	context->m_hasReceivedHello = false;
+	context->m_isCaptured		= false;
+	context->m_replyCur			= context->m_replyBuffer + 4;
+	context->m_sequenceNumber	= 0;
+	context->m_lastError = err;
+}
 
 /**
 @brief Send reply packet
@@ -263,17 +276,6 @@ void uSynergySendClipboard(uSynergyContext *context, int id, uint32_t len, const
 	sSendReply(context);
 }
 
-/**
-@brief Mark context as being disconnected
-**/
-static void sSetDisconnected(uSynergyContext *context)
-{
-	context->m_connected		= false;
-	context->m_hasReceivedHello = false;
-	context->m_isCaptured		= false;
-	context->m_replyCur			= context->m_replyBuffer + 4;
-	context->m_sequenceNumber	= 0;
-}
 
 /**
 @brief Check if the given message contains a valid welcome message, to allow for
@@ -298,6 +300,7 @@ static char *sIsWelcome(const unsigned char *msg)
 	}
 	return NULL;
 }
+
 
 /**
 @brief Parse a single client message, update state, send callbacks and send replies
@@ -600,17 +603,17 @@ static void sProcessMessage(uSynergyContext *context, const uint8_t *message)
 	}
 	else if (USYNERGY_IS_PACKET("CBYE")) {
 		logInfo("Server disconnected");
-		sSetDisconnected(context);
+		sSetDisconnected(context, USYNERGY_ERROR_NONE);
 		return;
 	}
 	else if (USYNERGY_IS_PACKET("EBAD")) {
 		logErr("Protocol error");
-		sSetDisconnected(context);
+		sSetDisconnected(context, USYNERGY_ERROR_EBAD);
 		return;
 	}
 	else if (USYNERGY_IS_PACKET("EBSY")) {
 		logErr("Other screen already connected with our name");
-		sSetDisconnected(context);
+		sSetDisconnected(context, USYNERGY_ERROR_EBSY);
 		return;
 	}
 	else
@@ -654,7 +657,8 @@ static void sUpdateContext(uSynergyContext *context)
 	{
 		/* Receive failed, let's try to reconnect */
 		logErr("Receive failed (%d bytes asked, %d bytes received), trying to reconnect in a second", receive_size, num_received);
-		sSetDisconnected(context);
+		/* The *only* way this can occur normally is with a timeout so that's what we assume*/
+		sSetDisconnected(context, USYNERGY_ERROR_TIMEOUT);
 		context->m_sleepFunc(context->m_cookie, 1000);
 		return;
 	}
@@ -674,7 +678,7 @@ static void sUpdateContext(uSynergyContext *context)
 		{
 			/* Timeout after 2 secs of inactivity (we received no CALV) */
 			if ((cur_time - context->m_lastMessageTime) > USYNERGY_IDLE_TIMEOUT)
-				sSetDisconnected(context);
+				sSetDisconnected(context, USYNERGY_ERROR_TIMEOUT);
 		}
 		else
 			context->m_lastMessageTime = cur_time;
@@ -711,7 +715,8 @@ static void sUpdateContext(uSynergyContext *context)
 			{
 				/* Receive failed, let's try to reconnect */
 				logErr("Receive failed, trying to reconnect in a second");
-				sSetDisconnected(context);
+				/* this only happens with timeout*/
+				sSetDisconnected(context, USYNERGY_ERROR_TIMEOUT);
 				context->m_sleepFunc(context->m_cookie, 1000);
 				break;
 			}
@@ -740,7 +745,7 @@ void uSynergyInit(uSynergyContext *context)
 	memset(context, 0, sizeof(uSynergyContext));
 
 	/* Initialize to default state */
-	sSetDisconnected(context);
+	sSetDisconnected(context, USYNERGY_ERROR__INIT);
 }
 
 
@@ -757,6 +762,12 @@ void uSynergyUpdate(uSynergyContext *context)
 	else
 	{
 		/* Try to connect */
+		if (context->m_lastError > 0) {
+			if (context->m_errorIsFatal[context->m_lastError]) {
+				logErr("Last error received (code %d) is configured as fatal, exiting", context->m_lastError);
+				Exit(context->m_lastError);
+			}
+		}
 		if (context->m_connectFunc(context->m_cookie))
 			context->m_connected = true;
 	}

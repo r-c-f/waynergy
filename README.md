@@ -30,7 +30,7 @@ output:
 ```
 swaynergy: Synergy client for wlroots compositors
 
-USAGE: swaynergy [-h|--help] [-c|--host host] [-p|--port port] [-W|--width width] [-H|--height height] [-N|--name name] [-l|--logfile file] [-L|--loglevel level]
+USAGE: swaynergy [-h|--help] [-c|--host host] [-p|--port port] [-W|--width width] [-H|--height height] [-N|--name name] [-l|--logfile file] [-L|--loglevel level] [-n|--no-clip] [--fatal-none] [--fatal-ebad] [--fatal-ebsy] [--fatal-timeout]
 	-h|--help:
 		Help text
 	-c|--host host:
@@ -47,7 +47,16 @@ USAGE: swaynergy [-h|--help] [-c|--host host] [-p|--port port] [-W|--width width
 		Name of logfile to use
 	-L|--loglevel level:
 		Log level -- number, increasing from 0 for more verbosity
-	
+	-n|--no-clip:
+		Don't synchronize the clipboard
+	--fatal-none:
+		Consider *normal* disconnect (i.e. CBYE) to be fatal
+	--fatal-ebad:
+		Protocol errors are fatal
+	--fatal-ebsy:
+		EBSY (client already exists with our name) errors are fatal
+	--fatal-timeout:
+		timeouts are fatal
 
 ```
 

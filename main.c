@@ -28,6 +28,10 @@ static struct sopt optspec[] = {
 	SOPT_INIT_ARGL('l', "logfile", "file", "Name of logfile to use"),
 	SOPT_INIT_ARGL('L', "loglevel", "level", "Log level -- number, increasing from 0 for more verbosity"),
 	SOPT_INITL('n', "no-clip", "Don't synchronize the clipboard"),
+	SOPT_INITL(CHAR_MAX + USYNERGY_ERROR_NONE, "fatal-none", "Consider *normal* disconnect (i.e. CBYE) to be fatal"),
+	SOPT_INITL(CHAR_MAX + USYNERGY_ERROR_EBAD, "fatal-ebad", "Protocol errors are fatal"),
+	SOPT_INITL(CHAR_MAX + USYNERGY_ERROR_EBSY, "fatal-ebsy", "EBSY (client already exists with our name) errors are fatal"),
+	SOPT_INITL(CHAR_MAX + USYNERGY_ERROR_TIMEOUT, "fatal-timeout", "timeouts are fatal"),
 	SOPT_INIT_END
 };
 
@@ -194,6 +198,12 @@ int main(int argc, char **argv)
 				break;
 			case 'n':
 				use_clipboard = false;
+				break;
+			case CHAR_MAX + USYNERGY_ERROR_NONE:
+			case CHAR_MAX + USYNERGY_ERROR_EBAD:
+			case CHAR_MAX + USYNERGY_ERROR_EBSY:
+			case CHAR_MAX + USYNERGY_ERROR_TIMEOUT:
+				synContext.m_errorIsFatal[opt - CHAR_MAX] = true;
 				break;
 opterror:
 			default:

@@ -8,7 +8,7 @@
 
 extern volatile sig_atomic_t sigDoExit;
 extern volatile sig_atomic_t sigDoRestart;
-void Exit(void);
+void Exit(int status);
 void Restart(void);
 void sigHandleInit(char **argv);
 
@@ -20,7 +20,7 @@ static inline void sigHandleRun(void)
 {
 	if (sigDoExit) {
 		logInfo("Exit signal %s received, exiting...", sys_siglist[sigDoExit]);
-		Exit();
+		Exit(EXIT_SUCCESS);
 	}
 	if (sigDoRestart) {
 		logInfo("Restart signal %s received, restarting...", sys_siglist[sigDoRestart]);

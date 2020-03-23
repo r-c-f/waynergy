@@ -101,8 +101,11 @@ static bool syn_recv(uSynergyCookie cookie, uint8_t *buf, int max_len, int *out_
 	alarm(USYNERGY_IDLE_TIMEOUT/1000);
 	*out_len = read(snet_ctx->fd, buf, max_len);
 	alarm(0);
-	if (*out_len < 1)
+	if (*out_len < 1) {
+		logErr("Synergy receive timed out");
+		snet_ctx->syn_ctx->m_lastError = USYNERGY_ERROR_TIMEOUT;
 		return false;
+	}
 	return true;
 }
 

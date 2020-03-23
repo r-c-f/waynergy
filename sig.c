@@ -32,10 +32,10 @@ static void cleanup(void)
 
 }
 
-void Exit()
+void Exit(int status)
 {
         cleanup();
-        exit(EXIT_SUCCESS);
+        exit(status);
 }
 void Restart(void)
 {

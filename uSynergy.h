@@ -133,6 +133,17 @@ enum uSynergyMouseButton {
 	USYNERGY_MOUSE_BUTTON_RIGHT
 };
 
+/**
+@brief Error codes
+**/
+enum uSynergyError {
+	USYNERGY_ERROR__INIT = -1,
+        USYNERGY_ERROR_NONE = 0,
+        USYNERGY_ERROR_EBSY,
+        USYNERGY_ERROR_EBAD,
+        USYNERGY_ERROR_TIMEOUT,
+	USYNERGY_ERROR__COUNT
+};
 
 //---------------------------------------------------------------------------------------------------------------------
 //	Functions and Callbacks
@@ -323,6 +334,7 @@ typedef struct uSynergyContext
 	uint16_t						m_clientHeight;									/* Height of screen */
 
 	/* Optional configuration data, filled in by client */
+	bool 					m_errorIsFatal[USYNERGY_ERROR__COUNT]; 				/* determines whether or not a given error code is fatal (i.e. we just give up rather than reconnect*/
 	uSynergyCookie					m_cookie;										/* Cookie pointer passed to callback functions (can be NULL) */
 	uSynergyScreenActiveCallback	m_screenActiveCallback;							/* Callback for entering and leaving screen */
 	uSynergyScreensaverCallback m_screensaverCallback;
@@ -335,6 +347,7 @@ typedef struct uSynergyContext
 	uSynergyClipboardCallback		m_clipboardCallback;							/* Callback for clipboard events */
 
 	/* State data, used internall by client, initialized by uSynergyInit() */
+	enum uSynergyError 						m_lastError; /* last error code which may have triggered a lost connection */
 	const char* 						m_implementation; /*implementation of the protocol -- usually "Synergy" or "Barrier" */
 	bool					m_connected;									/* Is our socket connected? */
 	bool					m_hasReceivedHello;								/* Have we received a 'Hello' from the server? */
