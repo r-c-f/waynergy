@@ -64,7 +64,7 @@ static void sig_handle(int sig, siginfo_t *si, void *context)
 			if (si->si_status) {
 				logOutSig(LOG_WARN, "Child died with nonzero status");
 			} else {
-				logOutSig(LOG_INFO, "Child died -- successful status");
+				logOutSig(LOG_DBG, "Child died -- successful status");
 			}
                         break;
                 default:
