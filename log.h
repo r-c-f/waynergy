@@ -24,5 +24,17 @@ void logErr(const char *fmt, ...);
 void logWarn(const char *fmt, ...);
 void logInfo(const char *fmt, ...);
 void logDbg(const char *fmt, ...);
+#define logPErr(msg) do { \
+	logErr("%s: %s: %s", __func__, (msg), strerror(errno)); \
+} while (0)
+#define logPWarn(msg) do { \
+	logWarn("%s: %s: %s", __func__, (msg), strerror(errno)); \
+} while (0)
+#define logPInfo(msg) do { \
+	logInfo("%s: %s: %s", __func__, (msg), strerror(errno)); \
+} while (0)
+#define logPDbg(msg) do { \
+	logDbg("%s: %s: %s", __func__, (msg), strerror(errno)); \
+} while (0)
 void logClose(void);
 
