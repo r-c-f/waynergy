@@ -11,6 +11,7 @@ extern volatile sig_atomic_t sigDoRestart;
 void Exit(int status);
 void Restart(void);
 void sigHandleInit(char **argv);
+void sigWaitSIGCHLD(bool state);
 
 static inline bool sigHandleCheck(void)
 {

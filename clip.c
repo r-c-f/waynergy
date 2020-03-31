@@ -12,8 +12,10 @@ pid_t clipMonitorPid[2];
 /* check for wl-clipboard's presence */
 bool clipHaveWlClipboard(void)
 {
+	bool ret = true;
 	pid_t pid;
-	int ret;
+	int status;
+	sigset_t sigset, sigsetold;
 	char *argv_0[] = {
 		"wl-paste",
 		"-v",
@@ -25,15 +27,27 @@ bool clipHaveWlClipboard(void)
 		NULL
 	};
 	char **argv[] = {argv_0, argv_1};
+
+	sigWaitSIGCHLD(true);
+
 	for (int i = 0; i < 2; ++i) {
-		if (posix_spawnp(&pid, argv[i][0], NULL, NULL, argv[i], environ))
-			return false;
-		if (waitpid(pid, &ret, 0) != pid)
-			return false;
-		if (ret)
-			return false;
+		if (posix_spawnp(&pid, argv[i][0], NULL, NULL, argv[i], environ)) {
+			ret = false;
+			goto done;
+		}
+		if (waitpid(pid, &status, 0) != pid) {
+			ret = false;
+			goto done;
+		}
+		if (status) {
+			ret = false;
+			goto done;
+		}
+		logDbg("Found %s", argv[i][0]);
 	}
-	return true;
+done:
+	sigWaitSIGCHLD(false);
+	return ret;
 }
 
 /* set up sockets */

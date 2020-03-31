@@ -250,7 +250,7 @@ opterror:
 			return 4;
 		if(!clipSpawnMonitors())
 			return 3;
-	} else if (use_clipboard) {
+	} else if (!use_clipboard) {
 		logInfo("Clipboard sync disabled by command line");
 	} else {
 		logWarn("wl-clipboard not found, no clipboard synchronization support");

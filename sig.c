@@ -72,6 +72,24 @@ static void sig_handle(int sig, siginfo_t *si, void *context)
         }
 }
 
+void sigWaitSIGCHLD(bool state)
+{
+	struct sigaction sa = {0};
+	static struct sigaction sa_old;
+	static bool we_set_wait;
+	if (state || !we_set_wait) {
+		sa.sa_sigaction = sig_handle;
+		sa.sa_flags = SA_RESTART | (state ? 0 : SA_NOCLDWAIT);
+		sigaction(SIGCHLD, &sa, &sa_old);
+	} else {
+		//use old sigaction, in case weird flags exist.
+		sa_old.sa_flags &= ~SA_NOCLDWAIT;
+		sigaction(SIGCHLD, &sa_old, NULL);
+	}
+	logDbg("%srequiring wait() on SIGCHLD", (state ? "" : "not "));
+}
+
+
 void sigHandleInit(char **argv)
 {
 	struct sigaction sa;
@@ -89,6 +107,8 @@ void sigHandleInit(char **argv)
         sigaction(SIGINT, &sa, NULL);
         sigaction(SIGQUIT, &sa, NULL);
         sigaction(SIGUSR1, &sa, NULL);
+	//don't zombify
+	sa.sa_flags |= SA_NOCLDWAIT;
         sigaction(SIGCHLD, &sa, NULL);
         sigemptyset(&set);
         sigaddset(&set, SIGUSR1);
