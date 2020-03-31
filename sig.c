@@ -42,7 +42,7 @@ void Restart(void)
         cleanup();
         errno = 0;
         execvp(argv_reexec[0], argv_reexec);
-        logErr("Could not re-exec: %s", strerror(errno));
+        logPErr("reexec");
         exit(EXIT_FAILURE);
 }
 

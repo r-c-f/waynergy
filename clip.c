@@ -57,15 +57,15 @@ bool clipSetupSockets()
 	unlink(clipMonitorAddr.sun_path);
 	clipMonitorAddr.sun_family = AF_UNIX;
 	if ((clipMonitorFd = socket(AF_UNIX, SOCK_STREAM, 0)) == -1) {
-		logErr("Socket call failed: %s", strerror(errno));
+		logPErr("socket");
 		return false;
 	}
 	if (bind(clipMonitorFd, (struct sockaddr *)&clipMonitorAddr, sizeof(clipMonitorAddr)) == -1) {
-		logErr("Bind call failed: %s", strerror(errno));
+		logPErr("bind");
 		return false;
 	}
 	if (listen(clipMonitorFd, 8) == -1) {
-		logErr("Could not listen: %s", strerror(errno));
+		logPErr("listen");
 		return false;
 	}
 	for (int i = POLLFD_CLIP_UPDATER; i < POLLFD_COUNT; ++i) {
@@ -99,7 +99,7 @@ bool clipSpawnMonitors(void)
 	char **argv[] = { argv_0, argv_1 };
 	for (int i = 0; i < 2; ++i) {
 		if (posix_spawnp(clipMonitorPid + i,"wl-paste",NULL,NULL,argv[i],environ)) {
-			logErr("Spawn failed: %s", strerror(errno));
+			logPErr("spawn");
 			return false;
 		}
 	}
@@ -119,7 +119,7 @@ void clipMonitorPollProc(struct pollfd *pfd)
 					logDbg("Accepting");
 					netPollFd[i].fd = accept(clipMonitorFd, NULL, NULL);
 					if (netPollFd[i].fd == -1) {
-						logErr("Could not accept connection: %s", strerror(errno));
+						logPErr("accept");
 					}
 					return;
 				}
@@ -127,16 +127,16 @@ void clipMonitorPollProc(struct pollfd *pfd)
 			logErr("No free updater file descriptors -- doing nothing");
 		} else {
 			if (!read_full(pfd->fd, &c_id, 1, 0)) {
-				logErr("Could not read clipboard ID: %s", strerror(errno));
+				logPErr("Could not read clipboard ID");
 				goto done;
 			}
 			if (!read_full(pfd->fd, &len, sizeof(len), 0)) {
-				logErr("Could not read clipboard data length: %s", strerror(errno));
+				logPErr("Could not read clipboard data length");
 				goto done;
 			}
 			char *buf = xmalloc(len);
 			if (!read_full(pfd->fd, buf, len, 0)) {
-				logErr("Could not read clipboard data: %s", strerror(errno));
+				logPErr("Could not read clipboard data");
 				goto done;
 			}
 			if (c_id == 'p') {
@@ -190,7 +190,7 @@ bool clipWlCopy(enum uSynergyClipboardId id, const unsigned char *data, size_t l
    	/* now we can spawn */
 	errno = 0;
         if (posix_spawnp(&pid, "wl-copy", &fa, NULL, argv[id], environ)) {
-		logErr("wl-copy spawn failed: %s", strerror(errno));
+		logPErr("wl-copy spawn");
 		close(fd[0]);
 		close(fd[1]);
 		return false;
