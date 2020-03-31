@@ -14,7 +14,7 @@
 #include "wayland.h"
 #include <stdbool.h>
 #include "log.h"
-
+#include "sig.h"
 
 
 
@@ -397,5 +397,9 @@ void wlPollProc(struct wlContext *ctx, short revents)
 	if (revents & POLLIN) {
 //		wl_display_cancel_read(display);
 		wl_display_dispatch(ctx->display);
+	}
+	if (revents & POLLHUP) {
+		logErr("Lost wayland connection");
+		Exit(1);
 	}
 }
