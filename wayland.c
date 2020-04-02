@@ -265,6 +265,15 @@ struct wlDataOffer *wlDataOfferGetById(struct wlDataOffer *offers, enum uSynergy
 	}
 	return NULL;
 }
+struct wlDataOffer *wlDataOfferGetByPfd1(struct wlDataOffer *offers, int fd)
+{
+	struct wlDataOffer *offer;
+	for (offer = offers; offer; offer = offer->next) {
+		if (offer->pfd[1] == fd)
+			return offer;
+	}
+	return NULL;
+}
 bool wlDataOfferAdd(struct wlDataOffer **offers, struct zwlr_data_control_offer_v1 *wlr_offer)
 {
 	struct wlDataOffer *n;
@@ -278,6 +287,9 @@ bool wlDataOfferAdd(struct wlDataOffer **offers, struct zwlr_data_control_offer_
 		n->mimes[i] = NULL;
 	}
 	n->offer = wlr_offer;
+	n->pfd[0] = -1;
+	n->pfd[1] = -1;
+	n->receive_cancel = false;
 	n->id = -1;
 	n->next = NULL;
 	n->prev = NULL;
@@ -386,7 +398,6 @@ static void on_data_offer(void *data, struct zwlr_data_control_device_v1 *device
 	struct wlContext *ctx = data;
 	wlDataOfferAdd(&ctx->data_offers, wlr_offer);
 	zwlr_data_control_offer_v1_add_listener(wlr_offer, &data_offer_listener, ctx);
-	wl_display_roundtrip(ctx->display);
 }
 static void on_finished(void *data, struct zwlr_data_control_device_v1 *device)
 {
@@ -397,13 +408,15 @@ static void on_selection(void *data, struct zwlr_data_control_device_v1 *device,
 {
 	pid_t pid;
 	posix_spawn_file_actions_t fa;
-	int fd[2];
+	int *fd;
 	struct wlContext *ctx = data;
+	char *cid[CLIP_COUNT] = {"c", "p"};
 	struct wlDataOffer *offer = wlDataOfferGet(ctx->data_offers, wlr_offer);
-	if (!offer) { 
+	if (!offer) {
 		logErr("Unknown offer selected");
 		return;
 	}
+	fd = offer->pfd;
 	wlDataOfferPromote(&ctx->data_offers, wlr_offer, id);
 	logDbg("Trying to receive");
 	for (int i = 0; i < CLIP_FORMAT_COUNT; ++i) {
@@ -412,18 +425,26 @@ static void on_selection(void *data, struct zwlr_data_control_device_v1 *device,
 		}
 		char *argv[] = {
 			"swaynergy-clip-update",
-			clipMonitorPath[id],
+			cid[id],
+			clipMonitorAddr.sun_path,
 			offer->mimes[i],
 			NULL
 		};
 		pipe(fd);
-		posix_spawn_file_actions_init(&fa);
-		posix_spawn_file_actions_adddup2(&fa, fd[0], STDIN_FILENO);
-		posix_spawn_file_actions_addclose(&fa, fd[1]);
 		zwlr_data_control_offer_v1_receive(offer->offer, offer->mimes[i], fd[1]);
+		if (offer->receive_cancel) {
+			logDbg("Cancelling receive at request of sender");
+			return;
+		}
+		posix_spawn_file_actions_init(&fa);
+                posix_spawn_file_actions_adddup2(&fa, fd[0], STDIN_FILENO);
+                posix_spawn_file_actions_addclose(&fa, fd[1]);
+
 		posix_spawnp(&pid, "swaynergy-clip-update", &fa, NULL, argv, environ);
 		close(fd[0]);
 		close(fd[1]);
+		fd[0] = -1;
+		fd[1] = -1;
 		logDbg("Spawned updater for clipboard %d, type %s", id, offer->mimes[i]);
 	}
 }
@@ -447,6 +468,7 @@ static void on_send(void *data, struct zwlr_data_control_source_v1 *source, cons
 {
 	struct zwlr_data_control_source_v1 *ctx_source = NULL;
 	struct wlContext *ctx = data;
+	struct wlDataOffer *offer;
 	enum uSynergyClipboardId id;
 	enum uSynergyClipboardFormat fmt = clip_format_from_mime(mime_type);
 	if (fmt == -1) {
@@ -461,21 +483,25 @@ static void on_send(void *data, struct zwlr_data_control_source_v1 *source, cons
 		logErr("Got unsupported mime type in request for %d: %s", id, mime_type);
 		return;
 	}
+	if ((offer = wlDataOfferGetByPfd1(ctx->data_offers, fd))) {
+		logDbg("We've got the same pipe in an offer -- don't send to self");
+		offer->receive_cancel = true;
+		return;
+	}
 	/* we do something dumb here*/
 	logDbg("Forking to send, because... fuck me");
-	if (!fork()) {
+	//if (!fork()) {
 
 		bool ret;
 		ret = write_full(fd, ctx->data_source_buf[id][fmt], ctx->data_source_len[id][fmt], 0);
 		close(fd);
 		if (!ret) {
 			logErr("FORKING SEND FAILED");
-			exit(EXIT_FAILURE);
+	//		exit(EXIT_FAILURE);
 		}
 		logDbg("FORKING SEND SUCCEEDED");
-		exit(EXIT_SUCCESS);
-	}
-	close(fd);
+	//	exit(EXIT_SUCCESS);
+	//}
 }
 static void on_cancelled(void *data, struct zwlr_data_control_source_v1 *source)
 {
@@ -487,7 +513,6 @@ static void on_cancelled(void *data, struct zwlr_data_control_source_v1 *source)
 		return;
 	}
 	/*NECESSARY TO PREVENT WEIRD RACE CONDITIONS*/
-	wl_display_roundtrip(ctx->display);
 
 	if (id == SYNERGY_CLIPBOARD_CLIPBOARD) {
 		zwlr_data_control_device_v1_set_selection(ctx->data_device, NULL);
@@ -504,7 +529,6 @@ static void on_cancelled(void *data, struct zwlr_data_control_source_v1 *source)
 		}
 	}
 	ctx->data_source[id] = NULL;
-	wl_display_roundtrip(ctx->display);
 }
 static struct zwlr_data_control_source_v1_listener data_source_listener = {
 	.send = on_send,
@@ -680,10 +704,6 @@ int wlSetup(struct wlContext *ctx, int width, int height)
 	wl_registry_add_listener(ctx->registry, &registry_listener, ctx);
 	wl_display_dispatch(ctx->display);
 	wl_display_roundtrip(ctx->display);
-	if (ctx->data_manager) {
-		ctx->data_device = zwlr_data_control_manager_v1_get_data_device(ctx->data_manager, ctx->seat);
-		zwlr_data_control_device_v1_add_listener(ctx->data_device, &data_device_listener, ctx);
-	}
 	ctx->pointer = zwlr_virtual_pointer_manager_v1_create_virtual_pointer(ctx->pointer_manager, ctx->seat);
 	wl_display_dispatch(ctx->display);
 	wl_display_roundtrip(ctx->display);
@@ -692,6 +712,10 @@ int wlSetup(struct wlContext *ctx, int width, int height)
 	wl_display_roundtrip(ctx->display);
 	if(wlKeySetConfigLayout(ctx)) {
 		return 1;
+	}
+	if (ctx->data_manager) {
+		ctx->data_device = zwlr_data_control_manager_v1_get_data_device(ctx->data_manager, ctx->seat);
+		zwlr_data_control_device_v1_add_listener(ctx->data_device, &data_device_listener, ctx);
 	}
 	/* set FD_CLOEXEC */
 	int fd = wl_display_get_fd(ctx->display);

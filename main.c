@@ -240,8 +240,6 @@ opterror:
 	synContext.m_clipboardCallback = syn_clip_cb;
 	if (!clipSetupSockets())
 		return 4;
-	if(!clipSpawnMonitors())
-		return 3;
 	wlSetup(&wlContext, synContext.m_clientWidth, synContext.m_clientHeight);
 	wlIdleInhibit(&wlContext, true);
 	netPollInit();

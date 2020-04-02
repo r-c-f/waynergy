@@ -46,9 +46,12 @@ struct wlDataOffer {
 	struct zwlr_data_control_offer_v1 *offer;
 	char *mimes[CLIP_FORMAT_COUNT];
 	enum uSynergyClipboardId id;
+	int pfd[2];
+	bool receive_cancel;
 	struct wlDataOffer *prev;
 	struct wlDataOffer *next;
 };
+
 bool wlDataOfferAdd(struct wlDataOffer **offers, struct zwlr_data_control_offer_v1 *offer);
 bool wlDataOfferDel(struct wlDataOffer **offers, struct zwlr_data_control_offer_v1 *offer);
 struct wlDataOffer *wlDataOfferGet(struct wlDataOffer *offers, struct zwlr_data_control_offer_v1 *offer);
