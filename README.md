@@ -104,6 +104,7 @@ hiding.
 possible
 * wl-clipboard, because its watch mode turns it into a clipboard manager so I
 I don't have to.
+* [stb](https://github.com/nothings/stb) for the image handling code
 
 ## TODO
 

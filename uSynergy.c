@@ -811,12 +811,14 @@ static uint8_t *buf_add_int32(uint8_t *buf, uint32_t val)
 	return buf += 4;
 }
 /* Update clipboard buffer from local clipboard */
-void uSynergyUpdateClipBuf(uSynergyContext *context, enum uSynergyClipboardId id, uint32_t len, const char *data)
+void uSynergyUpdateClipBuf(uSynergyContext *context, enum uSynergyClipboardId id, enum uSynergyClipboardFormat fmt, uint32_t len, const char *data)
 {
 	/* to prevent feedback loops, check to make sure the data is actually
 	 * different from what we've already got */
-	if (uSynergyClipBufContains(context, id, len, data))
+	if (uSynergyClipBufContains(context, id, len, data)) {
+		logDbg("Clipboard data already present, not updating");
 		return;
+	}
 	/* grab the clipboard, initialize the buffer */
 	context->m_clipInStream[id] = false;
 	context->m_clipGrabbed[id] = true;
@@ -827,7 +829,7 @@ void uSynergyUpdateClipBuf(uSynergyContext *context, enum uSynergyClipboardId id
 	/*populate buffer*/
 	uint8_t *buf = context->m_clipBuf[id];
 	buf = buf_add_int32(buf, 1); //formats
-	buf = buf_add_int32(buf, USYNERGY_CLIPBOARD_FORMAT_TEXT); //type, text only for now
+	buf = buf_add_int32(buf, fmt); //type 
 	buf = buf_add_int32(buf, len); //length of actual data
 	memmove(buf, data, len);
 	/* send CCLP  -- CCLP%1i%4i */

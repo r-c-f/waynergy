@@ -66,9 +66,14 @@ static void syn_key_cb(uSynergyCookie cookie, uint16_t key, uint16_t mod, bool d
 	if (!repeat)
  		wlKey(&wlContext, key, down);
 }
-static void syn_clip_cb(uSynergyCookie cookie, enum uSynergyClipboardId id, uint32_t format, const uint8_t *data, uint32_t size)
+static void syn_clip_cb(uSynergyCookie cookie, enum uSynergyClipboardId id, enum uSynergyClipboardFormat format, const uint8_t *data, uint32_t size)
 {
-	clipWlCopy(id, data, size);
+	char *mimes[] = {
+		"text/plain",
+		"image/bmp",
+		"text/html"
+	};
+	clipWlCopy(id, mimes[format], data, size);
 }
 static void syn_screensaver_cb(uSynergyCookie cookie, bool state)
 {
@@ -135,7 +140,10 @@ int main(int argc, char **argv)
 	/* If we are run as swaynergy-clip-update, we're just supposed to write
 	 * to the FIFO */
 	if (strstr(argv[0], "swaynergy-clip-update")) {
-		return clipWriteToSocket(argv[2], argv[1][0]);
+		size_t mid;
+		if (!sscanf(argv[2], "%zd", &mid))
+			return EXIT_FAILURE;
+		return clipWriteToSocket(argv[1], mid);
 	}
 	/*  proceed as the main process */
 
@@ -248,7 +256,15 @@ opterror:
 		synContext.m_clipboardCallback = syn_clip_cb;
 		if (!clipSetupSockets())
 			return 4;
-		if(!clipSpawnMonitors())
+		//TODO: Make this configurable
+		if(!clipSpawnMonitors(
+					"text/plain",
+					USYNERGY_CLIPBOARD_FORMAT_TEXT,
+					"image",
+					USYNERGY_CLIPBOARD_FORMAT_BITMAP,
+					"application/x-qt-image",
+					USYNERGY_CLIPBOARD_FORMAT_BITMAP,
+					NULL))
 			return 3;
 	} else if (!use_clipboard) {
 		logInfo("Clipboard sync disabled by command line");

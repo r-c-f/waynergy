@@ -18,10 +18,10 @@ static void cleanup(void)
 {
         wlIdleInhibit(&wlContext, false);
         /* stop clipbpoard monitors */
-        for (int i = 0; i < 2; ++i) {
-                if (clipMonitorPid[i] != -1) {
-                        kill(clipMonitorPid[i], SIGTERM);
-                        waitpid(clipMonitorPid[i], NULL, 0);
+        for (int i = 0; i < clipMonitorCount; ++i) {
+                if (clipMonitor[i].pid != -1) {
+                        kill(clipMonitor[i].pid, SIGTERM);
+                        waitpid(clipMonitor[i].pid, NULL, 0);
                 }
         }
         /*close stuff*/

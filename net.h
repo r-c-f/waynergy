@@ -25,7 +25,6 @@
 #define CLIP_UPDATER_FD_COUNT 8                                                 
 extern int clipMonitorFd;                                                       
 extern struct sockaddr_un clipMonitorAddr;                                      
-extern pid_t clipMonitorPid[2]; 
 
 enum net_pollfd_id {                                                            
         POLLFD_SYN,                                                             

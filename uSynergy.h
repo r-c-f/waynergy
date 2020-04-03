@@ -85,9 +85,11 @@ typedef void *uSynergyCookie;
 **/
 enum uSynergyClipboardFormat
 {
-	USYNERGY_CLIPBOARD_FORMAT_TEXT					= 0,			/* Text format, UTF-8, newline is LF */
-	USYNERGY_CLIPBOARD_FORMAT_BITMAP				= 1,			/* Bitmap format, BMP 24/32bpp, BI_RGB */
-	USYNERGY_CLIPBOARD_FORMAT_HTML					= 2,			/* HTML format, HTML fragment, UTF-8, newline is LF */
+	USYNERGY_CLIPBOARD_FORMAT__END 				= -1,
+	USYNERGY_CLIPBOARD_FORMAT_TEXT,			/* Text format, UTF-8, newline is LF */
+	USYNERGY_CLIPBOARD_FORMAT_HTML,			/* HTML format, HTML fragment, UTF-8, newline is LF */
+	USYNERGY_CLIPBOARD_FORMAT_BITMAP,			/* Bitmap format, BMP 24/32bpp, BI_RGB */
+	USYNERGY_CLIPBOARD_FORMAT__COUNT
 };
 
 
@@ -425,7 +427,7 @@ supported with some effort.
 @param len 		Length of clipboard data
 @param text		Text to set to the clipboard
 **/
-extern void 		uSynergyUpdateClipBuf(uSynergyContext *context, enum uSynergyClipboardId id, uint32_t len, const char *data);
+extern void 		uSynergyUpdateClipBuf(uSynergyContext *context, enum uSynergyClipboardId id, enum uSynergyClipboardFormat fmt, uint32_t len, const char *data);
 
 /**
 @brief Update screen resolution

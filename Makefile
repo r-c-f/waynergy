@@ -1,5 +1,5 @@
 CFLAGS+=-D_GNU_SOURCE -DUSYNERGY_LITTLE_ENDIAN
-LDFLAGS=-lwayland-client -lxkbcommon
+LDFLAGS=-lwayland-client -lxkbcommon -lm
 PROT:=idle.xml wlr-virtual-pointer-unstable-v1.xml virtual-keyboard-unstable-v1.xml xdg-output-unstable-v1.xml
 PROT_H=$(PROT:xml=prot.h)
 PROT_C=$(PROT_H:h=c)
