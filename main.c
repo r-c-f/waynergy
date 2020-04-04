@@ -75,6 +75,7 @@ static void syn_clip_cb(uSynergyCookie cookie, enum uSynergyClipboardId id, enum
 		"text/html",
 		"image/bmp",
 	};
+	logDbg("got clipboard data from synergy: ID: %d, Format: %d, %u bytes", id, format, size);
 	/*XXX: because synergy doesn't send anything but text to clients, 
 	 * we must infer whether the image is an image all on our own */
 	if (format != USYNERGY_CLIPBOARD_FORMAT_BITMAP) {
