@@ -30,7 +30,7 @@ output:
 ```
 swaynergy: Synergy client for wlroots compositors
 
-USAGE: swaynergy [-h|--help] [-c|--host host] [-p|--port port] [-W|--width width] [-H|--height height] [-N|--name name] [-l|--logfile file] [-L|--loglevel level] [-n|--no-clip] [--fatal-none] [--fatal-ebad] [--fatal-ebsy] [--fatal-timeout]
+USAGE: swaynergy [-h|--help] [-c|--host host] [-p|--port port] [-W|--width width] [-H|--height height] [-N|--name name] [-l|--logfile file] [-L|--loglevel level] [-n|--no-clip] [-P|--png-clip] [--fatal-none] [--fatal-ebad] [--fatal-ebsy] [--fatal-timeout]
 	-h|--help:
 		Help text
 	-c|--host host:
@@ -49,6 +49,8 @@ USAGE: swaynergy [-h|--help] [-c|--host host] [-p|--port port] [-W|--width width
 		Log level -- number, increasing from 0 for more verbosity
 	-n|--no-clip:
 		Don't synchronize the clipboard
+	-P|--png-clip:
+		Use PNG in clipboard offers rather than BMP
 	--fatal-none:
 		Consider *normal* disconnect (i.e. CBYE) to be fatal
 	--fatal-ebad:
@@ -57,7 +59,6 @@ USAGE: swaynergy [-h|--help] [-c|--host host] [-p|--port port] [-W|--width width
 		EBSY (client already exists with our name) errors are fatal
 	--fatal-timeout:
 		timeouts are fatal
-
 ```
 
 Also note that `SIGUSR1` triggers re-execution. Useful until proper recconect

@@ -16,6 +16,7 @@
 #include "clip.h"
 #include "log.h"
 #include "sig.h"
+#include "img.h"
 #include "stb_image/stb_image.h"
 #include "stb_image/stb_image_write.h"
 
@@ -30,6 +31,7 @@ static struct sopt optspec[] = {
 	SOPT_INIT_ARGL('l', "logfile", "file", "Name of logfile to use"),
 	SOPT_INIT_ARGL('L', "loglevel", "level", "Log level -- number, increasing from 0 for more verbosity"),
 	SOPT_INITL('n', "no-clip", "Don't synchronize the clipboard"),
+	SOPT_INITL('P', "png-clip", "Use PNG in clipboard offers rather than BMP"),
 	SOPT_INITL(CHAR_MAX + USYNERGY_ERROR_NONE, "fatal-none", "Consider *normal* disconnect (i.e. CBYE) to be fatal"),
 	SOPT_INITL(CHAR_MAX + USYNERGY_ERROR_EBAD, "fatal-ebad", "Protocol errors are fatal"),
 	SOPT_INITL(CHAR_MAX + USYNERGY_ERROR_EBSY, "fatal-ebsy", "EBSY (client already exists with our name) errors are fatal"),
@@ -68,24 +70,42 @@ static void syn_key_cb(uSynergyCookie cookie, uint16_t key, uint16_t mod, bool d
 	if (!repeat)
  		wlKey(&wlContext, key, down);
 }
+bool bmp_to_png_copy;
 static void syn_clip_cb(uSynergyCookie cookie, enum uSynergyClipboardId id, enum uSynergyClipboardFormat format, const uint8_t *data, uint32_t size)
 {
+	int x,y,comp;
+	unsigned char *png = NULL;
+	size_t png_size = 0;
 	char *mimes[] = {
 		"text/plain",
 		"text/html",
 		"image/bmp",
 	};
+	char *mime = mimes[format];
 	logDbg("got clipboard data from synergy: ID: %d, Format: %d, %u bytes", id, format, size);
 	/*XXX: because synergy doesn't send anything but text to clients, 
 	 * we must infer whether the image is an image all on our own */
 	if (format != USYNERGY_CLIPBOARD_FORMAT_BITMAP) {
-		int x, y, comp;
 		if (stbi_info_from_memory(data, size, &x, &y, &comp)) {
 			logDbg("BITMAP sent as TEXT data to clipboard, setting new type");
 			format = USYNERGY_CLIPBOARD_FORMAT_BITMAP;
 		}
 	}
-	clipWlCopy(id, mimes[format], data, size);
+	/* because of things like https://github.com/debauchee/barrier/issues/581
+	 * why not support PNG while we're at it, firefox hates bitmaps as well */
+	if ((format == USYNERGY_CLIPBOARD_FORMAT_BITMAP) && bmp_to_png_copy) {
+		if ((png = imgMemConvert(data, size, &png_size, IMG_FMT_PNG))) {
+			logDbg("Converted image to png for wl-copy");
+			mime = "image/png";
+			data = png;
+		       	size = png_size;
+		} else {
+			logWarn("Could not convert BMP to PNG, passing the former to wl-copy");
+		}
+	}
+	clipWlCopy(id, mime, data, size);
+	//clean up if we converted
+	free(png);
 }
 static void syn_screensaver_cb(uSynergyCookie cookie, bool state)
 {
@@ -218,6 +238,9 @@ int main(int argc, char **argv)
 				break;
 			case 'n':
 				use_clipboard = false;
+				break;
+			case 'P':
+				bmp_to_png_copy = true;
 				break;
 			case CHAR_MAX + USYNERGY_ERROR_NONE:
 			case CHAR_MAX + USYNERGY_ERROR_EBAD:

@@ -1,11 +1,7 @@
 #include "clip.h"
 #include "wayland.h"
 #include "net.h"
-#define STBI_ASSERT(x)
-#define STB_IMAGE_IMPLEMENTATION
-#include "stb_image/stb_image.h"
-#define STB_IMAGE_WRITE_IMPLEMENTATION
-#include "stb_image/stb_image_write.h"
+#include "img.h"
 
 extern uSynergyContext synContext;
 extern char **environ;
@@ -146,48 +142,17 @@ bool clipSpawnMonitors(char *mime, enum uSynergyClipboardFormat fmt, ...)
 	}
 	return true;
 }
-/* convert image data to bitmap, using imagemagick.
- *
- * Converts in-place, so *buf *MUST* be free-able.
-*/
-static void convert_bmp_write_func(void *context, void *data, int size)
-{
-	FILE *f = context;
-	size_t wrote = fwrite(data, 1, size, f);
-	if (wrote != size) {
-		logErr("Our write fucked up somehow");
-	}
-}
+/* Converts in-place, so *buf *MUST* be free-able. */
 static bool convert_bmp(char **buf, size_t *len)
 {
-	bool ret = true;
-	int x, y, chan;
-	unsigned char *data = stbi_load_from_memory(*buf, *len, &x, &y, &chan, 0);
-	if (!data) {
-		logErr("Could not load buffered image");
+	unsigned char *out;
+	size_t out_len = 0;
+	if (!(out = imgMemConvert(*buf, *len, &out_len, IMG_FMT_BMP))) {
 		return false;
 	}
-	logDbg("Loaded image: %dx%dx%d", x, y, chan * 8);
 	free(*buf);
-	*len = 0;
-	*buf = NULL;
-	FILE *f = open_memstream(buf, len);
-	if (!f) {
-		logPErr("could not open memstream buffer");
-		free(data);
-		return false;
-	}
-	if (!stbi_write_bmp_to_func(convert_bmp_write_func, f, x, y, chan, data)) {
-		logErr("could not write image to buffer");
-		free(data);
-		fclose(f);
-		free(*buf);
-		*len = 0;
-		*buf = NULL;
-		return false;
-	}
-	fclose(f);
-	free(data);
+	*buf = out;
+	*len = out_len;
 	/* synergy expects us to trim off 14-byte header it seems */
 	memmove(*buf, *buf + 14, *len -= 14);
 	*buf = xrealloc(*buf, *len);
