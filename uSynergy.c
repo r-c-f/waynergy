@@ -65,7 +65,21 @@ static int32_t sNetToNative32(const unsigned char *value)
 }
 
 
-
+// add data to a buffer -- little endian this time (for bitmaps)
+static unsigned char *buf_add_int16le(unsigned char *buf, uint16_t val)
+{
+	*(buf++) = (val & 0xFF);
+	*(buf++) = ((val >> 8) & 0xFF);
+	return buf;
+}
+static unsigned char *buf_add_int32le(unsigned char *buf, uint32_t val)
+{
+	*(buf++) = (val & 0xFF);
+	*(buf++) = ((val >> 8) & 0xFF);
+	*(buf++) = ((val >> 16) & 0xFF);
+	*(buf++) = ((val >> 24) & 0xFF);
+	return buf;
+}
 
 /**
 @brief Add string to reply packet
@@ -592,12 +606,35 @@ static void sProcessMessage(uSynergyContext *context, const uint8_t *message)
 				uint32_t format	= sNetToNative32(parse_msg);
 				uint32_t size	= sNetToNative32(parse_msg+4);
 				parse_msg += 8;
-
+				char *event_data;
+				uint32_t event_size;
+				// if we're a bitmap, reconstruct initial header
+				// and use separate event data
+				if (format == USYNERGY_CLIPBOARD_FORMAT_BITMAP) {
+					char *event_buf = event_data;
+					event_size = size + 14;
+					event_data = xmalloc(event_size);
+					*(event_buf++) = 'B';
+					*(event_buf++) = 'M';
+					//file size
+					event_buf = buf_add_int32le(event_buf, event_size);
+					//reserved
+					event_buf = buf_add_int32le(event_buf, 0);
+					//offset to data (main header + info header)
+					event_buf = buf_add_int32le(event_buf, 14 + 40);
+					//and the rest of it -- after 40 byte info header of course
+					memmove(event_buf += 40, parse_msg, size);
+				} else {
+					event_data = (unsigned char *)parse_msg;
+					event_size = size;
+				}
 				// Call callback
 				if (context->m_clipboardCallback)
-					context->m_clipboardCallback(context->m_cookie, id, format, parse_msg, size);
-
+					context->m_clipboardCallback(context->m_cookie, id, format, event_data, event_size);
+				if ((void*)event_data != (void *)parse_msg)
+					free(event_data);
 				parse_msg += size;
+			
 			}
 		}
 	}

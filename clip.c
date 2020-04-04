@@ -188,16 +188,10 @@ static bool convert_bmp(char **buf, size_t *len)
 	}
 	fclose(f);
 	free(data);
+	/* synergy expects us to trim off 14-byte header it seems */
+	memmove(*buf, *buf + 14, *len -= 14);
 	*buf = xrealloc(*buf, *len);
 	logDbg("Wrote %zd bytes of bitmap data", *len);
-	/* for testing, see if we can't reload it */
-	data = stbi_load_from_memory(*buf, *len, &x, &y, &chan, 0);
-	if (!data) {
-		free(data);
-		logErr("Coulnd't open our own output -- it's borked, yo");
-		return false;
-	}
-	free(data);
 	return true;
 }
 /* process poll data */
