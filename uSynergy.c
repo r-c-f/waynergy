@@ -582,7 +582,7 @@ static void sProcessMessage(uSynergyContext *context, const uint8_t *message)
 			expected_len[len] = '\0';
 			context->m_clipPosExpect[id] = atoi(expected_len);
 			if (context->m_clipPosExpect[id] > context->m_clipLen[id]) {
-				context->m_clipBuf[id] = xrealloc(context->m_clipBuf[id], context->m_clipPosExpect[id]);
+				context->m_clipBuf[id] = xrealloc(context->m_clipBuf[id], context->m_clipLen[id] = context->m_clipPosExpect[id]);
 			}
 		} else if (mark == SYN_DATA_CHUNK && context->m_clipInStream[id]) {
 			if (((parse_msg - message) + len) > USYNERGY_RECEIVE_BUFFER_SIZE) {
@@ -611,9 +611,9 @@ static void sProcessMessage(uSynergyContext *context, const uint8_t *message)
 				// if we're a bitmap, reconstruct initial header
 				// and use separate event data
 				if (format == USYNERGY_CLIPBOARD_FORMAT_BITMAP) {
-					char *event_buf = event_data;
 					event_size = size + 14;
 					event_data = xmalloc(event_size);
+					char *event_buf = event_data;
 					*(event_buf++) = 'B';
 					*(event_buf++) = 'M';
 					//file size
@@ -622,8 +622,8 @@ static void sProcessMessage(uSynergyContext *context, const uint8_t *message)
 					event_buf = buf_add_int32le(event_buf, 0);
 					//offset to data (main header + info header)
 					event_buf = buf_add_int32le(event_buf, 14 + 40);
-					//and the rest of it -- after 40 byte info header of course
-					memmove(event_buf += 40, parse_msg, size);
+					//and the rest of it
+					memmove(event_buf, parse_msg, size);
 				} else {
 					event_data = (unsigned char *)parse_msg;
 					event_size = size;
@@ -634,7 +634,7 @@ static void sProcessMessage(uSynergyContext *context, const uint8_t *message)
 				if ((void*)event_data != (void *)parse_msg)
 					free(event_data);
 				parse_msg += size;
-			
+
 			}
 		}
 	}
@@ -861,12 +861,12 @@ void uSynergyUpdateClipBuf(uSynergyContext *context, enum uSynergyClipboardId id
 	context->m_clipGrabbed[id] = true;
 	context->m_clipPos[id] = len + 4 + 4 + 4; //format count, format ID, size, data
 	if (context->m_clipLen[id] < context->m_clipPos[id]) {
-		context->m_clipBuf[id] = xrealloc(context->m_clipBuf[id], context->m_clipPos[id]);
+		context->m_clipBuf[id] = xrealloc(context->m_clipBuf[id], context->m_clipLen[id] = context->m_clipPos[id]);
 	}
 	/*populate buffer*/
 	uint8_t *buf = context->m_clipBuf[id];
 	buf = buf_add_int32(buf, 1); //formats
-	buf = buf_add_int32(buf, fmt); //type 
+	buf = buf_add_int32(buf, fmt); //type
 	buf = buf_add_int32(buf, len); //length of actual data
 	memmove(buf, data, len);
 	/* send CCLP  -- CCLP%1i%4i */
