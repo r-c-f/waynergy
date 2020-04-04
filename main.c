@@ -16,6 +16,8 @@
 #include "clip.h"
 #include "log.h"
 #include "sig.h"
+#include "stb_image/stb_image.h"
+#include "stb_image/stb_image_write.h"
 
 
 static struct sopt optspec[] = {
@@ -70,9 +72,18 @@ static void syn_clip_cb(uSynergyCookie cookie, enum uSynergyClipboardId id, enum
 {
 	char *mimes[] = {
 		"text/plain",
+		"text/html",
 		"image/bmp",
-		"text/html"
 	};
+	/*XXX: because synergy doesn't send anything but text to clients, 
+	 * we must infer whether the image is an image all on our own */
+	if (format != USYNERGY_CLIPBOARD_FORMAT_BITMAP) {
+		int x, y, comp;
+		if (stbi_info_from_memory(data, size, &x, &y, &comp)) {
+			logDbg("BITMAP sent as TEXT data to clipboard, setting new type");
+			format = USYNERGY_CLIPBOARD_FORMAT_BITMAP;
+		}
+	}
 	clipWlCopy(id, mimes[format], data, size);
 }
 static void syn_screensaver_cb(uSynergyCookie cookie, bool state)
