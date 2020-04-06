@@ -21,7 +21,6 @@ static void cleanup(void)
         for (int i = 0; i < 2; ++i) {
                 if (clipMonitorPid[i] != -1) {
                         kill(clipMonitorPid[i], SIGTERM);
-                        waitpid(clipMonitorPid[i], NULL, 0);
                 }
         }
         /*close stuff*/
@@ -47,13 +46,12 @@ void Restart(void)
 }
 
 
-#define INT32_BUFLEN 11
-static char *int32_to_str(uint32_t in, char *out)
+#define INT32_BUFLEN 12
+static char *uint32_to_str(uint32_t in, char out[static INT32_BUFLEN])
 {
         int i;
         if (!in) {
-                out[0] = '0';
-                out[1] = 0;
+                strcpy(out, "0");
                 return out;
         }
         for (i = INT32_BUFLEN - 1; in; --i) {
@@ -63,6 +61,20 @@ static char *int32_to_str(uint32_t in, char *out)
         /* shift back by number of unused digits */
         memmove(out, out + i + 1, INT32_BUFLEN - 1 - i);
         out[INT32_BUFLEN - 1 - i] = 0;
+        return out;
+}
+static char *int32_to_str(int32_t in, char out[static INT32_BUFLEN])
+{
+        if (in == INT_MIN) {
+                strcpy(out, "INT_MIN");
+                return out;
+        } else if (in < 0) {
+                in *= -1;
+                uint32_to_str(in, out + 1);
+                out[0] = '-';
+        } else {
+                uint32_to_str(in, out);
+        }
         return out;
 }
 
