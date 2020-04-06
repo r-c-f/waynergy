@@ -46,8 +46,25 @@ void Restart(void)
         exit(EXIT_FAILURE);
 }
 
+
+#define INT32_BUFLEN 11
+static char *int32_to_str(uint32_t in, char *out)
+{
+        int i;
+        for (i = INT32_BUFLEN - 1; in; --i) {
+                out[i] = '0' + (in % 10);
+                in /= 10;
+        }
+        /* shift back by number of unused digits */
+        memmove(out, out + i + 1, INT32_BUFLEN - 1 - i);
+        out[INT32_BUFLEN - 1 - i] = 0;
+        return out;
+}
+
 static void sig_handle(int sig, siginfo_t *si, void *context)
 {
+	int level;
+	char buf[INT32_BUFLEN];
         switch (sig) {
                 case SIGALRM:
                         logOutSig(LOG_ERR, "Alarm timeout encountered -- probably disconnecting");
@@ -61,12 +78,16 @@ static void sig_handle(int sig, siginfo_t *si, void *context)
                         sigDoRestart = true;
                         break;
                 case SIGCHLD:
-			if (si->si_status) {
-				logOutSig(LOG_WARN, "Child died with nonzero status");
+			if (si->si_code == CLD_EXITED) {
+				level = si->si_status ? LOG_WARN : LOG_DBG;
+				logOutSig(level, "Child died:");
+				logOutSig(level, int32_to_str(si->si_pid, buf));
+				logOutSig(level, "Status:");
+				logOutSig(level, int32_to_str(si->si_status, buf));
 			} else {
-				logOutSig(LOG_DBG, "Child died -- successful status");
+				logOutSig(LOG_DBG, "SIGCHLD sent without exit");
 			}
-                        break;
+			break;
                 default:
                         logOutSig(LOG_ERR, "Unhandled signal");
         }
