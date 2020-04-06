@@ -97,6 +97,10 @@ bool clipSpawnMonitors(void)
 			NULL
 	};
 	char **argv[] = { argv_0, argv_1 };
+	/* kill the other crap on our socket */
+	char *killcmd;
+	xasprintf(&killcmd, "pkill -f 'wlpaste.*%s'", clipMonitorAddr.sun_path);
+	system(killcmd);
 	for (int i = 0; i < 2; ++i) {
 		if (posix_spawnp(clipMonitorPid + i,"wl-paste",NULL,NULL,argv[i],environ)) {
 			logPErr("spawn");
