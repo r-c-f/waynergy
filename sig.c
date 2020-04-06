@@ -51,6 +51,11 @@ void Restart(void)
 static char *int32_to_str(uint32_t in, char *out)
 {
         int i;
+        if (!in) {
+                out[0] = '0';
+                out[1] = 0;
+                return out;
+        }
         for (i = INT32_BUFLEN - 1; in; --i) {
                 out[i] = '0' + (in % 10);
                 in /= 10;
