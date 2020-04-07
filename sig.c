@@ -50,17 +50,19 @@ void Restart(void)
 static char *uint32_to_str(uint32_t in, char out[static INT32_BUFLEN])
 {
         int i;
+	int digits;
         if (!in) {
                 strcpy(out, "0");
                 return out;
         }
-        for (i = INT32_BUFLEN - 1; in; --i) {
+        for (i = INT32_BUFLEN - 2; in; --i) {
                 out[i] = '0' + (in % 10);
                 in /= 10;
         }
         /* shift back by number of unused digits */
-        memmove(out, out + i + 1, INT32_BUFLEN - 1 - i);
-        out[INT32_BUFLEN - 1 - i] = 0;
+	digits = INT32_BUFLEN - 2 - i;
+        memmove(out, out + i + 1, digits);
+        out[digits] = 0;
         return out;
 }
 static char *int32_to_str(int32_t in, char out[static INT32_BUFLEN])
