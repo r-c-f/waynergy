@@ -1,4 +1,4 @@
-# swaynergy
+# waynergy
 
 An unspeakably-horrible implementation of a synergy client for wlroots
 compositors. Based on the upstream uSynergy library (modified for more protocol
@@ -24,13 +24,13 @@ make install PREFIX=/where/you/want/this
 
 See 
 ```
-swaynergy -h
+waynergy -h
 ```
 output:
 ```
-swaynergy: Synergy client for wlroots compositors
+waynergy: Synergy client for wlroots compositors
 
-USAGE: swaynergy [-h|--help] [-c|--host host] [-p|--port port] [-W|--width width] [-H|--height height] [-N|--name name] [-l|--logfile file] [-L|--loglevel level] [-n|--no-clip] [--fatal-none] [--fatal-ebad] [--fatal-ebsy] [--fatal-timeout]
+USAGE: waynergy [-h|--help] [-c|--host host] [-p|--port port] [-W|--width width] [-H|--height height] [-N|--name name] [-l|--logfile file] [-L|--loglevel level] [-n|--no-clip] [--fatal-none] [--fatal-ebad] [--fatal-ebsy] [--fatal-timeout]
 	-h|--help:
 		Help text
 	-c|--host host:
@@ -64,8 +64,8 @@ Also note that `SIGUSR1` triggers re-execution. Useful until proper recconect
 procedures exist. 
 ### Configuration
 
-The configuration files are stored in `$XDG_CONFIG_HOME/swaynergy`, which is
-probably at `~/.config/swaynergy` in most cases. A single variable goes into 
+The configuration files are stored in `$XDG_CONFIG_HOME/waynergy`, which is
+probably at `~/.config/waynergy` in most cases. A single variable goes into 
 each file named for the setting, because parsing is for those who are not lazy.
 
 The basics are `port`, `host`, `name`, `width`, and `height`, which do exactly

@@ -132,9 +132,9 @@ int main(int argc, char **argv)
 	bool use_clipboard = true;
 	struct sigaction sa;
 
-	/* If we are run as swaynergy-clip-update, we're just supposed to write
+	/* If we are run as waynergy-clip-update, we're just supposed to write
 	 * to the FIFO */
-	if (strstr(argv[0], "swaynergy-clip-update")) {
+	if (strstr(argv[0], "waynergy-clip-update")) {
 		return clipWriteToSocket(argv[2], argv[1][0]);
 	}
 	/*  proceed as the main process */

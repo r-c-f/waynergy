@@ -8,7 +8,7 @@
 int osGetAnonFd(void)
 {
 	#ifdef __linux__
-	return memfd_create("swaynergy-anon-fd", MFD_CLOEXEC);
+	return memfd_create("waynergy-anon-fd", MFD_CLOEXEC);
 	#endif
 	#ifdef __FreeBSD__
 	return shm_open(SHM_ANON, O_RDWR | O_CREAT, 0600);
@@ -31,11 +31,11 @@ char *osGetHomeConfigPath(char *name)
 	char *res;
         char *env;
 	if ((env = getenv("XDG_CONFIG_HOME"))) {
-		xasprintf(&res,"%s/swaynergy/%s", env, name);
+		xasprintf(&res,"%s/waynergy/%s", env, name);
 	} else {
 		if (!(env = getenv("HOME")))
 			return NULL;
-		xasprintf(&res, "%s/.config/swaynergy/%s",env, name);
+		xasprintf(&res, "%s/.config/waynergy/%s",env, name);
 	}
 	return res;
 }

@@ -53,7 +53,7 @@ done:
 /* set up sockets */
 bool clipSetupSockets()
 {
-	strncpy(clipMonitorAddr.sun_path, osGetRuntimePath("swaynergy-clip-sock"), sizeof(clipMonitorAddr.sun_path));
+	strncpy(clipMonitorAddr.sun_path, osGetRuntimePath("waynergy-clip-sock"), sizeof(clipMonitorAddr.sun_path));
 	unlink(clipMonitorAddr.sun_path);
 	clipMonitorAddr.sun_family = AF_UNIX;
 	if ((clipMonitorFd = socket(AF_UNIX, SOCK_STREAM, 0)) == -1) {
@@ -81,7 +81,7 @@ bool clipSpawnMonitors(void)
 			"wl-paste",
 			"-n",
 			"-w",
-			"swaynergy-clip-update",
+			"waynergy-clip-update",
 			"c",
 			clipMonitorAddr.sun_path,
 			NULL
@@ -91,7 +91,7 @@ bool clipSpawnMonitors(void)
 			"-n",
 			"--primary",
 			"-w",
-			"swaynergy-clip-update",
+			"waynergy-clip-update",
 			"p",
 			clipMonitorAddr.sun_path,
 			NULL

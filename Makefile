@@ -8,12 +8,12 @@ SRCFILES_H:=clip.h config.h net.h os.h  sig.h wayland.h uSynergy.h log.h
 SRCFILES_C=$(SRCFILES_H:h=c) wl_idle.c wl_key.c wl_mouse.c main.c clip-update.c
 SRCFILES_O=$(SRCFILES_C:c=o)
 
-all: swaynergy swaynergy-clip-update
+all: waynergy waynergy-clip-update
 
-swaynergy-clip-update: swaynergy
+waynergy-clip-update: waynergy
 	cp $< $@
 
-swaynergy: $(PROT_H) $(PROT_O) $(SRCFILES_H) $(SRCFILES_O)
+waynergy: $(PROT_H) $(PROT_O) $(SRCFILES_H) $(SRCFILES_O)
 	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $(PROT_O) $(SRCFILES_O)
 
 %.o: %.c
@@ -28,15 +28,15 @@ swaynergy: $(PROT_H) $(PROT_O) $(SRCFILES_H) $(SRCFILES_O)
 .PHONY: clean homeinstall distclean install
 
 clean:
-	rm *.o swaynergy swaynergy-clip-update
+	rm *.o waynergy waynergy-clip-update
 
 distclean: clean
 	rm *.prot.c *.prot.h
 
-install: swaynergy swaynergy-clip-update
+install: waynergy waynergy-clip-update
 	mkdir -p "${PREFIX}/bin"
 	install -m755 $^ ${PREFIX}/bin
 
-homeinstall: swaynergy swaynergy-clip-update 
+homeinstall: waynergy waynergy-clip-update 
 	cp -f $^ ~/bin
 
