@@ -135,7 +135,7 @@ int main(int argc, char **argv)
 	/* If we are run as waynergy-clip-update, we're just supposed to write
 	 * to the FIFO */
 	if (strstr(argv[0], "waynergy-clip-update")) {
-		return clipWriteToSocket(argv[2], argv[1][0]);
+		return clipWriteToSocket(argv[4], argv[1][0], argv[2][0], argv[3]);
 	}
 	/*  proceed as the main process */
 

@@ -40,6 +40,6 @@ install: waynergy waynergy-clip-update
 	mkdir -p "${PREFIX}/bin"
 	install -m755 $^ ${PREFIX}/bin
 
-homeinstall: waynergy waynergy-clip-update 
+homeinstall: waynergy waynergy-clip-update waynergy-clipmon 
 	cp -f $^ ~/bin
 

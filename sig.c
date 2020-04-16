@@ -135,6 +135,7 @@ void sigHandleInit(char **argv)
 	struct sigaction sa;
 	sigset_t set;
 	argv_reexec = argv;
+	signal(SIGPIPE, SIG_IGN);
         /* set up signal handler */
         sa.sa_sigaction = sig_handle;
         sigemptyset(&sa.sa_mask);

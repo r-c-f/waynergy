@@ -77,35 +77,22 @@ bool clipSetupSockets()
 /* spawn wl-paste watchers */
 bool clipSpawnMonitors(void)
 {
-	char *argv_0[] = {
-			"wl-paste",
-			"-n",
-			"-w",
-			"waynergy-clip-update",
-			"c",
+	char *argv[] = {
+			"waynergy-clipmon",
 			clipMonitorAddr.sun_path,
 			NULL
 	};
-	char *argv_1[] = {
-			"wl-paste",
-			"-n",
-			"--primary",
-			"-w",
-			"waynergy-clip-update",
-			"p",
-			clipMonitorAddr.sun_path,
-			NULL
-	};
-	char **argv[] = { argv_0, argv_1 };
 	/* kill the other crap on our socket */
 	char *killcmd;
-	xasprintf(&killcmd, "pkill -f 'wlpaste.*%s'", clipMonitorAddr.sun_path);
+	xasprintf(&killcmd, "pkill -f 'waynergy-clipmon.*%s'", clipMonitorAddr.sun_path);
 	system(killcmd);
-	for (int i = 0; i < 2; ++i) {
-		if (posix_spawnp(clipMonitorPid + i,"wl-paste",NULL,NULL,argv[i],environ)) {
-			logPErr("spawn");
-			return false;
-		}
+	free(killcmd);
+	xasprintf(&killcmd, "pkill -f 'waynergy-clip-update.%s'", clipMonitorAddr.sun_path);
+	system(killcmd);
+	free(killcmd);
+	if (posix_spawnp(clipMonitorPid,argv[0],NULL,NULL,argv,environ)) {
+		logPErr("spawn");
+		return false;
 	}
 	return true;
 }
@@ -114,7 +101,10 @@ bool clipSpawnMonitors(void)
 void clipMonitorPollProc(struct pollfd *pfd)
 {
 	size_t len;
+	char seq;
 	char c_id;
+	char *mime;
+	size_t mime_len;
 	enum uSynergyClipboardId id;
 	if (pfd->revents & POLLIN) {
 		if (pfd->fd == clipMonitorFd) {
@@ -130,10 +120,23 @@ void clipMonitorPollProc(struct pollfd *pfd)
 			}
 			logErr("No free updater file descriptors -- doing nothing");
 		} else {
+			if (!read_full(pfd->fd, &seq, 1, 0)) {
+				logPErr("Could not read clipboard offer sequence");
+				goto done;
+			}	
 			if (!read_full(pfd->fd, &c_id, 1, 0)) {
 				logPErr("Could not read clipboard ID");
 				goto done;
 			}
+			if (!read_full(pfd->fd, &mime_len, sizeof(mime_len), 0)) {
+				logPErr("Could not read MIME type length");
+				goto done;
+			}
+			mime = xmalloc(mime_len);
+			if (!read_full(pfd->fd, mime, len, 0)) {
+				logPErr("could not read mime type");
+				goto done;
+			}	
 			if (!read_full(pfd->fd, &len, sizeof(len), 0)) {
 				logPErr("Could not read clipboard data length");
 				goto done;
@@ -151,8 +154,12 @@ void clipMonitorPollProc(struct pollfd *pfd)
 				logErr("Unknown clipboard ID %c", c_id);
 				goto done;
 			}
-			logDbg("Clipboard data read for %c: %zd bytes", c_id, len);
-			uSynergyUpdateClipBuf(&synContext, id , len, buf);
+			logDbg("Clipboard data read for %c, sequence %c, mime %s: %zd bytes", c_id, seq, mime, len);
+			if (!strcmp(mime, "text/plain")) {
+				uSynergyUpdateClipBuf(&synContext, id , len, buf);
+			}else {
+				logDbg("Ignoring unknown mimetype %s", mime);
+			}
 done:
 			shutdown(pfd->fd, SHUT_RDWR);
 			close(pfd->fd);
@@ -189,7 +196,7 @@ bool clipWlCopy(enum uSynergyClipboardId id, const unsigned char *data, size_t l
 		return false;
 	}
 	posix_spawn_file_actions_init(&fa);
-	posix_spawn_file_actions_adddup2(&fa, fd[0], STDIN_FILENO);
+	posix_spawn_file_actions_adddup2(&fa, STDIN_FILENO, fd[0]);
 	posix_spawn_file_actions_addclose(&fa, fd[1]);
    	/* now we can spawn */
 	errno = 0;
