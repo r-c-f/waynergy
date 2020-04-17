@@ -103,7 +103,6 @@ void clipMonitorPollProc(struct pollfd *pfd)
 	size_t len;
 	char seq;
 	char c_id;
-	char *mime;
 	size_t mime_len;
 	enum uSynergyClipboardId id;
 	if (pfd->revents & POLLIN) {
@@ -132,11 +131,12 @@ void clipMonitorPollProc(struct pollfd *pfd)
 				logPErr("Could not read MIME type length");
 				goto done;
 			}
-			mime = xmalloc(mime_len);
-			if (!read_full(pfd->fd, mime, len, 0)) {
+			char *mime = xmalloc(mime_len + 1);
+			if (!read_full(pfd->fd, mime, mime_len, 0)) {
 				logPErr("could not read mime type");
 				goto done;
-			}	
+			}
+			mime[mime_len] = 0;
 			if (!read_full(pfd->fd, &len, sizeof(len), 0)) {
 				logPErr("Could not read clipboard data length");
 				goto done;

@@ -6,12 +6,15 @@
 #include "clip.h"
 #include "net.h"
 #include "fdio_full.h"
+#include "sig.h"
+
 
 /* read file into a buffer, resizing as needed */
 static bool buf_append_file(char **buf, size_t *len, size_t *pos, FILE *f)
 {
         size_t read_count;
         while ((read_count = fread(*buf + *pos, 1, *len - *pos - 1, f))) {
+		fprintf(stderr, "READ %zd BYTES\n", read_count);
                 *pos += read_count;
                 if (*len - *pos <= 2) {
                         *buf = xrealloc(*buf, *len *= 2);
@@ -21,16 +24,28 @@ static bool buf_append_file(char **buf, size_t *len, size_t *pos, FILE *f)
 }
 int clipWriteToSocket(char *path, char seq, char cid, char *mime)
 {
+	fprintf(stderr, "STARTING TO WRITE SOCKET\n");
+	struct sigaction siga = {0};
 	char *buf;
 	size_t len = 4000;
 	size_t pos = 0;
 	size_t mime_len;
 	struct sockaddr_un sa = {0};
 	int sock;
+	siga.sa_handler = SIG_DFL;
+	siga.sa_flags = 0;
+	sigaction(SIGALRM, &siga, NULL);
 	mime_len = strlen(mime);
 	buf = xmalloc(len);
-	if (!buf_append_file(&buf, &len, &pos, stdin))
+	alarm(5);
+	errno = 0;
+	if (!buf_append_file(&buf, &len, &pos, stdin)) {
+		if (errno == EINTR) {
+			fprintf(stderr, "READ TIMEOUT fuck this shit\n");
+		}
 		return EXIT_FAILURE;
+	}
+	alarm(0);
 	/* write out the clipboard sequence
 	 *
 	 * - one char for offer sequence

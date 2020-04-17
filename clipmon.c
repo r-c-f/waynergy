@@ -4,13 +4,20 @@
 #include <wayland-client.h>
 #include <spawn.h>
 #include <unistd.h>
+#include <signal.h>
+#include <errno.h>
 #include <sys/wait.h>
+#include <sys/socket.h>
+#include <sys/un.h>
+#include <stdbool.h>
+#include "fdio_full.h"
 #include "wlr-data-control-unstable-v1.prot.h"
 #include "xmem.h"
 extern char **environ;
 
 char *monitor_sun_path;
 
+static struct wl_display *display;
 static struct wl_seat *seat;
 static struct wl_registry *registry;
 
@@ -102,20 +109,43 @@ static void on_data_offer(void *data, struct zwlr_data_control_device_v1 *device
 	zwlr_data_control_offer_v1_add_listener(dc_offer, &offer_listener, NULL);
 }
 
+
+static bool buf_append_file(char **buf, size_t *len, size_t *pos, int fd)
+{
+        size_t read_count;
+        while ((read_count = read(fd, *buf + *pos, 1)) == 1) {
+                fprintf(stderr, "READ %zd BYTES\n", read_count);
+                *pos += read_count;
+                if (*len - *pos <= 2) {
+                        *buf = xrealloc(*buf, *len *= 2);
+                }
+        }
+	fprintf(stderr, "DONE READING\n");
+        return true;
+}
+
 enum clipboard_id {
 	CLIPBOARD = 0,
 	PRIMARY
 };
 static void on_selection(void *data, struct zwlr_data_control_device_v1 *device, struct zwlr_data_control_offer_v1 *dc_offer, enum clipboard_id id)
 {
-	int pfd[2];
-	posix_spawn_file_actions_t fa;
+	int pfd[2], sock;
+	char *buf;
+	size_t data_len, mime_len, data_pos;
+	unsigned char cseq;
+	struct sockaddr_un sa = {0};
 	pid_t pid;
+
+	strncpy(sa.sun_path, monitor_sun_path, sizeof(sa.sun_path));
+        sa.sun_family = AF_UNIX;
+
 	char *id_str = id ? "primary" : "clipboard";
-	char *cid = id ? "p" : "c";
+	char cid = id ? 'p' : 'c';
 	struct Offer **coffer_ptr = id ? &clip_offer : &prim_offer;
 	if (!dc_offer) {
-		OfferDel((*coffer_ptr)->dc_offer);
+		if (*coffer_ptr)
+			OfferDel((*coffer_ptr)->dc_offer);
 		*coffer_ptr = NULL;
 		return;
 	}
@@ -129,27 +159,45 @@ static void on_selection(void *data, struct zwlr_data_control_device_v1 *device,
 	fprintf(stderr, "Selected (id %s) types:\n", id_str);
 	for (size_t i = 0; i < offer->mime_pos; ++i) {
 		fprintf(stderr, "\t%s\n", offer->mime[i]);
-		/*
-		char *argv[] = {
-			"waynergy-clip-update",
-			get_offer_seq(),	
-			cid,
-			offer_mime[i],
-			monitor_sun_path,
-			NULL
-		};*/
-		char *argv[] = {
-			"cat",
-			"-",
-			NULL
-		};
-		zwlr_data_control_offer_v1_receive(offer->dc_offer, offer->mime[i], pfd[1]);
 		pipe(pfd);
-		posix_spawn_file_actions_init(&fa);
-		posix_spawn_file_actions_adddup2(&fa, STDIN_FILENO, pfd[0]);
-		posix_spawnp(&pid, argv[0], &fa, NULL, argv, environ);
+		zwlr_data_control_offer_v1_receive(dc_offer, offer->mime[i], pfd[1]);
+		wl_display_roundtrip(display);
+		close(pfd[1]);
+		data_len = 4000;
+		data_pos = 0;
+		buf = xmalloc(data_len);
+		buf_append_file(&buf, &data_len, &data_pos, pfd[0]);
 		close(pfd[0]);
+		mime_len = strlen(offer->mime[i]);
+		if ((sock = socket(AF_UNIX, SOCK_STREAM, 0)) == -1) {
+			exit(EXIT_FAILURE);
+		}
+		if (connect(sock, (struct sockaddr *)&sa, sizeof(sa)) == -1) {
+			exit(EXIT_FAILURE);
+		}
+		if (!write_full(sock, get_offer_seq(), 1, 0)) {
+			exit(EXIT_FAILURE);
+		}
+		if (!write_full(sock, &cid, 1, 0)) {
+			exit(EXIT_FAILURE);
+		}
+		if (!write_full(sock, &mime_len, sizeof(mime_len), 0)) {
+			exit(EXIT_FAILURE);
+		}
+		if (!write_full(sock, offer->mime[i], mime_len, 0)) {
+			exit(EXIT_FAILURE);
+		}
+		if (!write_full(sock, &data_pos, sizeof(data_pos), 0)) {
+			exit(EXIT_FAILURE);
+		}
+		if (!write_full(sock, buf, data_pos, 0)) {
+			exit(EXIT_FAILURE);
+		}
+		shutdown(sock, SHUT_RDWR);
+		close(sock);
 	}
+	fprintf(stderr, "DONE WITH OFFER %s\n", get_offer_seq());
+	++offer_seq;
 	return;
 }
 static void on_clipboard(void *data, struct zwlr_data_control_device_v1 *device, struct zwlr_data_control_offer_v1 *offer)
@@ -194,11 +242,12 @@ static struct wl_registry_listener registry_listener = {
 	.global_remove = on_global_remove
 };
 
+
+
 int main(int argc, char **argv)
 {
-	struct wl_display *display;
-	struct zwp_virtual_keyboard_v1 *keyboard;
 	monitor_sun_path = argv[1];
+
 	display = wl_display_connect(NULL);
 	registry = wl_display_get_registry(display);
 	wl_registry_add_listener(registry, &registry_listener, NULL);
@@ -208,6 +257,7 @@ int main(int argc, char **argv)
 	zwlr_data_control_device_v1_add_listener(dc_device, &device_listener, NULL);
 	while (1) {
 		wl_display_dispatch(display);
+		wl_display_roundtrip(display);
 	}
 	return 0;
 }
