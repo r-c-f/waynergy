@@ -31,12 +31,12 @@ waynergy: $(PROT_H) $(PROT_O) $(SRCFILES_H) $(SRCFILES_O)
 .PHONY: clean homeinstall distclean install
 
 clean:
-	rm *.o waynergy waynergy-clip-update
+	rm *.o waynergy waynergy-clip-update waynergy-clipmon
 
 distclean: clean
 	rm *.prot.c *.prot.h
 
-install: waynergy waynergy-clip-update
+install: waynergy waynergy-clip-update waynergy-clipmon
 	mkdir -p "${PREFIX}/bin"
 	install -m755 $^ ${PREFIX}/bin
 
