@@ -206,7 +206,6 @@ static void on_selection(void *data, struct zwlr_data_control_device_v1 *device,
 	wl_display_roundtrip(display);
 	for (size_t i = 0; i < offer->mime_pos; ++i) {
 		close(pfd[i][1]);
-		waitpid(pid[i], NULL, 0);
 	}
 
 	fprintf(stderr, "DONE WITH OFFER %s\n", get_offer_seq());
