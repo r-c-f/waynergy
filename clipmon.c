@@ -130,12 +130,11 @@ enum clipboard_id {
 };
 static void on_selection(void *data, struct zwlr_data_control_device_v1 *device, struct zwlr_data_control_offer_v1 *dc_offer, enum clipboard_id id)
 {
-	int pfd[2], sock;
+	int sock;
 	char *buf;
 	size_t data_len, mime_len, data_pos;
 	unsigned char cseq;
 	struct sockaddr_un sa = {0};
-	pid_t pid;
 
 	strncpy(sa.sun_path, monitor_sun_path, sizeof(sa.sun_path));
         sa.sun_family = AF_UNIX;
@@ -157,45 +156,59 @@ static void on_selection(void *data, struct zwlr_data_control_device_v1 *device,
 	*coffer_ptr= offer;
 	fprintf(stderr, "Offer sequence: %s (%u)", get_offer_seq(), offer_seq);
 	fprintf(stderr, "Selected (id %s) types:\n", id_str);
+	pid_t pid[offer->mime_pos];
+	int pfd[offer->mime_pos][2];
 	for (size_t i = 0; i < offer->mime_pos; ++i) {
 		fprintf(stderr, "\t%s\n", offer->mime[i]);
-		pipe(pfd);
-		zwlr_data_control_offer_v1_receive(dc_offer, offer->mime[i], pfd[1]);
-		wl_display_roundtrip(display);
-		close(pfd[1]);
-		data_len = 4000;
-		data_pos = 0;
-		buf = xmalloc(data_len);
-		buf_append_file(&buf, &data_len, &data_pos, pfd[0]);
-		close(pfd[0]);
-		mime_len = strlen(offer->mime[i]);
-		if ((sock = socket(AF_UNIX, SOCK_STREAM, 0)) == -1) {
-			exit(EXIT_FAILURE);
+		pipe(&pfd[i][0]);
+		if ((pid[i] = fork())) {
+			/* parent */
+			zwlr_data_control_offer_v1_receive(dc_offer, offer->mime[i], pfd[i][1]);
+			close(pfd[i][0]);
+		} else {
+			/* child */
+			data_len = 4000;
+			data_pos = 0;
+			buf = xmalloc(data_len);
+			close(pfd[i][1]);
+			buf_append_file(&buf, &data_len, &data_pos, pfd[i][0]);
+			close(pfd[i][0]);
+			mime_len = strlen(offer->mime[i]);
+			if ((sock = socket(AF_UNIX, SOCK_STREAM, 0)) == -1) {
+				exit(EXIT_FAILURE);
+			}
+			if (connect(sock, (struct sockaddr *)&sa, sizeof(sa)) == -1) {
+				exit(EXIT_FAILURE);
+			}
+			if (!write_full(sock, get_offer_seq(), 1, 0)) {
+				exit(EXIT_FAILURE);
+			}
+			if (!write_full(sock, &cid, 1, 0)) {
+				exit(EXIT_FAILURE);
+			}
+			if (!write_full(sock, &mime_len, sizeof(mime_len), 0)) {
+				exit(EXIT_FAILURE);
+			}
+			if (!write_full(sock, offer->mime[i], mime_len, 0)) {
+				exit(EXIT_FAILURE);
+			}
+			if (!write_full(sock, &data_pos, sizeof(data_pos), 0)) {
+				exit(EXIT_FAILURE);
+			}
+			if (!write_full(sock, buf, data_pos, 0)) {
+				exit(EXIT_FAILURE);
+			}
+			shutdown(sock, SHUT_RDWR);
+			close(sock);
+			exit(EXIT_SUCCESS);
 		}
-		if (connect(sock, (struct sockaddr *)&sa, sizeof(sa)) == -1) {
-			exit(EXIT_FAILURE);
-		}
-		if (!write_full(sock, get_offer_seq(), 1, 0)) {
-			exit(EXIT_FAILURE);
-		}
-		if (!write_full(sock, &cid, 1, 0)) {
-			exit(EXIT_FAILURE);
-		}
-		if (!write_full(sock, &mime_len, sizeof(mime_len), 0)) {
-			exit(EXIT_FAILURE);
-		}
-		if (!write_full(sock, offer->mime[i], mime_len, 0)) {
-			exit(EXIT_FAILURE);
-		}
-		if (!write_full(sock, &data_pos, sizeof(data_pos), 0)) {
-			exit(EXIT_FAILURE);
-		}
-		if (!write_full(sock, buf, data_pos, 0)) {
-			exit(EXIT_FAILURE);
-		}
-		shutdown(sock, SHUT_RDWR);
-		close(sock);
 	}
+	wl_display_roundtrip(display);
+	for (size_t i = 0; i < offer->mime_pos; ++i) {
+		close(pfd[i][1]);
+		waitpid(pid[i], NULL, 0);
+	}
+
 	fprintf(stderr, "DONE WITH OFFER %s\n", get_offer_seq());
 	++offer_seq;
 	return;
@@ -257,7 +270,6 @@ int main(int argc, char **argv)
 	zwlr_data_control_device_v1_add_listener(dc_device, &device_listener, NULL);
 	while (1) {
 		wl_display_dispatch(display);
-		wl_display_roundtrip(display);
 	}
 	return 0;
 }

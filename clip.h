@@ -19,7 +19,7 @@
 #include "net.h"
 
 
-#define CLIP_UPDATER_FD_COUNT 8
+#define CLIP_UPDATER_FD_COUNT 64 
 extern int clipMonitorFd;
 extern struct sockaddr_un clipMonitorAddr;
 extern pid_t clipMonitorPid[2];
