@@ -137,7 +137,7 @@ void clipMonitorPollProc(struct pollfd *pfd)
 				logPErr("Could not read clipboard data length");
 				goto done;
 			}
-			char *buf = xmalloc(len);
+			buf = xmalloc(len);
 			if (!read_full(pfd->fd, buf, len, 0)) {
 				logPErr("Could not read clipboard data");
 				goto done;
