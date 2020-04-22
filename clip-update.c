@@ -2,9 +2,9 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <stdbool.h>
+#include <sys/socket.h>
+#include <sys/un.h>
 #include "xmem.h"
-#include "clip.h"
-#include "net.h"
 #include "fdio_full.h"
 
 /* read file into a buffer, resizing as needed */
@@ -19,8 +19,10 @@ static bool buf_append_file(char **buf, size_t *len, size_t *pos, FILE *f)
         }
         return true;
 }
-int clipWriteToSocket(char *path, char cid)
+int main(int argc, char **argv)
 {
+	char *path = argv[2];
+	char cid = argv[1][0];
 	char *buf;
 	size_t len = 4000;
 	size_t pos = 0;
