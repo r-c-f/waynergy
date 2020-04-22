@@ -113,7 +113,7 @@ bool clipSpawnMonitors(void)
 void clipMonitorPollProc(struct pollfd *pfd)
 {
 	size_t len;
-	char c_id;
+	char c_id, *buf = NULL;
 	enum uSynergyClipboardId id;
 	if (pfd->revents & POLLIN) {
 		if (pfd->fd == clipMonitorFd) {
