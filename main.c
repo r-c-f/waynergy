@@ -122,7 +122,7 @@ static void syn_active_cb(uSynergyCookie cookie, bool active)
 int main(int argc, char **argv)
 {
 	int opt, optind = 0, optcpos = 0;
-	char *optarg, *port, *name, *host, hostname[HOST_NAME_MAX] = {0};
+	char *optarg, *port, *name, *host, hostname[_POSIX_HOST_NAME_MAX] = {0};
 	char *log_path = NULL;
 	enum logLevel log_level;
 	short optshrt;
@@ -133,7 +133,7 @@ int main(int argc, char **argv)
 	struct sigaction sa;
 
 	/* we default to name being hostname, so get it*/
-	gethostname(hostname, HOST_NAME_MAX - 1);
+	gethostname(hostname, _POSIX_HOST_NAME_MAX - 1);
 
 	uSynergyInit(&synContext);
 	/* Load defaults for everything */
