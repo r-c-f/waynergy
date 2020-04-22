@@ -300,7 +300,6 @@ static void handle_global(void *data, struct wl_registry *registry, uint32_t nam
 
 static void handle_global_remove(void *data, struct wl_registry *registry, uint32_t name)
 {
-	int i;
 	struct wlContext *ctx = data;
 	/* possible objects */
 	struct wlOutput *output;
@@ -318,16 +317,6 @@ static const struct wl_registry_listener registry_listener = {
 	.global_remove = handle_global_remove,
 };
 
-
-static int button_map[] = {
-	0,
-	0x110,
-	0x112,
-	0x111,
-	0x150,
-	0x151,
-	-1
-};
 uint32_t wlTS(struct wlContext *ctx)
 {
 	struct timespec ts;

@@ -33,7 +33,6 @@ static char *log_level_get_str(enum logLevel level)
 }
 static void log_out_v_(FILE *f, enum logLevel level, const char *fmt, va_list ap)
 {
-	size_t i;
 	va_list aq;
 	if (level > log_level)
 		return;

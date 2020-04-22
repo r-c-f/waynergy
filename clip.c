@@ -15,7 +15,6 @@ bool clipHaveWlClipboard(void)
 	bool ret = true;
 	pid_t pid;
 	int status;
-	sigset_t sigset, sigsetold;
 	char *argv_0[] = {
 		"wl-paste",
 		"-v",

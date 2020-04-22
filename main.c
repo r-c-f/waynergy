@@ -130,7 +130,6 @@ int main(int argc, char **argv)
 	bool optshrt_valid, optlong_valid;
 	bool man_geom = false;
 	bool use_clipboard = true;
-	struct sigaction sa;
 
 	/* we default to name being hostname, so get it*/
 	gethostname(hostname, _POSIX_HOST_NAME_MAX - 1);
