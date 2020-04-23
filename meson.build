@@ -20,8 +20,8 @@ src_c = [
   'uSynergy.c',
   'log.c'
 ]
-wayland_client = dependency('wayland-client')
 
+wayland_client = dependency('wayland-client')
 xkbcommon = dependency('xkbcommon')
 wayland_scanner = find_program('wayland-scanner')
 if host_machine.system() == 'linux'
