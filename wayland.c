@@ -333,14 +333,14 @@ void wlClose(struct wlContext *ctx)
 	return;
 }
 
-int wlSetup(struct wlContext *ctx, int width, int height)
+bool wlSetup(struct wlContext *ctx, int width, int height)
 {
 	ctx->width = width;
 	ctx->height = height;
 	ctx->display = wl_display_connect(NULL);
 	if (!ctx->display) {
-		printf("Couldn't connect, yo\n");
-		return 1;
+		logErr("Could not connect to display");
+		return false;
 	}
 	ctx->registry = wl_display_get_registry(ctx->display);
 	wl_registry_add_listener(ctx->registry, &registry_listener, ctx);
@@ -354,14 +354,15 @@ int wlSetup(struct wlContext *ctx, int width, int height)
 	wl_display_dispatch(ctx->display);
 	wl_display_roundtrip(ctx->display);
 	if(wlKeySetConfigLayout(ctx)) {
-		return 1;
+		logErr("Could not configure virtual keyboard");
+		return false;
 	}
 	/* set FD_CLOEXEC */
 	int fd = wl_display_get_fd(ctx->display);
 	int flags = fcntl(fd, F_GETFD);
 	flags |= FD_CLOEXEC;
 	fcntl(fd, F_SETFD, flags);
-	return 0;
+	return true;
 }
 void wlResUpdate(struct wlContext *ctx, int width, int height)
 {

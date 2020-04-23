@@ -60,7 +60,7 @@ struct wlContext {
 };
 
 extern int wlKeySetConfigLayout(struct wlContext *ctx);
-extern int wlSetup(struct wlContext *context, int width, int height);
+extern bool wlSetup(struct wlContext *context, int width, int height);
 extern uint32_t wlTS(struct wlContext *context);
 extern void wlResUpdate(struct wlContext *context, int width, int height);
 extern void wlClose(struct wlContext *context);

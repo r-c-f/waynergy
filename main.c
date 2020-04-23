@@ -247,7 +247,8 @@ opterror:
 	} else {
 		logWarn("wl-clipboard not found, no clipboard synchronization support");
 	}
-	wlSetup(&wlContext, synContext.m_clientWidth, synContext.m_clientHeight);
+	if (!wlSetup(&wlContext, synContext.m_clientWidth, synContext.m_clientHeight))
+		return 5;
 	wlIdleInhibit(&wlContext, true);
 	netPollInit();
 	while(1) {

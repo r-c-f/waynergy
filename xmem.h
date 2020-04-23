@@ -31,6 +31,8 @@ __attribute__((unused))
 static char *xstrdup(const char *str)
 {
 	char *ret;
+	if (!str)
+		return NULL;
 	if (!(ret = strdup(str)))
 		abort();
 	return ret;
