@@ -109,6 +109,7 @@ long configTryLong(char *name, long def)
 	if ((s = configReadFile(name))) {
 		errno = 0;
 		out = strtol(s, NULL, 0);
+		free(s);
 		if (!errno)
 			return out;
 	}

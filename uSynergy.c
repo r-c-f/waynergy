@@ -529,7 +529,7 @@ static void sProcessMessage(uSynergyContext *context, const uint8_t *message)
 		++parse_msg;
 		uint32_t seq = sNetToNative32(parse_msg);
 		(void)seq;
-		parse_msg += 4;
+		//parse_msg += 4;
 		/* XXX: I think the sequence number is always zero on receive?*/
 		context->m_clipGrabbed[id] = false;
 	}
@@ -808,7 +808,7 @@ static uint8_t *buf_add_int32(uint8_t *buf, uint32_t val)
 	buf[1] = (val >> 16) & 0xFF;
 	buf[2] = (val >> 8) & 0xFF;
 	buf[3] = val & 0xFF;
-	return buf += 4;
+	return buf + 4;
 }
 /* Update clipboard buffer from local clipboard */
 void uSynergyUpdateClipBuf(uSynergyContext *context, enum uSynergyClipboardId id, uint32_t len, const char *data)

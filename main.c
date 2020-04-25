@@ -121,13 +121,21 @@ static void syn_active_cb(uSynergyCookie cookie, bool active)
 
 int main(int argc, char **argv)
 {
-	int opt, optind = 0, optcpos = 0;
-	char *optarg, *port, *name, *host, hostname[_POSIX_HOST_NAME_MAX] = {0};
+	int ret = EXIT_SUCCESS;
+	int opt;
+	int optind = 0;
+	int optcpos = 0;
+	char *optarg = NULL;
+	char *port = NULL;
+	char *name = NULL;
+	char *host = NULL;
+	char hostname[_POSIX_HOST_NAME_MAX] = {0};
 	char *log_path = NULL;
 	enum logLevel log_level;
-	short optshrt;
-	long optlong;
-	bool optshrt_valid, optlong_valid;
+	short optshrt = 0;
+	long optlong = 0;
+	bool optshrt_valid = false;
+	bool optlong_valid = false;
 	bool man_geom = false;
 	bool use_clipboard = true;
 
@@ -159,7 +167,7 @@ int main(int argc, char **argv)
 		switch (opt) {
 			case 'h':
 				sopt_usage_s();
-				return 0;
+				goto done;
 			case 'c':
 				free(host);
 				host = xstrdup(optarg);
@@ -200,7 +208,7 @@ int main(int argc, char **argv)
 opterror:
 			default:
 			       	sopt_usage_s();
-				return 1;
+				goto error;
 		}
 	}
 	/* set up logging */
@@ -210,7 +218,7 @@ opterror:
 		if (!(synContext.m_clientWidth && synContext.m_clientHeight)) {
 			logErr("Must specify both manual dimensions");
 			sopt_usage_s();
-			return 1;
+			goto error;
 		}
 		logInfo("Using manaul dimensions: %dx%d", synContext.m_clientWidth, synContext.m_clientHeight);
 		man_geom = true;
@@ -220,8 +228,10 @@ opterror:
 	/* we can't override const, so set hostname here*/
 	synContext.m_clientName = name;
 
-	if (!synNetInit(&synNetContext, &synContext, host, port))
-		return 2;
+	if (!synNetInit(&synNetContext, &synContext, host, port)) {
+		logErr("Could not initialize network code");
+		goto error;
+	}
 	/* populate events */
 	synContext.m_mouseMoveCallback = syn_mouse_move_cb;
 	synContext.m_mouseButtonDownCallback = syn_mouse_button_down_cb;
@@ -239,16 +249,16 @@ opterror:
 	if (clipHaveWlClipboard() && use_clipboard) {
 		synContext.m_clipboardCallback = syn_clip_cb;
 		if (!clipSetupSockets())
-			return 4;
+			goto error;
 		if(!clipSpawnMonitors())
-			return 3;
+			goto error;
 	} else if (!use_clipboard) {
 		logInfo("Clipboard sync disabled by command line");
 	} else {
 		logWarn("wl-clipboard not found, no clipboard synchronization support");
 	}
 	if (!wlSetup(&wlContext, synContext.m_clientWidth, synContext.m_clientHeight))
-		return 5;
+		goto error;
 	wlIdleInhibit(&wlContext, true);
 	netPollInit();
 	while(1) {
@@ -259,7 +269,14 @@ opterror:
 			netPoll(&synNetContext, &wlContext);
 		}
 	}
-	return 0;
+error:
+	ret = EXIT_FAILURE;
+done:
+	free(log_path);
+	free(host);
+	free(name);
+	free(port);
+	return ret;
 }
 
 
