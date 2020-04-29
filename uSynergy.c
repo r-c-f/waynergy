@@ -599,6 +599,7 @@ static void sProcessMessage(uSynergyContext *context, const uint8_t *message)
 
 				parse_msg += size;
 			}
+			context->m_clipInStream[id] = false;
 		}
 	}
 	else if (USYNERGY_IS_PACKET("CBYE")) {

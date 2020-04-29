@@ -91,6 +91,10 @@ static void sig_handle(int sig, siginfo_t *si, void *context)
                 case SIGTERM:
                 case SIGINT:
                 case SIGQUIT:
+			if (sigDoExit) {
+				logOutSig(LOG_ERR, "received unhanlded quit request, aborting");
+				abort();
+			}
                         sigDoExit = sig;
                         break;
                 case SIGUSR1:
