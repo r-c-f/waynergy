@@ -101,7 +101,7 @@ static void sig_handle(int sig, siginfo_t *si, void *context)
                         sigDoRestart = true;
                         break;
                 case SIGCHLD:
-			if (si->si_code == CLD_EXITED) {
+			if (si && si->si_code == CLD_EXITED) {
 				level = si->si_status ? LOG_WARN : LOG_DBG;
 				logOutSig(level, "Child died:");
 				logOutSig(level, int32_to_str(si->si_pid, buf));
