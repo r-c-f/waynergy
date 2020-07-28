@@ -348,11 +348,7 @@ bool wlSetup(struct wlContext *ctx, int width, int height)
 	wl_display_roundtrip(ctx->display);
 
 	ctx->pointer = zwlr_virtual_pointer_manager_v1_create_virtual_pointer(ctx->pointer_manager, ctx->seat);
-	wl_display_dispatch(ctx->display);
-	wl_display_roundtrip(ctx->display);
 	ctx->keyboard = zwp_virtual_keyboard_manager_v1_create_virtual_keyboard(ctx->keyboard_manager, ctx->seat);
-	wl_display_dispatch(ctx->display);
-	wl_display_roundtrip(ctx->display);
 	if(wlKeySetConfigLayout(ctx)) {
 		logErr("Could not configure virtual keyboard");
 		return false;
