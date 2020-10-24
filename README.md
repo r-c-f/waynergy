@@ -16,8 +16,10 @@ support). Not ready for primetime (by any means) but maybe useful to somebody
 ### Building
 
 ```
-make
-make install PREFIX=/where/you/want/this
+meson build
+cd build
+ninja
+ninja install
 ```
 
 ### Running
