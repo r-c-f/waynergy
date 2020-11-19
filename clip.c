@@ -52,7 +52,7 @@ done:
 /* set up sockets */
 bool clipSetupSockets()
 {
-	strncpy(clipMonitorAddr.sun_path, osGetRuntimePath("waynergy-clip-sock"), sizeof(clipMonitorAddr.sun_path));
+	strncpy(clipMonitorAddr.sun_path, osGetRuntimePath("waynergy-clip-sock"), sizeof(clipMonitorAddr.sun_path) - 1);
 	unlink(clipMonitorAddr.sun_path);
 	clipMonitorAddr.sun_family = AF_UNIX;
 	if ((clipMonitorFd = socket(AF_UNIX, SOCK_STREAM, 0)) == -1) {
@@ -98,8 +98,11 @@ bool clipSpawnMonitors(void)
 	char **argv[] = { argv_0, argv_1 };
 	/* kill the other crap on our socket */
 	char *killcmd;
+	int killret;
 	xasprintf(&killcmd, "pkill -f 'wlpaste.*%s'", clipMonitorAddr.sun_path);
-	system(killcmd);
+	if ((killret = system(killcmd))) {
+		logWarn("Could not kill lingering wlpaste instances: %d\n", killret);
+	}
 	for (int i = 0; i < 2; ++i) {
 		if (posix_spawnp(clipMonitorPid + i,"wl-paste",NULL,NULL,argv[i],environ)) {
 			logPErr("spawn");

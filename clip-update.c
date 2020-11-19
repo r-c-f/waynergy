@@ -32,7 +32,7 @@ int main(int argc, char **argv)
 	if (!buf_append_file(&buf, &len, &pos, stdin))
 		return EXIT_FAILURE;
 	/* write out the clipboard sequence -- char for ID, size_t for size, then data */
-	strncpy(sa.sun_path, path, sizeof(sa.sun_path));
+	strncpy(sa.sun_path, path, sizeof(sa.sun_path) - 1);
 	sa.sun_family = AF_UNIX;
 	if ((sock = socket(AF_UNIX, SOCK_STREAM, 0)) == -1) {
 		return EXIT_FAILURE;
