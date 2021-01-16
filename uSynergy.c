@@ -28,6 +28,7 @@ freely, subject to the following restrictions:
 #include <string.h>
 #include "sig.h"
 #include "xmem.h"
+#include "ssp.h"
 #include <stdlib.h>
 #include "log.h"
 #include <inttypes.h>
@@ -38,17 +39,6 @@ freely, subject to the following restrictions:
 
 
 
-/**
-@brief Read 16 bit integer in network byte order and convert to native byte order
-**/
-static int16_t sNetToNative16(const unsigned char *value)
-{
-#ifdef USYNERGY_LITTLE_ENDIAN
-	return value[1] | (value[0] << 8);
-#else
-	return value[0] | (value[1] << 8);
-#endif
-}
 
 
 
@@ -286,17 +276,16 @@ static char *sImplementations[] = {
 	"Synergy",
 	NULL
 };
-static char *sIsWelcome(const unsigned char *msg)
+static char *sIsWelcome(struct sspBuf *msg)
 {
 	char **i;
-	/* check length -- the original test was probably a bad idea as it did
-	 * not make sure the message was even 7 characters long....*/
-	uint32_t mlen = sNetToNative32(msg);
 	for (i = sImplementations; *i; ++i) {
-		if (strlen(*i) > mlen)
+		if (strlen(*i) > msg->len)
 			continue;
-		if (memcmp(msg + 4, *i, strlen(*i)) == 0)
+		if (memcmp(msg->data, *i, strlen(*i)) == 0) {
+			sspSeek(msg, strlen(*i));
 			return *i;
+		}
 	}
 	return NULL;
 }
@@ -305,20 +294,21 @@ static char *sIsWelcome(const unsigned char *msg)
 /**
 @brief Parse a single client message, update state, send callbacks and send replies
 **/
-#define USYNERGY_IS_PACKET(pkt_id)	memcmp(message+4, pkt_id, 4)==0
-static void sProcessMessage(uSynergyContext *context, const uint8_t *message)
+#define PARSE_ERROR() do { logErr("Parsing Error: %s %s:%d", __func__, __FILE__, __LINE__); return; } while (0)
+static void sProcessMessage(uSynergyContext *context, struct sspBuf *msg)
 {
 	// We have a packet!
 	const char *imp;
-	if ((imp = sIsWelcome(message)))
+	char pkt_id[5] = {0};
+	if ((imp = sIsWelcome(msg)))
 	{
 		// Welcome message
 		//		kMsgHello			= "Synergy%2i%2i"
 		//		kMsgHelloBack		= "Synergy%2i%2i%s"
-		const unsigned char *parse_msg = message + 4 + strlen(imp);
-		uint16_t server_major = sNetToNative16(parse_msg);
-		parse_msg += 2;
-		uint16_t server_minor = sNetToNative16(parse_msg);
+		uint16_t server_major, server_minor;
+		if (!(sspNetU16(msg, &server_major) && sspNetU16(msg, &server_minor))) {
+			PARSE_ERROR();
+		}
 		logInfo("Server is %s %" PRIu16 ".%" PRIu16, imp, server_major, server_minor);
 		sAddString(context, imp);
 		sAddUInt16(context, USYNERGY_PROTOCOL_MAJOR);
@@ -341,7 +331,10 @@ static void sProcessMessage(uSynergyContext *context, const uint8_t *message)
 		}
 		return;
 	}
-	else if (USYNERGY_IS_PACKET("QINF"))
+	if (!sspMemMove(pkt_id, msg, 4)) {
+		PARSE_ERROR();
+	}
+	else if (!strcmp(pkt_id, "QINF"))
 	{
 		// Screen info. Reply with DINF
 		//		kMsgQInfo			= "QINF"
@@ -359,33 +352,35 @@ static void sProcessMessage(uSynergyContext *context, const uint8_t *message)
 		context->m_infoCurrent = false;
 		return;
 	}
-	else if (USYNERGY_IS_PACKET("CIAK"))
+	else if (!strcmp(pkt_id, "CIAK"))
 	{
 		//		kMsgCInfoAck		= "CIAK"
 		context->m_infoCurrent = true;
 		return;
 	}
-	else if (USYNERGY_IS_PACKET("CROP"))
+	else if (!strcmp(pkt_id, "CROP"))
 	{
 		// Do nothing?
 		//		kMsgCResetOptions	= "CROP"
 		return;
 	}
-	else if (USYNERGY_IS_PACKET("CINN"))
+	else if (!strcmp(pkt_id, "CINN"))
 	{
 		// Screen enter. Reply with CNOP
 		//		kMsgCEnter 			= "CINN%2i%2i%4i%2i"
-
 		// Obtain the Synergy sequence number
-		context->m_sequenceNumber = sNetToNative32(message + 12);
+		if (!(sspNet16(msg, NULL) &&
+		      sspNet16(msg, NULL) &&
+		      sspNetU32(msg, &context->m_sequenceNumber))) {
+			PARSE_ERROR();
+		}
 		context->m_isCaptured = true;
-
 
 		// Call callback
 		if (context->m_screenActiveCallback != 0L)
 			context->m_screenActiveCallback(context->m_cookie, true);
 	}
-	else if (USYNERGY_IS_PACKET("COUT"))
+	else if (!strcmp(pkt_id, "COUT"))
 	{
 		// Screen leave
 		//		kMsgCLeave 			= "COUT"
@@ -403,110 +398,138 @@ static void sProcessMessage(uSynergyContext *context, const uint8_t *message)
 		if (context->m_screenActiveCallback != 0L)
 			context->m_screenActiveCallback(context->m_cookie, false);
 	}
-	else if (USYNERGY_IS_PACKET("CSEC"))
+	else if (!strcmp(pkt_id, "CSEC"))
 	{
 		//Screensaver state
-		bool active = message[8];
+		char active;
+		if (!sspChar(msg, &active)) {
+			PARSE_ERROR();
+		}
 		sSendScreensaverCallback(context, active);
 	}
-	else if (USYNERGY_IS_PACKET("DMDN"))
+	else if (!strcmp(pkt_id, "DMDN"))
 	{
 		// Mouse down
 		//		kMsgDMouseDown		= "DMDN%1i"
-		char btn = message[8];
+		char btn;
+		if (!sspChar(msg, &btn)) {
+			PARSE_ERROR();
+		}
 		sSendMouseButtonDownCallback(context, btn);
 	}
-	else if (USYNERGY_IS_PACKET("DMUP"))
+	else if (!strcmp(pkt_id, "DMUP"))
 	{
 		// Mouse up
 		//		kMsgDMouseUp		= "DMUP%1i"
-		char btn = message[8];
+		char btn;
+		if (!sspChar(msg, &btn)) {
+			PARSE_ERROR();
+		}
 		sSendMouseButtonUpCallback(context, btn);
 	}
-	else if (USYNERGY_IS_PACKET("DMMV"))
+	else if (!strcmp(pkt_id, "DMMV"))
 	{
 		// Mouse move. Reply with CNOP
 		//		kMsgDMouseMove		= "DMMV%2i%2i"
-		int16_t x = sNetToNative16(message+8);
-		int16_t y = sNetToNative16(message+10);
+		int16_t x, y;
+		if (!(sspNet16(msg, &x) && sspNet16(msg, &y))) {
+			PARSE_ERROR();
+		}
 		sSendMouseMoveCallback(context, false, x, y);
 	}
-	else if (USYNERGY_IS_PACKET("DMRM"))
+	else if (!strcmp(pkt_id, "DMRM"))
 	{
 		//Relative mouse move.
-		int16_t x = sNetToNative16(message + 8);
-		int16_t y = sNetToNative16(message + 10);
+		int16_t x, y;
+		if (!(sspNet16(msg, &x) && sspNet16(msg, &y))) {
+			PARSE_ERROR();
+		}
 		sSendMouseMoveCallback(context, true, x, y);
 	}
-	else if (USYNERGY_IS_PACKET("DMWM"))
+	else if (!strcmp(pkt_id, "DMWM"))
 	{
 		// Mouse wheel
 		//		kMsgDMouseWheel		= "DMWM%2i%2i"
 		//		kMsgDMouseWheel1_0	= "DMWM%2i"
-		int16_t x = sNetToNative16(message+8);
-		int16_t y = sNetToNative16(message+10);
+		int16_t x, y;
+		if (!(sspNet16(msg, &x) && sspNet16(msg, &y))) {
+			PARSE_ERROR();
+		}
 		sSendMouseWheelCallback(context, x, y);
 	}
-	else if (USYNERGY_IS_PACKET("DKDN"))
+	else if (!strcmp(pkt_id, "DKDN"))
 	{
 		// Key down
 		//		kMsgDKeyDown		= "DKDN%2i%2i%2i"
 		//		kMsgDKeyDown1_0		= "DKDN%2i%2i"
-		//uint16_t id = sNetToNative16(message+8);
-		uint16_t mod = sNetToNative16(message+10);
-		uint16_t key = sNetToNative16(message+12);
+		uint16_t id, mod, key;
+		if (!(sspNetU16(msg, &id) && sspNetU16(msg, &mod) && sspNetU16(msg, &key))) {
+			PARSE_ERROR();
+		}
 		sSendKeyboardCallback(context, key, mod, true, false);
 	}
-	else if (USYNERGY_IS_PACKET("DKRP"))
+	else if (!strcmp(pkt_id, "DKRP"))
 	{
 		// Key repeat
 		//		kMsgDKeyRepeat		= "DKRP%2i%2i%2i%2i"
 		//		kMsgDKeyRepeat1_0	= "DKRP%2i%2i%2i"
-		uint16_t mod = sNetToNative16(message+10);
-//		uint16_t count = sNetToNative16(message+12);
-		uint16_t key = sNetToNative16(message+14);
+		uint16_t id, mod, count, key;
+		if (!(sspNetU16(msg, &id) &&
+		      sspNetU16(msg, &mod) &&
+		      sspNetU16(msg, &count) &&
+		      sspNetU16(msg, &key))) {
+			PARSE_ERROR();
+		}
 		sSendKeyboardCallback(context, key, mod, true, true);
 	}
-	else if (USYNERGY_IS_PACKET("DKUP"))
+	else if (!strcmp(pkt_id, "DKUP"))
 	{
 		// Key up
 		//		kMsgDKeyUp			= "DKUP%2i%2i%2i"
 		//		kMsgDKeyUp1_0		= "DKUP%2i%2i"
-		//uint16 id=Endian::sNetToNative(sbuf[4]);
-		uint16_t mod = sNetToNative16(message+10);
-		uint16_t key = sNetToNative16(message+12);
+		uint16_t id, mod, key;
+		if (!(sspNetU16(msg, &id) && sspNetU16(msg, &mod) && sspNetU16(msg, &key))) {
+			PARSE_ERROR();
+		}
 		sSendKeyboardCallback(context, key, mod, false, false);
 	}
-	else if (USYNERGY_IS_PACKET("DGBT"))
+	else if (!strcmp(pkt_id, "DGBT"))
 	{
 		// Joystick buttons
 		//		kMsgDGameButtons	= "DGBT%1i%2i";
-		uint8_t	joy_num = message[8];
+		uint8_t	joy_num;
+		uint16_t state;
+		if (!(sspUChar(msg, &joy_num) && sspNetU16(msg, &state))) {
+			PARSE_ERROR();
+		}
 		if (joy_num<USYNERGY_NUM_JOYSTICKS)
 		{
-			// Copy button state, then send callback
-			context->m_joystickButtons[joy_num] = (message[9] << 8) | message[10];
+			context->m_joystickButtons[joy_num] = state;
 			sSendJoystickCallback(context, joy_num);
 		}
 	}
-	else if (USYNERGY_IS_PACKET("DGST"))
+	else if (!strcmp(pkt_id, "DGST"))
 	{
 		// Joystick sticks
 		//		kMsgDGameSticks		= "DGST%1i%1i%1i%1i%1i";
-		uint8_t	joy_num = message[8];
+		uint8_t	joy_num;
+		int8_t state[4];
+		if (!(sspUChar(msg, &joy_num) && sspMemMove(state, msg, sizeof(state)))) {
+			PARSE_ERROR();
+		}
 		if (joy_num<USYNERGY_NUM_JOYSTICKS)
 		{
 			// Copy stick state, then send callback
-			memcpy(context->m_joystickSticks[joy_num], message+9, 4);
+			memcpy(context->m_joystickSticks[joy_num], state, sizeof(state));
 			sSendJoystickCallback(context, joy_num);
 		}
 	}
-	else if (USYNERGY_IS_PACKET("DSOP"))
+	else if (!strcmp(pkt_id, "DSOP"))
 	{
 		// Set options
 		//		kMsgDSetOptions		= "DSOP%4I"
 	}
-	else if (USYNERGY_IS_PACKET("CALV"))
+	else if (!strcmp(pkt_id, "CALV"))
 	{
 		// Keepalive, reply with CALV and then CNOP
 		//		kMsgCKeepAlive		= "CALV"
@@ -515,7 +538,7 @@ static void sProcessMessage(uSynergyContext *context, const uint8_t *message)
 		sSendReply(context);
 		// now reply with CNOP
 	}
-	else if (USYNERGY_IS_PACKET("CCLP"))
+	else if (!strcmp(pkt_id, "CCLP"))
 	{
 		// Clipboard grab
 		// CCLP%1i%4i
@@ -524,16 +547,15 @@ static void sProcessMessage(uSynergyContext *context, const uint8_t *message)
 		// 4 char: identifier ("CCLP")
 		// 1 uint8_t: clipboard ID
 		// 1 uint32_t: sequence number
-		const unsigned char *parse_msg = message + 8;
-		uint8_t id = *parse_msg;
-		++parse_msg;
-		uint32_t seq = sNetToNative32(parse_msg);
-		(void)seq;
-		//parse_msg += 4;
+		unsigned char id;
+		uint32_t seq;
+		if (!(sspUChar(msg, &id) && sspNetU32(msg, &seq))) {
+			PARSE_ERROR();
+		}
 		/* XXX: I think the sequence number is always zero on receive?*/
 		context->m_clipGrabbed[id] = false;
 	}
-	else if (USYNERGY_IS_PACKET("DCLP"))
+	else if (!strcmp(pkt_id, "DCLP"))
 	{
 		// Clipboard message
 		//		kMsgDClipboard		= "DCLP%1i%4i%s"
@@ -549,70 +571,76 @@ static void sProcessMessage(uSynergyContext *context, const uint8_t *message)
 		//		1 uint32:	The format of the clipboard data
 		//		1 uint32:	The size n of the clipboard data
 		//		n uint8:	The clipboard data
-		uint8_t id = message[8];
-		const uint8_t *parse_msg  = &message[9];
-		uint32_t sequence = sNetToNative32(parse_msg);
-		(void)sequence;
-		parse_msg += 4;
-		uint8_t mark = *parse_msg;
-		++parse_msg;
-		uint32_t len = sNetToNative32(parse_msg);
-		parse_msg += 4;
-
+		unsigned char id, mark;
+		uint32_t seq, len;
+		if (!(sspUChar(msg, &id) &&
+		      sspNetU32(msg, &seq) &&
+		      sspUChar(msg, &mark) &&
+		      sspNetU32(msg, &len))) {
+			PARSE_ERROR();
+		}
 		if (mark ==  SYN_DATA_START) {
 			context->m_clipGrabbed[id] = false;
 			context->m_clipInStream[id] = true;
 			context->m_clipPos[id] = 0;
 			char expected_len[len + 1];
-			memmove(expected_len, parse_msg, len);
+			sspMemMove(expected_len, msg, len);
 			expected_len[len] = '\0';
 			context->m_clipPosExpect[id] = atoi(expected_len);
 			if (context->m_clipPosExpect[id] > context->m_clipLen[id]) {
 				context->m_clipBuf[id] = xrealloc(context->m_clipBuf[id], context->m_clipPosExpect[id]);
 			}
 		} else if (mark == SYN_DATA_CHUNK && context->m_clipInStream[id]) {
-			if (((parse_msg - message) + len) > USYNERGY_RECEIVE_BUFFER_SIZE) {
-				logErr("Malformed clipboard chunk");
-				return;
-			}
 			if ((context->m_clipPos[id] + len) > context->m_clipPosExpect[id]) {
 				logErr("Packet too long!");
 				return;
 			}
-
-			memmove(context->m_clipBuf[id] + context->m_clipPos[id], parse_msg, len);
+			sspMemMove(context->m_clipBuf[id] + context->m_clipPos[id], msg, len);
 			context->m_clipPos[id] += len;
 		} else if (mark ==  SYN_DATA_END && context->m_clipInStream[id]) {
-			parse_msg = context->m_clipBuf[id];
-			uint32_t		num_formats = sNetToNative32(parse_msg);
-			parse_msg += 4;
+			struct sspBuf clipmsg = {
+				.data = context->m_clipBuf[id],
+				.pos = 0,
+				.len = context->m_clipPosExpect[id]
+			};
+			uint32_t num_formats, format, size;
+			if (!sspNetU32(&clipmsg, &num_formats)) {
+				PARSE_ERROR();
+			}
 			for (; num_formats; num_formats--)
 			{
 				// Parse clipboard format header
-				uint32_t format	= sNetToNative32(parse_msg);
-				uint32_t size	= sNetToNative32(parse_msg+4);
-				parse_msg += 8;
+				if (!(sspNetU32(&clipmsg, &format) &&
+				      sspNetU32(&clipmsg, &size))) {
+					PARSE_ERROR();
+				}
 
 				// Call callback
-				if (context->m_clipboardCallback)
-					context->m_clipboardCallback(context->m_cookie, id, format, parse_msg, size);
-
-				parse_msg += size;
+				if (context->m_clipboardCallback) {
+					//First check size against buffer
+					if (clipmsg.pos + size > clipmsg.len) {
+						PARSE_ERROR();
+					}
+					context->m_clipboardCallback(context->m_cookie, id, format, clipmsg.data + clipmsg.pos, size);
+				}
+				if (!sspSeek(&clipmsg, size)) {
+					PARSE_ERROR();
+				}
 			}
 			context->m_clipInStream[id] = false;
 		}
 	}
-	else if (USYNERGY_IS_PACKET("CBYE")) {
+	else if (!strcmp(pkt_id, "CBYE")) {
 		logInfo("Server disconnected");
 		sSetDisconnected(context, USYNERGY_ERROR_NONE);
 		return;
 	}
-	else if (USYNERGY_IS_PACKET("EBAD")) {
+	else if (!strcmp(pkt_id, "EBAD")) {
 		logErr("Protocol error");
 		sSetDisconnected(context, USYNERGY_ERROR_EBAD);
 		return;
 	}
-	else if (USYNERGY_IS_PACKET("EBSY")) {
+	else if (!strcmp(pkt_id, "EBSY")) {
 		logErr("Other screen already connected with our name");
 		sSetDisconnected(context, USYNERGY_ERROR_EBSY);
 		return;
@@ -631,7 +659,7 @@ static void sProcessMessage(uSynergyContext *context, const uint8_t *message)
 		//		kMsgEBusy 			= "EBSY"
 		//		kMsgEUnknown		= "EUNK"
 		//		kMsgEBad			= "EBAD"
-		logWarn("Unknown packet '%c%c%c%c'", message[4], message[5], message[6], message[7]);
+		logWarn("Unknown packet '%s'", pkt_id);
 		return;
 	}
 	// Reply with CNOP maybe?
@@ -653,7 +681,7 @@ static void sUpdateContext(uSynergyContext *context)
 	/* Receive data (blocking) */
 	int receive_size = USYNERGY_RECEIVE_BUFFER_SIZE - context->m_receiveOfs;
 	int num_received = 0;
-	int packlen = 0;
+	uint32_t packlen = 0;
 	if (context->m_receiveFunc(context->m_cookie, context->m_receiveBuffer + context->m_receiveOfs, receive_size, &num_received) == false)
 	{
 		/* Receive failed, let's try to reconnect */
@@ -694,7 +722,12 @@ static void sUpdateContext(uSynergyContext *context)
 			break;
 
 		/* Process message */
-		sProcessMessage(context, context->m_receiveBuffer);
+		struct sspBuf msg = {
+			.data = context->m_receiveBuffer + 4,
+			.pos = 0,
+			.len = packlen
+		};
+		sProcessMessage(context, &msg);
 
 		/* Move packet to front of buffer */
 		memmove(context->m_receiveBuffer, context->m_receiveBuffer+packlen+4, context->m_receiveOfs-packlen-4);
@@ -780,21 +813,28 @@ void uSynergyUpdate(uSynergyContext *context)
 /* check all formats in the clipboard message buffer */
 static bool uSynergyClipBufContains(uSynergyContext *context, enum uSynergyClipboardId id, uint32_t len, const char *data)
 {
-	uint8_t *buf = context->m_clipBuf[id];
-	if (!buf)
+	uint32_t formats, flen;
+	struct sspBuf buf = {
+		.data = context->m_clipBuf[id],
+		.pos = 0,
+		.len = context->m_clipLen[id]
+	};
+	if (!buf.data)
 		return false;
 	if (context->m_clipInStream[id])
 		return false;
-	uint32_t formats = sNetToNative32(buf);
-	uint32_t flen;
-	buf += 4;
+	if (!sspNetU32(&buf, &formats)) {
+		logErr("Clipboard parse error: %d, %d", buf.pos, buf.len);
+		return false;
+	}
 	for (int i = 0; i < formats; ++i) {
 		//skip the format, only check the raw data
-		buf += 4;
-		flen = sNetToNative32(buf);
-		buf += 4;
+		if (!(sspNetU32(&buf, NULL) && sspNetU32(&buf, &flen))) {
+			logErr("Clipboard format parse error");
+			return false;
+		}
 		if (flen == len) {
-			if (!memcmp(data, buf, len)) {
+			if (!memcmp(data, buf.data + buf.pos, len)) {
 				return true;
 			}
 		}
@@ -823,7 +863,8 @@ void uSynergyUpdateClipBuf(uSynergyContext *context, enum uSynergyClipboardId id
 	context->m_clipGrabbed[id] = true;
 	context->m_clipPos[id] = len + 4 + 4 + 4; //format count, format ID, size, data
 	if (context->m_clipLen[id] < context->m_clipPos[id]) {
-		context->m_clipBuf[id] = xrealloc(context->m_clipBuf[id], context->m_clipPos[id]);
+		context->m_clipLen[id] = context->m_clipPos[id];
+		context->m_clipBuf[id] = xrealloc(context->m_clipBuf[id], context->m_clipLen[id]);
 	}
 	/*populate buffer*/
 	uint8_t *buf = context->m_clipBuf[id];

@@ -16,6 +16,7 @@ src_c = [
   'net.c',
   'os.c',
   'sig.c',
+  'ssp.c',
   'wayland.c',
   'uSynergy.c',
   'log.c'
