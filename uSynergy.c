@@ -60,25 +60,34 @@ static int32_t sNetToNative32(const unsigned char *value)
 /**
 @brief Add string to reply packet
 **/
-static void sAddString(uSynergyContext *context, const char *string)
+static bool sAddString(uSynergyContext *context, const char *string)
 {
 	size_t len = strlen(string);
+	if (context->m_replyCur - context->m_replyBuffer + len > USYNERGY_REPLY_BUFFER_SIZE)
+		return false;
 	memcpy(context->m_replyCur, string, len);
 	context->m_replyCur += len;
+	return true;
 }
 
-static void sAddBin(uSynergyContext *context, const unsigned char *val, size_t len)
+static bool sAddBin(uSynergyContext *context, const unsigned char *val, size_t len)
 {
+	if (context->m_replyCur - context->m_replyBuffer + len > USYNERGY_REPLY_BUFFER_SIZE)
+		return false;
 	memcpy(context->m_replyCur, val, len);
 	context->m_replyCur += len;
+	return true;
 }
 
 /**
 @brief Add uint8 to reply packet
 **/
-static void sAddUInt8(uSynergyContext *context, uint8_t value)
+static bool sAddUInt8(uSynergyContext *context, uint8_t value)
 {
+	if (context->m_replyCur - context->m_replyBuffer + sizeof(value) > USYNERGY_REPLY_BUFFER_SIZE)
+		return false;
 	*context->m_replyCur++ = value;
+	return true;
 }
 
 
@@ -86,12 +95,15 @@ static void sAddUInt8(uSynergyContext *context, uint8_t value)
 /**
 @brief Add uint16 to reply packet
 **/
-static void sAddUInt16(uSynergyContext *context, uint16_t value)
+static bool sAddUInt16(uSynergyContext *context, uint16_t value)
 {
+	if (context->m_replyCur - context->m_replyBuffer + sizeof(value) > USYNERGY_REPLY_BUFFER_SIZE)
+		return false;
 	uint8_t *reply = context->m_replyCur;
 	*reply++ = (uint8_t)(value >> 8);
 	*reply++ = (uint8_t)value;
 	context->m_replyCur = reply;
+	return true;
 }
 
 
@@ -99,14 +111,17 @@ static void sAddUInt16(uSynergyContext *context, uint16_t value)
 /**
 @brief Add uint32 to reply packet
 **/
-static void sAddUInt32(uSynergyContext *context, uint32_t value)
+static bool sAddUInt32(uSynergyContext *context, uint32_t value)
 {
+	if (context->m_replyCur - context->m_replyBuffer + sizeof(value) > USYNERGY_REPLY_BUFFER_SIZE)
+		return false;
 	uint8_t *reply = context->m_replyCur;
 	*reply++ = (uint8_t)(value >> 24);
 	*reply++ = (uint8_t)(value >> 16);
 	*reply++ = (uint8_t)(value >> 8);
 	*reply++ = (uint8_t)value;
 	context->m_replyCur = reply;
+	return true;
 }
 
 
