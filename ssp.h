@@ -49,28 +49,28 @@ static inline bool sspAddString(struct sspBuf *buf, const char *str)
 	size_t len = strlen(str);
 	return sspAddBin(buf, str, len);
 }
-static inline bool sspAddChar(struct sspBuf *buf, char *val)
+static inline bool sspAddChar(struct sspBuf *buf, char val)
 {
-	return sspAddNetInt(buf, val, 1);
+	return sspAddNetInt(buf, &val, 1);
 }
-static inline bool sspAddUChar(struct sspBuf *buf, unsigned char *val)
+static inline bool sspAddUChar(struct sspBuf *buf, unsigned char val)
 {
-	return sspAddNetInt(buf, val, 1);
+	return sspAddNetInt(buf, &val, 1);
 }
-static inline bool sspAddNet16(struct sspBuf *buf, int16_t *val)
+static inline bool sspAddNet16(struct sspBuf *buf, int16_t val)
 {
-	return sspAddNetInt(buf, val, 2);
+	return sspAddNetInt(buf, &val, 2);
 }
-static inline bool sspAddNetU16(struct sspBuf *buf, uint16_t *val)
+static inline bool sspAddNetU16(struct sspBuf *buf, uint16_t val)
 {
-	return sspAddNetInt(buf, val, 2);
+	return sspAddNetInt(buf, &val, 2);
 }
-static inline bool sspAddNet32(struct sspBuf *buf, int32_t *val)
+static inline bool sspAddNet32(struct sspBuf *buf, int32_t val)
 {
-	return sspAddNetInt(buf, val, 4);
+	return sspAddNetInt(buf, &val, 4);
 }
-static inline bool sspAddNetU32(struct sspBuf *buf, uint32_t *val)
+static inline bool sspAddNetU32(struct sspBuf *buf, uint32_t val)
 {
-	return sspAddNetInt(buf, val, 4);
+	return sspAddNetInt(buf, &val, 4);
 }
 
