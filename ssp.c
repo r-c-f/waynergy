@@ -47,3 +47,38 @@ bool sspMemMove(void *dest, struct sspBuf *buf, size_t len)
 	return true;
 }
 
+bool sspAddBin(struct sspBuf *buf, void *data, size_t len)
+{
+	if (!buf)
+		return false;
+	if (!data)
+		return false;
+	if (buf->pos + len > buf->len) {
+		return false;
+	}
+	memmove(buf->data + buf->pos, data, len);
+	buf->pos += len;
+	return true;
+}
+bool sspAddNetInt(struct sspBuf *buf, void *val, size_t len)
+{
+#ifdef USYNERGY_LITTLE_ENDIAN
+	ssize_t i;
+	unsigned char *val_b = val;
+	if (!val) {
+		return sspSeek(buf, len);
+	}
+	if (!buf) {
+		return false;
+	}
+	if (buf->pos + len > buf->len) {
+		return false;
+	}
+	for (i = 0; i < len; ++i) {
+		buf->data[buf->pos + len - i - 1] = val_b[i];
+	}
+	return true;
+#else
+	return sspAddBin(buf, val, len);
+}
+

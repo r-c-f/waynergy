@@ -108,8 +108,6 @@ struct synContext {
 	uint32_t seq_number;
 	char recv_buf[SYNERGY_RECEIVE_BUFFER_SIZE];
 	size_t recv_offset;
-	char reply_buf[SYNERGY_REPLY_BUFFER_SIZE];
-	char *reply_cur;
 	char *clip_buf[2];
 	size_t clip_len[2];
 	size_t clip_pos[2];
