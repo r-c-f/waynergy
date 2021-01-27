@@ -38,7 +38,8 @@ freely, subject to the following restrictions:
 //---------------------------------------------------------------------------------------------------------------------
 
 
-
+#define PARSE_ERROR() do { logErr("Parsing Error: %s %s:%d", __func__, __FILE__, __LINE__); return; } while (0)
+#define REPLY_ERROR() do { logErr("Error in constructing reply: %s %s:%d", __func__, __FILE__, __LINE__); return; } while (0)
 
 
 
@@ -253,31 +254,37 @@ void uSynergySendClipboard(uSynergyContext *context, int id, uint32_t len, const
 
 	// Assemble start packet.
 	sprintf(buffer, "%d", len);
-	sAddString(context, "DCLP");
-	sAddUInt8(context, id);							/* Clipboard index */
-	sAddUInt32(context, context->m_sequenceNumber);
-	sAddUInt8(context, SYN_DATA_START);
-	sAddUInt32(context, strlen(buffer));			/* Rest of message size: mark, string size of message */
-	sAddString(context, buffer);
+	if (!(sAddString(context, "DCLP") &&
+	      sAddUInt8(context, id) &&				/* Clipboard index */
+	      sAddUInt32(context, context->m_sequenceNumber) &&
+	      sAddUInt8(context, SYN_DATA_START) &&
+	      sAddUInt32(context, strlen(buffer)) && 			/* Rest of message size: mark, string size of message */
+	      sAddString(context, buffer))) {
+		REPLY_ERROR();
+	}
 	sSendReply(context);
 	// Now we do the chunks.
 	for (pos = 0; pos < len; pos += chunk_len) {
 		chunk_len = ((len - pos) > max_length) ? max_length : len - pos;
 		memmove(chunk, text + pos, chunk_len);
-		sAddString(context, "DCLP");
-		sAddUInt8(context, id);
-		sAddUInt32(context, context->m_sequenceNumber);
-		sAddUInt8(context, SYN_DATA_CHUNK);
-		sAddUInt32(context, chunk_len);
-		sAddBin(context, chunk, chunk_len);
-	       	sSendReply(context);
+		if (!(sAddString(context, "DCLP") &&
+		      sAddUInt8(context, id) &&
+		      sAddUInt32(context, context->m_sequenceNumber) &&
+		      sAddUInt8(context, SYN_DATA_CHUNK) &&
+		      sAddUInt32(context, chunk_len) &&
+		      sAddBin(context, chunk, chunk_len))) {
+			REPLY_ERROR();
+		}
+		sSendReply(context);
 	}
 	//And then we're done
-	sAddString(context, "DCLP");
-	sAddUInt8(context, id);
-	sAddUInt32(context, context->m_sequenceNumber);
-	sAddUInt8(context, SYN_DATA_END);
-	sAddUInt32(context, 0);
+	if (!(sAddString(context, "DCLP") &&
+	      sAddUInt8(context, id) &&
+	      sAddUInt32(context, context->m_sequenceNumber) &&
+	      sAddUInt8(context, SYN_DATA_END) &&
+	      sAddUInt32(context, 0))) {
+		REPLY_ERROR();
+	}
 	sSendReply(context);
 }
 
@@ -309,7 +316,6 @@ static char *sIsWelcome(struct sspBuf *msg)
 /**
 @brief Parse a single client message, update state, send callbacks and send replies
 **/
-#define PARSE_ERROR() do { logErr("Parsing Error: %s %s:%d", __func__, __FILE__, __LINE__); return; } while (0)
 static void sProcessMessage(uSynergyContext *context, struct sspBuf *msg)
 {
 	// We have a packet!
@@ -325,11 +331,13 @@ static void sProcessMessage(uSynergyContext *context, struct sspBuf *msg)
 			PARSE_ERROR();
 		}
 		logInfo("Server is %s %" PRIu16 ".%" PRIu16, imp, server_major, server_minor);
-		sAddString(context, imp);
-		sAddUInt16(context, USYNERGY_PROTOCOL_MAJOR);
-		sAddUInt16(context, USYNERGY_PROTOCOL_MINOR);
-		sAddUInt32(context, (uint32_t)strlen(context->m_clientName));
-		sAddString(context, context->m_clientName);
+		if(!(sAddString(context, imp) &&
+		      sAddUInt16(context, USYNERGY_PROTOCOL_MAJOR) &&
+		      sAddUInt16(context, USYNERGY_PROTOCOL_MINOR) &&
+		      sAddUInt32(context, (uint32_t)strlen(context->m_clientName)) &&
+		      sAddString(context, context->m_clientName))) {
+			REPLY_ERROR();
+		}
 		if (!sSendReply(context))
 		{
 			// Send reply failed, let's try to reconnect
@@ -355,14 +363,16 @@ static void sProcessMessage(uSynergyContext *context, struct sspBuf *msg)
 		//		kMsgQInfo			= "QINF"
 		//		kMsgDInfo			= "DINF%2i%2i%2i%2i%2i%2i%2i"
 		uint16_t x = 0, y = 0, warp = 0;
-		sAddString(context, "DINF");
-		sAddUInt16(context, x);
-		sAddUInt16(context, y);
-		sAddUInt16(context, context->m_clientWidth);
-		sAddUInt16(context, context->m_clientHeight);
-		sAddUInt16(context, warp);
-		sAddUInt16(context, 0);		// mx?
-		sAddUInt16(context, 0);		// my?
+		if (!(sAddString(context, "DINF") &&
+		      sAddUInt16(context, x) &&
+		      sAddUInt16(context, y) &&
+		      sAddUInt16(context, context->m_clientWidth) &&
+		      sAddUInt16(context, context->m_clientHeight) &&
+		      sAddUInt16(context, warp) &&
+		      sAddUInt16(context, 0) &&			// mx?
+		      sAddUInt16(context, 0))) {		// my?
+			REPLY_ERROR();
+		}
 		sSendReply(context);
 		context->m_infoCurrent = false;
 		return;
@@ -549,7 +559,9 @@ static void sProcessMessage(uSynergyContext *context, struct sspBuf *msg)
 		// Keepalive, reply with CALV and then CNOP
 		//		kMsgCKeepAlive		= "CALV"
 		logDbg("Got CALV");
-		sAddString(context, "CALV");
+		if (!sAddString(context, "CALV")) {
+			REPLY_ERROR();
+		}
 		sSendReply(context);
 		// now reply with CNOP
 	}
@@ -678,7 +690,9 @@ static void sProcessMessage(uSynergyContext *context, struct sspBuf *msg)
 		return;
 	}
 	// Reply with CNOP maybe?
-	sAddString(context, "CNOP");
+	if(!sAddString(context, "CNOP")) {
+		REPLY_ERROR();
+	}
 	sSendReply(context);
 }
 #undef USYNERGY_IS_PACKET
@@ -888,9 +902,11 @@ void uSynergyUpdateClipBuf(uSynergyContext *context, enum uSynergyClipboardId id
 	buf = buf_add_int32(buf, len); //length of actual data
 	memmove(buf, data, len);
 	/* send CCLP  -- CCLP%1i%4i */
-	sAddString(context, "CCLP");
-	sAddUInt8(context, id);
-	sAddUInt32(context, context->m_sequenceNumber);
+	if (!(sAddString(context, "CCLP") &&
+	      sAddUInt8(context, id) &&
+	      sAddUInt32(context, context->m_sequenceNumber))) {
+		REPLY_ERROR();
+	}
 	sSendReply(context);
 }
 
