@@ -232,7 +232,14 @@ shortopt:
 			*cpos = 0;
 		}
 	}
-	*optarg = opt->arg ? argv[++*optind] : NULL;
+	if (opt->arg) {
+		if (!(*optarg = argv[++*optind])) {
+			/* we were expecting an argument, got none */
+			return '?';
+		}
+	} else {
+		*optarg = NULL;
+	}
 	return opt->val;
 }
 
