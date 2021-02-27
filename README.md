@@ -1,8 +1,8 @@
 # waynergy
 
-An unspeakably-horrible implementation of a synergy client for wlroots
-compositors. Based on the upstream uSynergy library (modified for more protocol
-support). Not ready for primetime (by any means) but maybe useful to somebody
+An implementation of a synergy client for wlroots compositors. Based on the 
+upstream uSynergy library (heavily modified for more protocol support and
+a bit of paranoia).
 
 ## Getting started
 
