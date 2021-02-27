@@ -1,24 +1,27 @@
-project('waynergy', 'c')
+project('waynergy',
+ 'c',
+ version: '0.0.1'
+)
 
-src_c = [
-  'wl_idle.c',
-  'wl_key.c',
-  'wl_mouse.c',
-  'main.c',
-  'clip.c',
-  'config.c',
-  'net.c',
-  'os.c',
-  'sig.c',
-  'ssp.c',
-  'wayland.c',
-  'uSynergy.c',
-  'log.c'
-]
+src_c = files(
+  'src/wl_idle.c',
+  'src/wl_key.c',
+  'src/wl_mouse.c',
+  'src/main.c',
+  'src/clip.c',
+  'src/config.c',
+  'src/net.c',
+  'src/os.c',
+  'src/sig.c',
+  'src/ssp.c',
+  'src/wayland.c',
+  'src/uSynergy.c',
+  'src/log.c'
+)
 
 wayland_client = dependency('wayland-client')
 xkbcommon = dependency('xkbcommon')
-wayland_scanner = find_program('wayland-scanner')
+
 if host_machine.system() == 'linux'
   add_project_arguments('-D_GNU_SOURCE ', language: 'c')
 endif
@@ -38,6 +41,12 @@ executable(
     client_protos, 
     wayland_client, 
     xkbcommon
-  ], 
+  ],
+  include_directories: [include_directories('include')],
 )
-executable('waynergy-clip-update', 'clip-update.c', install: true)
+executable(
+  'waynergy-clip-update', 
+  'src/clip-update.c', 
+  install: true,
+  include_directories: [include_directories('include')],
+)
