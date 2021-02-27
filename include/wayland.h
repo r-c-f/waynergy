@@ -11,10 +11,10 @@
 #include <unistd.h>
 #include <wayland-client.h>
 #include <wayland-client-protocol.h>
-#include "wlr-virtual-pointer-unstable-v1.prot.h"
-#include "virtual-keyboard-unstable-v1.prot.h"
-#include "xdg-output-unstable-v1.prot.h"
-#include "idle.prot.h"
+#include "wlr-virtual-pointer-unstable-v1-client-protocol.h"
+#include "virtual-keyboard-unstable-v1-client-protocol.h"
+#include "xdg-output-unstable-v1-client-protocol.h"
+#include "idle-client-protocol.h"
 #include "uSynergy.h"
 
 struct wlOutput
