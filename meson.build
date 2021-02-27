@@ -1,11 +1,5 @@
 project('waynergy', 'c')
 
-prot = [
-  'idle.xml',
-  'wlr-virtual-pointer-unstable-v1.xml',
-  'virtual-keyboard-unstable-v1.xml',
-  'xdg-output-unstable-v1.xml',
-]
 src_c = [
   'wl_idle.c',
   'wl_key.c',
@@ -34,21 +28,16 @@ else
   add_project_arguments('-DUSYNERGY_LITTLE_ENDIAN', language: 'c')
 endif
 
-prot_src = []
-prot_h = []
-foreach p : prot
-  prot_src += custom_target(
-    p + '.c',
-    input: p,
-    output: '@BASENAME@.prot.c',
-    command: [wayland_scanner, 'private-code', '@INPUT@', '@OUTPUT@'])
-  prot_h += custom_target(
-    p + '.h',
-    input: p,
-    output: '@BASENAME@.prot.h',
-    command: [wayland_scanner, 'client-header', '@INPUT@', '@OUTPUT@'])
-endforeach
-lib_prot = static_library('prot', prot_src + prot_h, dependencies: [wayland_client])
+subdir('protocol')
 
-executable('waynergy', src_c, install: true, dependencies : [wayland_client, xkbcommon], link_with: lib_prot)
+executable(
+  'waynergy', 
+  src_c, 
+  install: true, 
+  dependencies : [
+    client_protos, 
+    wayland_client, 
+    xkbcommon
+  ], 
+)
 executable('waynergy-clip-update', 'clip-update.c', install: true)
