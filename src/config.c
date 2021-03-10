@@ -116,5 +116,19 @@ long configTryLong(char *name, long def)
 	return def;
 }
 
+bool configTryBool(char *name, bool def)
+{
+	char *s;
+	bool out;
 
+	if ((s = configReadFile(name))) {
+		out = (bool)(
+				strstr(s, "yes") ||
+				strstr(s, "true") ||
+				strstr(s, "on"));
+		free(s);
+		return out;
+	}
+	return def;
+}
 

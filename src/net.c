@@ -17,6 +17,7 @@
 #include <sys/stat.h>
 #include <netdb.h>
 #include <time.h>
+#include <tls.h>
 
 
 static bool syn_connect(uSynergyCookie cookie)
@@ -31,16 +32,47 @@ static bool syn_connect(uSynergyCookie cookie)
 			continue;
 		if (connect(snet_ctx->fd, h->ai_addr, h->ai_addrlen))
 			continue;
+		if (snet_ctx->tls_ctx) {
+			if (tls_connect_socket(snet_ctx->tls_ctx, snet_ctx->fd, snet_ctx->host)) {
+				logErr("tls_connect error: %s", tls_error(snet_ctx->tls_ctx));
+				synNetDisconnect(snet_ctx);
+				continue;
+			}
+			if (tls_handshake(snet_ctx->tls_ctx)) {
+				logErr("tls_handshake error: %s", tls_error(snet_ctx->tls_ctx));
+				synNetDisconnect(snet_ctx);
+				continue;
+			}
+		}
 		syn_ctx->m_lastMessageTime = syn_ctx->m_getTimeFunc();
 		return true;
 	}
 	return false;
 }
+static bool tls_write_full(struct tls *ctx, const unsigned char *buf, size_t len)
+{
+	while (len) {
+		ssize_t ret;
+		ret = tls_write(ctx, buf, len);
+		if (ret == TLS_WANT_POLLIN || ret == TLS_WANT_POLLOUT) {
+			continue;
+		}
+		if (ret == -1) {
+			logErr("tls_write failed: %s", tls_error(ctx));
+			return false;
+		}
+		buf += ret;
+		len -= ret;
+	}
+	return true;
+}
 
 static bool syn_send(uSynergyCookie cookie, const uint8_t *buf, int len)
 {
 	struct synNetContext *snet_ctx = cookie;
-	return write_full(snet_ctx->fd, buf, len, 0);
+	return snet_ctx->tls_ctx ?
+		tls_write_full(snet_ctx->tls_ctx, buf, len) :
+		write_full(snet_ctx->fd, buf, len, 0);
 }
 struct pollfd netPollFd[POLLFD_COUNT];
 void netPollInit(void)
@@ -99,7 +131,13 @@ static bool syn_recv(uSynergyCookie cookie, uint8_t *buf, int max_len, int *out_
 {
 	struct synNetContext *snet_ctx = cookie;
 	alarm(USYNERGY_IDLE_TIMEOUT/1000);
-	*out_len = read(snet_ctx->fd, buf, max_len);
+	if (snet_ctx->tls_ctx) {
+		do {
+			*out_len = tls_read(snet_ctx->tls_ctx, buf, max_len);
+		} while (*out_len == TLS_WANT_POLLIN || *out_len == TLS_WANT_POLLOUT);
+	} else {
+		*out_len = read(snet_ctx->fd, buf, max_len);
+	}
 	alarm(0);
 	if (*out_len < 1) {
 		logErr("Synergy receive timed out");
@@ -124,15 +162,43 @@ static uint32_t syn_get_time(void)
 	return ms;
 }
 
-bool synNetInit(struct synNetContext *snet_ctx, uSynergyContext *context, const char *host, const char *port)
+bool synNetInit(struct synNetContext *snet_ctx, uSynergyContext *context, const char *host, const char *port, bool tls)
 {
 	logInfo("Going to connect to %s at port %s", host, port);
 	struct addrinfo hints = {
 		.ai_family = AF_UNSPEC,
 		.ai_socktype = SOCK_STREAM
 	};
+	snet_ctx->host = xstrdup(host);
 	if (getaddrinfo(host, port, &hints, &snet_ctx->hostinfo))
 		return false;
+	if (tls) {
+		if (!(snet_ctx->tls_ctx = tls_client())) {
+			logErr("Could not create tls client context");
+			return false;
+		}
+		struct tls_config *cfg;
+		if (!(cfg = tls_config_new())) {
+			logErr("Could not create tls configuration structure");
+			tls_free(snet_ctx->tls_ctx);
+			return false;
+		}
+		//FIXME: figure out what barrier/synergy actually provide for 
+		//verification and put it here. 
+		logWarn("***CERTIFICATE VERIFICATION IS BORKED, THIS MAY NOT BE TRUSTWORTHY***");
+		tls_config_insecure_noverifycert(cfg);
+		tls_config_insecure_noverifyname(cfg);
+		if (tls_configure(snet_ctx->tls_ctx, cfg)) {
+			logErr("Could not configure TLS context: %s", tls_error(snet_ctx->tls_ctx));
+			tls_config_free(cfg);
+			tls_free(snet_ctx->tls_ctx);
+			return false;
+		}
+
+	} else {
+		logWarn("Not using TLS for connection");
+		snet_ctx->tls_ctx = NULL;
+	}
 	snet_ctx->syn_ctx = context;
 	snet_ctx->fd = -1;
 	context->m_connectFunc = syn_connect;
@@ -148,6 +214,11 @@ bool synNetDisconnect(struct synNetContext *snet_ctx)
 {
 	if (snet_ctx->fd == -1)
 		return false;
+	if (snet_ctx->tls_ctx) {
+		if (tls_close(snet_ctx->tls_ctx)) {
+			logErr("tls_close error: %s", snet_ctx->tls_ctx);
+		}
+	}
 	shutdown(snet_ctx->fd, SHUT_RDWR);
 	close(snet_ctx->fd);
 	snet_ctx->fd = -1;

@@ -21,6 +21,7 @@ src_c = files(
 
 wayland_client = dependency('wayland-client')
 xkbcommon = dependency('xkbcommon')
+libtls = dependency('libtls')
 
 if host_machine.system() == 'linux'
   add_project_arguments('-D_GNU_SOURCE ', language: 'c')
@@ -38,7 +39,8 @@ executable(
   src_c, 
   install: true, 
   dependencies : [
-    client_protos, 
+    client_protos,
+    libtls,
     wayland_client, 
     xkbcommon
   ],

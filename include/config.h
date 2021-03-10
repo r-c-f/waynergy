@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <stdbool.h>
 #include <unistd.h>
 #include <errno.h>
 
@@ -22,3 +23,6 @@ extern char *configTryStringFull(char *name, char *def);
 /* read a string, *trimmed* of the newline */
 extern char *configTryString(char *name, char *def);
 extern long configTryLong(char *name, long def);
+/* read a bool */
+extern bool configTryBool(char *name, bool def);
+
