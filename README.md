@@ -10,6 +10,7 @@ a bit of paranoia).
 
 * wayland, including wayland-scanner and the base protocols
 * libxkbcommon
+* libtls (either from libressl, or libretls)
 * A compositor making use of [wlroots](https://github.com/swaywm/wlroots)
 * [wl-clipboard](https://github.com/bugaevc/wl-clipboard) for clipboard support
 
@@ -51,6 +52,10 @@ USAGE: waynergy [-h|--help] [-c|--host host] [-p|--port port] [-W|--width width]
 		Log level -- number, increasing from 0 for more verbosity
 	-n|--no-clip:
 		Don't synchronize the clipboard
+	-e|--enable-crypto:
+		Enable TLS encryption
+	-t|--enable-tofu:
+		Enable trust-on-first-use for TLS certificate
 	--fatal-none:
 		Consider *normal* disconnect (i.e. CBYE) to be fatal
 	--fatal-ebad:
@@ -98,6 +103,19 @@ move of 0,0 is sent (this is the default).
 
 The mouse approach prevents any clashes with keys, but will prevent cursor
 hiding.
+
+#### TLS
+
+Enabled or disabled with `tls/enable`. The certificate hash is stored in 
+`tls/hash` -- this can either be obtained (per `tls_peer_cert_hash()` manual)
+with something along the lines of
+```
+h=$(openssl x509 -outform der -in mycert.crt | sha256)
+printf "SHA256:${h}\n"
+```
+or it can be stored on first use by setting `tls/tofu` or running with the 
+`--enable-tofu` option on the command line, after which it will be checked
+at every new connection.
 
 ## Acknowledgements
 

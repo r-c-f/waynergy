@@ -18,7 +18,7 @@
 #include <netdb.h>
 #include <time.h>
 #include <tls.h>
-
+#include <assert.h>
 
 static bool syn_connect(uSynergyCookie cookie)
 {
@@ -40,6 +40,20 @@ static bool syn_connect(uSynergyCookie cookie)
 			}
 			if (tls_handshake(snet_ctx->tls_ctx)) {
 				logErr("tls_handshake error: %s", tls_error(snet_ctx->tls_ctx));
+				synNetDisconnect(snet_ctx);
+				continue;
+			}
+			const char *peer_hash = tls_peer_cert_hash(snet_ctx->tls_ctx);
+			assert(peer_hash);
+			if (!snet_ctx->tls_hash) {
+				logInfo("Trust-on-first-use enabled, saving hash %s", tls_peer_cert_hash(snet_ctx->tls_ctx));
+				snet_ctx->tls_hash = xstrdup(peer_hash);
+				if (!(configWriteString("tls/hash", peer_hash))) {
+					logErr("Could not save hash");
+				}
+			}
+			if (strcasecmp(snet_ctx->tls_hash, peer_hash)) {
+				logErr("CERTIFICATE HASH MISMATCH: %s (client) != %s (server)", snet_ctx->tls_hash, peer_hash);
 				synNetDisconnect(snet_ctx);
 				continue;
 			}
@@ -162,7 +176,7 @@ static uint32_t syn_get_time(void)
 	return ms;
 }
 
-bool synNetInit(struct synNetContext *snet_ctx, uSynergyContext *context, const char *host, const char *port, bool tls)
+bool synNetInit(struct synNetContext *snet_ctx, uSynergyContext *context, const char *host, const char *port, bool tls, bool tofu)
 {
 	logInfo("Going to connect to %s at port %s", host, port);
 	struct addrinfo hints = {
@@ -183,9 +197,17 @@ bool synNetInit(struct synNetContext *snet_ctx, uSynergyContext *context, const 
 			tls_free(snet_ctx->tls_ctx);
 			return false;
 		}
-		//FIXME: figure out what barrier/synergy actually provide for 
-		//verification and put it here. 
-		logWarn("***CERTIFICATE VERIFICATION IS BORKED, THIS MAY NOT BE TRUSTWORTHY***");
+		/* figure out certificate hash business */
+		if (!(snet_ctx->tls_hash = configTryString("tls/hash", NULL))) {
+			if (!tofu) {
+				logErr("No certificate hash available");
+				tls_free(snet_ctx->tls_ctx);
+				return false;
+			}
+			/* if we are trusting on frist use we just defer this
+			 * until a successful handshake */
+		}
+		/* we operate on hashes instead -- this is fine for now */
 		tls_config_insecure_noverifycert(cfg);
 		tls_config_insecure_noverifyname(cfg);
 		if (tls_configure(snet_ctx->tls_ctx, cfg)) {

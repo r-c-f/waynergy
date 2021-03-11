@@ -29,6 +29,7 @@ static struct sopt optspec[] = {
 	SOPT_INIT_ARGL('L', "loglevel", "level", "Log level -- number, increasing from 0 for more verbosity"),
 	SOPT_INITL('n', "no-clip", "Don't synchronize the clipboard"),
 	SOPT_INITL('e', "enable-crypto", "Enable TLS encryption"),
+	SOPT_INITL('t', "enable-tofu", "Enable trust-on-first-use for TLS certificate"),
 	SOPT_INITL(CHAR_MAX + USYNERGY_ERROR_NONE, "fatal-none", "Consider *normal* disconnect (i.e. CBYE) to be fatal"),
 	SOPT_INITL(CHAR_MAX + USYNERGY_ERROR_EBAD, "fatal-ebad", "Protocol errors are fatal"),
 	SOPT_INITL(CHAR_MAX + USYNERGY_ERROR_EBSY, "fatal-ebsy", "EBSY (client already exists with our name) errors are fatal"),
@@ -140,6 +141,7 @@ int main(int argc, char **argv)
 	bool man_geom = false;
 	bool use_clipboard = true;
 	bool enable_crypto = false;
+	bool enable_tofu = false;
 
 	/* we default to name being hostname, so get it*/
 	gethostname(hostname, _POSIX_HOST_NAME_MAX - 1);
@@ -150,6 +152,7 @@ int main(int argc, char **argv)
 	host = configTryString("host", "localhost");
 	name = configTryString("name", hostname);
 	enable_crypto = configTryBool("tls/enable", false);
+	enable_tofu = configTryBool("tls/tofu", false);
 	synContext.m_clientWidth = configTryLong("width", 0);
 	synContext.m_clientHeight = configTryLong("height", 0);
 	log_path = configTryString("log/path", NULL);
@@ -205,6 +208,9 @@ int main(int argc, char **argv)
 			case 'e':
 				enable_crypto = true;
 				break;
+			case 't':
+				enable_tofu = true;
+				break;
 			case CHAR_MAX + USYNERGY_ERROR_NONE:
 			case CHAR_MAX + USYNERGY_ERROR_EBAD:
 			case CHAR_MAX + USYNERGY_ERROR_EBSY:
@@ -233,7 +239,7 @@ opterror:
 	sigHandleInit(argv);
 	/* we can't override const, so set hostname here*/
 	synContext.m_clientName = name;
-	if (!synNetInit(&synNetContext, &synContext, host, port, enable_crypto)) {
+	if (!synNetInit(&synNetContext, &synContext, host, port, enable_crypto, enable_tofu)) {
 		logErr("Could not initialize network code");
 		goto error;
 	}

@@ -25,4 +25,5 @@ extern char *configTryString(char *name, char *def);
 extern long configTryLong(char *name, long def);
 /* read a bool */
 extern bool configTryBool(char *name, bool def);
-
+/* Write a string to a config file */
+extern bool configWriteString(char *name, const char *val);

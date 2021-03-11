@@ -132,3 +132,20 @@ bool configTryBool(char *name, bool def)
 	return def;
 }
 
+bool configWriteString(char *name, const char *val)
+{
+	FILE *f;
+	char *path;
+	int ret;
+
+	if (!(path = osGetHomeConfigPath(name))) {
+		return false;
+	}
+	if (!(f = fopen(path, "w+"))) {
+		free(path);
+		return false;
+	}
+	ret = fwrite(val, strlen(val), 1, f);
+	fclose(f);
+	return ret == 1;
+}
