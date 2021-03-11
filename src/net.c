@@ -32,7 +32,37 @@ static bool syn_connect(uSynergyCookie cookie)
 			continue;
 		if (connect(snet_ctx->fd, h->ai_addr, h->ai_addrlen))
 			continue;
-		if (snet_ctx->tls_ctx) {
+		if (snet_ctx->tls) {
+			if (!(snet_ctx->tls_ctx = tls_client())) {
+				logErr("Could not create tls client context");
+				return false;
+			}
+			struct tls_config *cfg;
+			if (!(cfg = tls_config_new())) {
+				logErr("Could not create tls configuration structure");
+				tls_free(snet_ctx->tls_ctx);
+				return false;
+			}
+			/* figure out certificate hash business */
+			if (!(snet_ctx->tls_hash = configTryString("tls/hash", NULL))) {
+				if (snet_ctx->tls_tofu) {
+					logErr("No certificate hash available");
+					tls_free(snet_ctx->tls_ctx);
+					return false;
+				}
+				/* if we are trusting on frist use we just defer this
+				 * until a successful handshake */
+			}
+			/* we operate on hashes instead -- this is fine for now */
+			tls_config_insecure_noverifycert(cfg);
+			tls_config_insecure_noverifyname(cfg);
+			if (tls_configure(snet_ctx->tls_ctx, cfg)) {
+				logErr("Could not configure TLS context: %s", tls_error(snet_ctx->tls_ctx));
+				tls_config_free(cfg);
+				tls_free(snet_ctx->tls_ctx);
+				return false;
+			}
+			tls_config_free(cfg);
 			if (tls_connect_socket(snet_ctx->tls_ctx, snet_ctx->fd, snet_ctx->host)) {
 				logErr("tls_connect error: %s", tls_error(snet_ctx->tls_ctx));
 				synNetDisconnect(snet_ctx);
@@ -186,43 +216,10 @@ bool synNetInit(struct synNetContext *snet_ctx, uSynergyContext *context, const 
 	snet_ctx->host = xstrdup(host);
 	if (getaddrinfo(host, port, &hints, &snet_ctx->hostinfo))
 		return false;
-	if (tls) {
-		if (!(snet_ctx->tls_ctx = tls_client())) {
-			logErr("Could not create tls client context");
-			return false;
-		}
-		struct tls_config *cfg;
-		if (!(cfg = tls_config_new())) {
-			logErr("Could not create tls configuration structure");
-			tls_free(snet_ctx->tls_ctx);
-			return false;
-		}
-		/* figure out certificate hash business */
-		if (!(snet_ctx->tls_hash = configTryString("tls/hash", NULL))) {
-			if (!tofu) {
-				logErr("No certificate hash available");
-				tls_free(snet_ctx->tls_ctx);
-				return false;
-			}
-			/* if we are trusting on frist use we just defer this
-			 * until a successful handshake */
-		}
-		/* we operate on hashes instead -- this is fine for now */
-		tls_config_insecure_noverifycert(cfg);
-		tls_config_insecure_noverifyname(cfg);
-		if (tls_configure(snet_ctx->tls_ctx, cfg)) {
-			logErr("Could not configure TLS context: %s", tls_error(snet_ctx->tls_ctx));
-			tls_config_free(cfg);
-			tls_free(snet_ctx->tls_ctx);
-			return false;
-		}
-
-	} else {
-		logWarn("Not using TLS for connection");
-		snet_ctx->tls_ctx = NULL;
-	}
 	snet_ctx->syn_ctx = context;
 	snet_ctx->fd = -1;
+	snet_ctx->tls = tls;
+	snet_ctx->tls_tofu = tofu;
 	context->m_connectFunc = syn_connect;
 	context->m_sendFunc = syn_send;
 	context->m_receiveFunc = syn_recv;
@@ -240,6 +237,8 @@ bool synNetDisconnect(struct synNetContext *snet_ctx)
 		if (tls_close(snet_ctx->tls_ctx)) {
 			logErr("tls_close error: %s", snet_ctx->tls_ctx);
 		}
+		tls_free(snet_ctx->tls_ctx);
+		snet_ctx->tls_ctx = NULL;
 	}
 	shutdown(snet_ctx->fd, SHUT_RDWR);
 	close(snet_ctx->fd);
