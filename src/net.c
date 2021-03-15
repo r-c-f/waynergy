@@ -78,7 +78,7 @@ static bool syn_connect(uSynergyCookie cookie)
 			if (!snet_ctx->tls_hash) {
 				logInfo("Trust-on-first-use enabled, saving hash %s", tls_peer_cert_hash(snet_ctx->tls_ctx));
 				snet_ctx->tls_hash = xstrdup(peer_hash);
-				if (!(configWriteString("tls/hash", peer_hash))) {
+				if (!(configWriteString("tls/hash", peer_hash, false))) {
 					logErr("Could not save hash");
 				}
 			}
