@@ -20,6 +20,26 @@
 #include <tls.h>
 #include <assert.h>
 
+static char *load_cert_hash(const char *host)
+{
+	char *ret, *path;
+
+	xasprintf(&path, "tls/hash/%s", host);
+	ret = configTryString(path, NULL);
+	free(path);
+	return ret;
+}
+static bool store_cert_hash(const char *host, const char *hash)
+{
+	bool ret;
+	char *path;
+
+	xasprintf(&path, "tls/hash/%s", host);
+	ret = configWriteString(path, hash, 0);
+	free(path);
+	return ret;
+}
+
 static bool syn_connect(uSynergyCookie cookie)
 {
 	struct addrinfo *h;
@@ -35,20 +55,20 @@ static bool syn_connect(uSynergyCookie cookie)
 		if (snet_ctx->tls) {
 			if (!(snet_ctx->tls_ctx = tls_client())) {
 				logErr("Could not create tls client context");
-				return false;
+				continue;
 			}
 			struct tls_config *cfg;
 			if (!(cfg = tls_config_new())) {
 				logErr("Could not create tls configuration structure");
 				tls_free(snet_ctx->tls_ctx);
-				return false;
+				continue;
 			}
 			/* figure out certificate hash business */
-			if (!(snet_ctx->tls_hash = configTryString("tls/hash", NULL))) {
-				if (snet_ctx->tls_tofu) {
+			if (!(snet_ctx->tls_hash = load_cert_hash(snet_ctx->host))) {
+				if (!snet_ctx->tls_tofu) {
 					logErr("No certificate hash available");
 					tls_free(snet_ctx->tls_ctx);
-					return false;
+					continue;
 				}
 				/* if we are trusting on frist use we just defer this
 				 * until a successful handshake */
@@ -60,7 +80,7 @@ static bool syn_connect(uSynergyCookie cookie)
 				logErr("Could not configure TLS context: %s", tls_error(snet_ctx->tls_ctx));
 				tls_config_free(cfg);
 				tls_free(snet_ctx->tls_ctx);
-				return false;
+				continue;
 			}
 			tls_config_free(cfg);
 			if (tls_connect_socket(snet_ctx->tls_ctx, snet_ctx->fd, snet_ctx->host)) {
@@ -78,7 +98,7 @@ static bool syn_connect(uSynergyCookie cookie)
 			if (!snet_ctx->tls_hash) {
 				logInfo("Trust-on-first-use enabled, saving hash %s", tls_peer_cert_hash(snet_ctx->tls_ctx));
 				snet_ctx->tls_hash = xstrdup(peer_hash);
-				if (!(configWriteString("tls/hash", peer_hash, false))) {
+				if (!store_cert_hash(snet_ctx->host, peer_hash)) {
 					logErr("Could not save hash");
 				}
 			}
