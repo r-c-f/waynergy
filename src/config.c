@@ -145,7 +145,7 @@ bool configWriteString(char *name, const char *val, bool overwrite)
 	}
 	errno = 0;
 	oflag = O_WRONLY | O_CREAT | (overwrite ? O_EXCL : 0);
-	if ((fd = open(path, oflag)) == -1) {
+	if ((fd = open(path, oflag, S_IRWXU)) == -1) {
 		logPErr("Could not create config file");
 		free(path);
 		return false;
