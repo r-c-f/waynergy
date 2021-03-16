@@ -40,78 +40,100 @@ static bool store_cert_hash(const char *host, const char *hash)
 	return ret;
 }
 
-static bool syn_connect(uSynergyCookie cookie)
+static bool syn_connect_setup(struct synNetContext *snet_ctx, struct addrinfo *ai)
 {
-	struct addrinfo *h;
-	struct synNetContext *snet_ctx = cookie;
-	uSynergyContext *syn_ctx = snet_ctx->syn_ctx;
-	logDbg("syn_connect trying to connect");
-	synNetDisconnect(snet_ctx);
-	for (h = snet_ctx->hostinfo; h; h = h->ai_next) {
-		if ((snet_ctx->fd = socket(h->ai_family, h->ai_socktype | SOCK_CLOEXEC, h->ai_protocol)) == -1)
-			continue;
-		if (connect(snet_ctx->fd, h->ai_addr, h->ai_addrlen))
-			continue;
-		if (snet_ctx->tls) {
-			if (!(snet_ctx->tls_ctx = tls_client())) {
-				logErr("Could not create tls client context");
-				continue;
-			}
-			struct tls_config *cfg;
-			if (!(cfg = tls_config_new())) {
-				logErr("Could not create tls configuration structure");
+	struct tls_config *cfg;
+	const char *peer_hash;
+
+	if ((snet_ctx->fd = socket(ai->ai_family, ai->ai_socktype | SOCK_CLOEXEC, ai->ai_protocol)) == -1)
+		return false;
+	if (connect(snet_ctx->fd, ai->ai_addr, ai->ai_addrlen))
+		return false;
+	if (snet_ctx->tls) {
+		if (!(snet_ctx->tls_ctx = tls_client())) {
+			logErr("Could not create tls client context");
+			return false;
+		}
+		if (!(cfg = tls_config_new())) {
+			logErr("Could not create tls configuration structure");
+			tls_free(snet_ctx->tls_ctx);
+			return false;
+		}
+		/* figure out certificate hash business */
+		if (!(snet_ctx->tls_hash = load_cert_hash(snet_ctx->host))) {
+			if (!snet_ctx->tls_tofu) {
+				logErr("No certificate hash available");
 				tls_free(snet_ctx->tls_ctx);
-				continue;
+				return false;
 			}
-			/* figure out certificate hash business */
-			if (!(snet_ctx->tls_hash = load_cert_hash(snet_ctx->host))) {
-				if (!snet_ctx->tls_tofu) {
-					logErr("No certificate hash available");
-					tls_free(snet_ctx->tls_ctx);
-					continue;
-				}
-				/* if we are trusting on frist use we just defer this
-				 * until a successful handshake */
-			}
-			/* we operate on hashes instead -- this is fine for now */
-			tls_config_insecure_noverifycert(cfg);
-			tls_config_insecure_noverifyname(cfg);
-			if (tls_configure(snet_ctx->tls_ctx, cfg)) {
-				logErr("Could not configure TLS context: %s", tls_error(snet_ctx->tls_ctx));
-				tls_config_free(cfg);
-				tls_free(snet_ctx->tls_ctx);
-				continue;
-			}
+			/* if we are trusting on frist use we just defer this
+			 * until a successful handshake */
+		}
+		/* we operate on hashes instead -- this is fine for now */
+		tls_config_insecure_noverifycert(cfg);
+		tls_config_insecure_noverifyname(cfg);
+		if (tls_configure(snet_ctx->tls_ctx, cfg)) {
+			logErr("Could not configure TLS context: %s", tls_error(snet_ctx->tls_ctx));
 			tls_config_free(cfg);
-			if (tls_connect_socket(snet_ctx->tls_ctx, snet_ctx->fd, snet_ctx->host)) {
-				logErr("tls_connect error: %s", tls_error(snet_ctx->tls_ctx));
-				synNetDisconnect(snet_ctx);
-				continue;
-			}
-			if (tls_handshake(snet_ctx->tls_ctx)) {
-				logErr("tls_handshake error: %s", tls_error(snet_ctx->tls_ctx));
-				synNetDisconnect(snet_ctx);
-				continue;
-			}
-			const char *peer_hash = tls_peer_cert_hash(snet_ctx->tls_ctx);
-			assert(peer_hash);
-			if (!snet_ctx->tls_hash) {
-				logInfo("Trust-on-first-use enabled, saving hash %s", tls_peer_cert_hash(snet_ctx->tls_ctx));
-				snet_ctx->tls_hash = xstrdup(peer_hash);
-				if (!store_cert_hash(snet_ctx->host, peer_hash)) {
-					logErr("Could not save hash");
-				}
-			}
-			if (strcasecmp(snet_ctx->tls_hash, peer_hash)) {
-				logErr("CERTIFICATE HASH MISMATCH: %s (client) != %s (server)", snet_ctx->tls_hash, peer_hash);
-				synNetDisconnect(snet_ctx);
-				continue;
+			tls_free(snet_ctx->tls_ctx);
+			return false;
+		}
+		tls_config_free(cfg);
+		if (tls_connect_socket(snet_ctx->tls_ctx, snet_ctx->fd, snet_ctx->host)) {
+			logErr("tls_connect error: %s", tls_error(snet_ctx->tls_ctx));
+			synNetDisconnect(snet_ctx);
+			return false;
+		}
+		if (tls_handshake(snet_ctx->tls_ctx)) {
+			logErr("tls_handshake error: %s", tls_error(snet_ctx->tls_ctx));
+			synNetDisconnect(snet_ctx);
+			return false;
+		}
+		if (!(peer_hash = tls_peer_cert_hash(snet_ctx->tls_ctx))) {
+			logErr("Server provided no certificate");
+			synNetDisconnect(snet_ctx);
+			return false;
+		}
+		if (!snet_ctx->tls_hash) {
+			logInfo("Trust-on-first-use enabled, saving hash %s", tls_peer_cert_hash(snet_ctx->tls_ctx));
+			snet_ctx->tls_hash = xstrdup(peer_hash);
+			if (!store_cert_hash(snet_ctx->host, peer_hash)) {
+				logErr("Could not save hash");
 			}
 		}
-		syn_ctx->m_lastMessageTime = syn_ctx->m_getTimeFunc();
-		return true;
+		if (strcasecmp(snet_ctx->tls_hash, peer_hash)) {
+			logErr("CERTIFICATE HASH MISMATCH: %s (client) != %s (server)", snet_ctx->tls_hash, peer_hash);
+			synNetDisconnect(snet_ctx);
+			return false;
+		}
 	}
-	return false;
+	return true;
+}
+
+
+static bool syn_connect(uSynergyCookie cookie)
+{
+	bool ret = false;
+	struct addrinfo *hostinfo, *h;
+	struct synNetContext *snet_ctx = cookie;
+	uSynergyContext *syn_ctx = snet_ctx->syn_ctx;
+	logInfo("Going to connect to %s at port %s", snet_ctx->host, snet_ctx->port);
+	struct addrinfo hints = {
+		.ai_family = AF_UNSPEC,
+		.ai_socktype = SOCK_STREAM
+	};
+	if (getaddrinfo(snet_ctx->host, snet_ctx->port, &hints, &hostinfo))
+		return false;
+	synNetDisconnect(snet_ctx);
+	for (h = hostinfo; h; h = h->ai_next) {
+		if (syn_connect_setup(snet_ctx, h)) {
+			syn_ctx->m_lastMessageTime = syn_ctx->m_getTimeFunc();
+			ret = true;
+			break;
+		}
+	}
+	freeaddrinfo(hostinfo);
+	return ret;
 }
 static bool tls_write_full(struct tls *ctx, const unsigned char *buf, size_t len)
 {
@@ -228,14 +250,8 @@ static uint32_t syn_get_time(void)
 
 bool synNetInit(struct synNetContext *snet_ctx, uSynergyContext *context, const char *host, const char *port, bool tls, bool tofu)
 {
-	logInfo("Going to connect to %s at port %s", host, port);
-	struct addrinfo hints = {
-		.ai_family = AF_UNSPEC,
-		.ai_socktype = SOCK_STREAM
-	};
 	snet_ctx->host = xstrdup(host);
-	if (getaddrinfo(host, port, &hints, &snet_ctx->hostinfo))
-		return false;
+	snet_ctx->port = xstrdup(port);
 	snet_ctx->syn_ctx = context;
 	snet_ctx->fd = -1;
 	snet_ctx->tls = tls;
