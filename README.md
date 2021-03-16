@@ -106,9 +106,10 @@ hiding.
 
 #### TLS
 
-Enabled or disabled with `tls/enable`. The certificate hash is stored in 
-`tls/hash` -- this can either be obtained (per `tls_peer_cert_hash()` manual)
-with something along the lines of
+Enabled or disabled with `tls/enable`. Certificate hashes (for any given host) 
+are stored in the directory `tls/hash/`, one hash per file named after the
+host. These can be obtained (per `tls_peer_cert_hash()` manual) with something 
+along the lines of
 ```
 h=$(openssl x509 -outform der -in mycert.crt | sha256)
 printf "SHA256:${h}\n"
