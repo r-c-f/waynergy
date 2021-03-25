@@ -26,11 +26,15 @@ char *osGetRuntimePath(char *name)
 	xasprintf(&res, "%s/%s", base, name);
 	return res;
 }
+char *osConfigPathOverride;
 char *osGetHomeConfigPath(char *name)
 {
 	char *res;
         char *env;
-	if ((env = getenv("XDG_CONFIG_HOME"))) {
+
+	if (osConfigPathOverride) {
+		xasprintf(&res, "%s/%s", osConfigPathOverride, name);
+	} else if ((env = getenv("XDG_CONFIG_HOME"))) {
 		xasprintf(&res,"%s/waynergy/%s", env, name);
 	} else {
 		if (!(env = getenv("HOME")))
