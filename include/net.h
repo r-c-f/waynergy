@@ -39,12 +39,12 @@ extern struct pollfd netPollFd[POLLFD_COUNT];
 
 struct synNetContext {
 	uSynergyContext *syn_ctx;
-	char *host;
 	bool tls;
 	bool tls_tofu;
 	struct tls *tls_ctx;
 	char *tls_hash;
-	struct addrinfo *hostinfo;
+	char *host;
+	char *port;
 	int fd;
 };
 bool synNetInit(struct synNetContext *net_ctx, uSynergyContext *syn_ctx, const char *host, const char *port, bool tls, bool tofu);

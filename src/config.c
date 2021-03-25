@@ -1,6 +1,8 @@
 #include "config.h"
 #include "os.h"
 #include "xmem.h"
+#include "fdio_full.h"
+#include "log.h"
 #include <stdbool.h>
 
 /* read file into a buffer, resizing as needed */
@@ -132,20 +134,23 @@ bool configTryBool(char *name, bool def)
 	return def;
 }
 
-bool configWriteString(char *name, const char *val)
+bool configWriteString(char *name, const char *val, bool overwrite)
 {
-	FILE *f;
+	int fd, oflag;
 	char *path;
 	int ret;
 
 	if (!(path = osGetHomeConfigPath(name))) {
 		return false;
 	}
-	if (!(f = fopen(path, "w+"))) {
+	errno = 0;
+	oflag = O_WRONLY | O_CREAT | (overwrite ? O_EXCL : 0);
+	if ((fd = open(path, oflag, S_IRWXU)) == -1) {
+		logPErr("Could not create config file");
 		free(path);
 		return false;
 	}
-	ret = fwrite(val, strlen(val), 1, f);
-	fclose(f);
-	return ret == 1;
+	ret = write_full(fd, val, strlen(val), 0);
+	close(fd);
+	return ret;
 }

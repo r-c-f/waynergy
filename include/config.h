@@ -7,7 +7,8 @@
 #include <stdbool.h>
 #include <unistd.h>
 #include <errno.h>
-
+#include <sys/stat.h>
+#include <fcntl.h>
 
 
 /* read a configuration file from the proper directory, or return NULL */
@@ -26,4 +27,4 @@ extern long configTryLong(char *name, long def);
 /* read a bool */
 extern bool configTryBool(char *name, bool def);
 /* Write a string to a config file */
-extern bool configWriteString(char *name, const char *val);
+extern bool configWriteString(char *name, const char *val, bool overwrite);
