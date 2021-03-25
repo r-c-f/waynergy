@@ -20,7 +20,6 @@
 
 static struct sopt optspec[] = {
 	SOPT_INITL('h', "help", "Help text"),
-	SOPT_INIT_ARGL('C', "config", "path", "Configuration directory"),
 	SOPT_INIT_ARGL('c', "host", "host", "Server to connect to"),
 	SOPT_INIT_ARGL('p', "port", "port", "Port"),
 	SOPT_INIT_ARGL('W', "width", "width", "Width of screen in pixels (manual override, must be given with height)"),
@@ -175,9 +174,6 @@ int main(int argc, char **argv)
 			case 'h':
 				sopt_usage_s();
 				goto done;
-			case 'C':
-				osConfigPathOverride = xstrdup(optarg);
-				break;
 			case 'c':
 				free(host);
 				host = xstrdup(optarg);
