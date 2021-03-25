@@ -111,7 +111,7 @@ are stored in the directory `tls/hash/`, one hash per file named after the
 host. These can be obtained (per `tls_peer_cert_hash()` manual) with something 
 along the lines of
 ```
-h=$(openssl x509 -outform der -in mycert.crt | sha256)
+h=$(openssl x509 -outform der -in mycert.crt | openssl dgst -sha256 | cut -d ' ' -f 2)
 printf "SHA256:${h}\n"
 ```
 or it can be stored on first use by setting `tls/tofu` or running with the 
