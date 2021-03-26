@@ -108,15 +108,18 @@ hiding.
 
 Enabled or disabled with `tls/enable`. Certificate hashes (for any given host) 
 are stored in the directory `tls/hash/`, one hash per file named after the
-host. These can be obtained (per `tls_peer_cert_hash()` manual) with something 
-along the lines of
+host. These can be obtained by running something like 
 ```
-h=$(openssl x509 -outform der -in mycert.crt | openssl dgst -sha256 | cut -d ' ' -f 2)
-printf "SHA256:${h}\n"
+printf "SHA256:%s\n" $(openssl x509 -outform der -in $certpath | openssl dgst -sha256 | cut -d ' ' -f 2)
 ```
-or it can be stored on first use by setting `tls/tofu` or running with the 
-`--enable-tofu` option on the command line, after which it will be checked
-at every new connection.
+on the host. Comman values of $certpath would be
+- `%LocalAppData%\Barrier\SSL\Barrier.pem`
+- `~/.local/share/barrier/SSL/Barrier.pem`
+- `$XDG_DATA_HOME/barrier/SSL/Barrier.pem`
+- `~/.synergy/SSL/Synergy.pem`
+There is also the option to trust on first use by setting `tls/tofu` or 
+running with the `--enable-tofu` option on the command line, which will allow
+verification that it has not changed on subsequent connections. 
 
 ## Acknowledgements
 
