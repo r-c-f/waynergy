@@ -117,6 +117,7 @@ on the host. Comman values of $certpath would be
 - `~/.local/share/barrier/SSL/Barrier.pem`
 - `$XDG_DATA_HOME/barrier/SSL/Barrier.pem`
 - `~/.synergy/SSL/Synergy.pem`
+
 There is also the option to trust on first use by setting `tls/tofu` or 
 running with the `--enable-tofu` option on the command line, which will allow
 verification that it has not changed on subsequent connections. 
