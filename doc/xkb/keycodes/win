@@ -1,0 +1,122 @@
+//
+// XKB keycodes for Windows primaries
+
+default xkb_keycodes "win" {
+
+    minimum= 1;
+    maximum= 1024;
+
+    <ESC> = 0x1;
+    <FK01> = 0x3B;
+    <FK02> = 0x3C;
+    <FK03> = 0x3D;
+    <FK04> = 0x3E;
+    <FK05> = 0x3F;
+    <FK06> = 0x40;
+    <FK07> = 0x41;
+    <FK08> = 0x42;
+    <FK09> = 0x43;
+    <FK10> = 0x44;
+    <FK11> = 0x45;
+    <FK12> = 0x46;
+    <PRSC> = 311;
+    <SCLK> = 0x46;
+//    <PAUS> =
+
+    <TLDE> = 0x29;
+    <AE01> = 0x02;
+    <AE02> = 0x03;
+    <AE03> = 0x04;
+    <AE04> = 0x05;
+    <AE05> = 0x06;
+    <AE06> = 0x07;
+    <AE07> = 0x08;
+    <AE08> = 0x09;
+    <AE09> = 0x0A;
+    <AE10> = 0x0B;
+    <AE11> = 0x0C;
+    <AE12> = 0x0D;
+    <BKSP> = 0x0E;
+
+    <TAB> = 0x0F;
+    <AD01> = 0x10;
+    <AD02> = 0x11;
+    <AD03> = 0x12;
+    <AD04> = 0x13;
+    <AD05> = 0x14;
+    <AD06> = 0x15;
+    <AD07> = 0x16;
+    <AD08> = 0x17;
+    <AD09> = 0x18;
+    <AD10> = 0x19;
+    <AD11> = 0x1A;
+    <AD12> = 0x1B;
+    <BKSL> = 43;
+
+    <CAPS> = 0x3A;
+    <AC01> = 0x1E;
+    <AC02> = 0x1F;
+    <AC03> = 0x20;
+    <AC04> = 0x21;
+    <AC05> = 0x22;
+    <AC06> = 0x23;
+    <AC07> = 0x24;
+    <AC08> = 0x25;
+    <AC09> = 0x26;
+    <AC10> = 0x27;
+    <AC11> = 0x28;
+    <RTRN> = 0x1C;
+
+    <LFSH> = 0x2A;
+    <AB01> = 0x2C;
+    <AB02> = 0x2D;
+    <AB03> = 0x2E;
+    <AB04> = 0x2F;
+    <AB05> = 0x30;
+    <AB06> = 0x31;
+    <AB07> = 0x32;
+    <AB08> = 0x33;
+    <AB09> = 0x34;
+    <AB10> = 0x35;
+    <RTSH> = 0x36;
+
+    <LCTL> = 0x1D;
+    <LWIN> = 347;
+    <LALT> = 0x38;
+    <SPCE> = 0x39;
+    <RALT> = 312;
+//    <RWIN> =
+    <MENU> = 349;
+    <RCTL> = 285;
+
+    <INS> = 338;
+    <HOME> = 327;
+    <PGUP> = 329;
+    <DELE> = 339;
+    <END> = 335;
+    <PGDN>  = 337;
+
+    <LEFT> = 331;
+    <UP> = 328;
+    <RIGHT> = 333;
+    <DOWN> = 336;
+
+//    <NMLK> = 0xEF7F;
+//    <KPDV> = 0xEFAF;
+//    <KPMU> = 0xEFAA;
+//    <KPSU> = 0xEFAD;
+//    <KPAD> = 0xEFAB;
+//    <KPEN> = 0xEF8D;
+//    <KPDL> = 0xEFAE;
+//    <KP0> = 0xEFB0;
+//    <KP1> = 0xEFB1;
+//    <KP2> = 0xEFB2;
+//   <KP3> = 0xEFB3;
+//    <KP4> = 0xEFB4;
+//    <KP5> = 0xEFB5;
+//    <KP6> = 0xEFB6;
+//    <KP7> = 0xEFB7;
+//    <KP8> = 0xEFB8;
+//    <KP9> = 0xEFB9;
+};
+

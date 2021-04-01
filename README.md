@@ -87,6 +87,14 @@ default is insufficient is to use the output of
 setxkbmap -print
 ```
 
+##### Windows primary
+
+Unfortunately there is no existing `xkb_keycodes` section included in
+xkbcommon that will work with a Windows primary. To deal with this I've
+included one that mostly works (minus the keys I don't actually have to test
+on my own systems) in `doc/xkb/keycodes/win`. 
+
+
 #### Screensaver
 
 `screensaver/start` should contain a command to be run when the screensaver is
