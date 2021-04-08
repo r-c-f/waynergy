@@ -1,6 +1,7 @@
 #include "wayland.h"
 #include <stdbool.h>
 #include "log.h"
+#include "fdio_full.h"
 #include <xkbcommon/xkbcommon.h>
 
 
@@ -50,7 +51,6 @@ int wlKeySetConfigLayout(struct wlContext *ctx)
 {
         int ret = 0;
         int fd;
-        char nul = 0;
 	char *keymap_str = configTryStringFull("xkb_keymap", "xkb_keymap { \
 		xkb_keycodes  { include \"xfree86+aliases(qwerty)\"     }; \
 		xkb_types     { include \"complete\"    }; \
@@ -63,20 +63,10 @@ int wlKeySetConfigLayout(struct wlContext *ctx)
                 goto done;
         }
         size_t keymap_size = strlen(keymap_str) + 1;
-        if (lseek(fd, keymap_size, SEEK_SET) != keymap_size) {
-                ret = 2;
-                goto done;
-        }
-        if (write(fd, &nul, 1) != 1) {
-                ret = 3;
-                goto done;
-        }
-        void *ptr = mmap(NULL, keymap_size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
-        if (ptr == MAP_FAILED) {
-                ret = 4;
-                goto done;
-        }
-        strcpy(ptr, keymap_str);
+        if (!write_full(fd, keymap_str, keymap_size, 0)) {
+		ret = 2;
+		goto done;
+	}
         zwp_virtual_keyboard_v1_keymap(ctx->keyboard, WL_KEYBOARD_KEYMAP_FORMAT_XKB_V1, fd, keymap_size);
 	local_mod_init(ctx, keymap_str);
 done:
