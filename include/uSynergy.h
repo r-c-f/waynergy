@@ -1,7 +1,7 @@
 #pragma once
 /*
 uSynergy client -- Interface for the embedded Synergy client library
-  version 1.0.0, July 7th, 2012
+Heavily modified from the original version
 
 Copyright (C) 2012-2016 Symless Ltd.
 Copyright (c) 2012 Alex Evans
