@@ -79,6 +79,7 @@ int wlKeySetConfigLayout(struct wlContext *ctx)
         strcpy(ptr, keymap_str);
         zwp_virtual_keyboard_v1_keymap(ctx->keyboard, WL_KEYBOARD_KEYMAP_FORMAT_XKB_V1, fd, keymap_size);
 	local_mod_init(ctx, keymap_str);
+	ctx->xkb_key_offset = configTryLong("xkb_key_offset", 0);
 done:
         free(keymap_str);
         return ret;
@@ -90,13 +91,13 @@ void wlKey(struct wlContext *ctx, int key, int state)
 		return;
 	}
 	key_press_counts[key] += state ? 1 : -1;
-	xkb_state_update_key(ctx->xkb_state, key, state);
+	xkb_state_update_key(ctx->xkb_state, key + ctx->xkb_key_offset, state);
 	xkb_mod_mask_t depressed = xkb_state_serialize_mods(ctx->xkb_state, XKB_STATE_MODS_DEPRESSED);
 	xkb_mod_mask_t latched = xkb_state_serialize_mods(ctx->xkb_state, XKB_STATE_MODS_LATCHED);
         xkb_mod_mask_t locked = xkb_state_serialize_mods(ctx->xkb_state, XKB_STATE_MODS_LOCKED);
 	xkb_layout_index_t group = xkb_state_serialize_layout(ctx->xkb_state, XKB_STATE_LAYOUT_EFFECTIVE);
 	logDbg("depressed: %x latched: %x locked: %x group: %x", depressed, latched, locked, group);
-	zwp_virtual_keyboard_v1_key(ctx->keyboard, wlTS(ctx), key - 8, state);
+	zwp_virtual_keyboard_v1_key(ctx->keyboard, wlTS(ctx), key - 8 + ctx->xkb_key_offset, state);
         zwp_virtual_keyboard_v1_modifiers(ctx->keyboard, depressed, latched, locked, group);
         wl_display_flush(ctx->display);
 }
