@@ -94,6 +94,11 @@ xkbcommon that will work with a Windows primary. To deal with this I've
 included one that mostly works (minus the keys I don't actually have to test
 on my own systems) in `doc/xkb/keycodes/win`. 
 
+##### Xwayland compatibility
+
+For custom keycodes, one may run into issues with Xwayland if the minimum
+keycode is below 8. To work around this, add an offset to the given codes
+and include it in `xkb_key_offset`. 
 
 #### Screensaver
 
