@@ -86,6 +86,9 @@ default is insufficient is to use the output of
 ```
 setxkbmap -print
 ```
+For custom keycodes, one may run into issues with Xwayland if the minimum
+keycode is below 8. To work around this, an offset may be provided in 
+`xkb_key_offset`. 
 
 ##### Windows primary
 
@@ -94,11 +97,10 @@ xkbcommon that will work with a Windows primary. To deal with this I've
 included one that mostly works (minus the keys I don't actually have to test
 on my own systems) in `doc/xkb/keycodes/win`. 
 
-##### Xwayland compatibility
+##### macOS primary
 
-For custom keycodes, one may run into issues with Xwayland if the minimum
-keycode is below 8. To work around this, add an offset to the given codes
-and include it in `xkb_key_offset`. 
+The same issue of keycodes applies here; see `doc/xkb/keycodes/mac` for
+a usable configuration. 
 
 #### Screensaver
 
