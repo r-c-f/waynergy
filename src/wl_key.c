@@ -80,9 +80,9 @@ void wlKey(struct wlContext *ctx, int key, int state)
 	if (!key_press_counts[key] && !state) {
 		return;
 	}
+	key_press_counts[key] += state ? 1 : -1;
 	key += ctx->xkb_key_offset;
 	logDbg("Keycode (with offset %d): %d, state %d", ctx->xkb_key_offset, key, state);
-	key_press_counts[key] += state ? 1 : -1;
 	xkb_state_update_key(ctx->xkb_state, key, state);
 	xkb_mod_mask_t depressed = xkb_state_serialize_mods(ctx->xkb_state, XKB_STATE_MODS_DEPRESSED);
 	xkb_mod_mask_t latched = xkb_state_serialize_mods(ctx->xkb_state, XKB_STATE_MODS_LATCHED);
