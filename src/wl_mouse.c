@@ -25,12 +25,14 @@ void wlMouseMotion(struct wlContext *ctx, int x, int y)
 }
 void wlMouseButtonDown(struct wlContext *ctx, int button)
 {
+	logDbg("mouse: button %d (mapped to %x) down", button, button_map[button]);
         zwlr_virtual_pointer_v1_button(ctx->pointer, wlTS(ctx), button_map[button], 1);
         zwlr_virtual_pointer_v1_frame(ctx->pointer);
         wl_display_flush(ctx->display);
 }
 void wlMouseButtonUp(struct wlContext *ctx, int button)
 {
+	logDbg("mouse: button %d (mapped to %x) down", button, button_map[button]);
         zwlr_virtual_pointer_v1_button(ctx->pointer, wlTS(ctx), button_map[button], 0);
         zwlr_virtual_pointer_v1_frame(ctx->pointer);
         wl_display_flush(ctx->display);
