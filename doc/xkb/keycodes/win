@@ -1,5 +1,13 @@
 //
 // XKB keycodes for Windows primaries
+//
+// Derived from trial and error, and then the eventual realization that 
+// these are actually just specially encoded PS/2 set 1 make scancodes:
+// - single byte codes are sent unaltered
+// - E0-profixed codes are sent as the primary byte OR'd with 0x100.
+//
+// This may be horribly wrong in some cases, feel free to send corrections
+// or extensions for more fancy layouts with more specialized keys
 
 default xkb_keycodes "win" {
 
@@ -98,7 +106,7 @@ default xkb_keycodes "win" {
 
     <LEFT> = 331;
     <UP> = 328;
-    <RIGHT> = 333;
+    <RGHT> = 333;
     <DOWN> = 336;
 
     <NMLK> = 0x45;

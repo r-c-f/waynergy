@@ -47,7 +47,7 @@ void Restart(void)
 
 
 #define INT32_BUFLEN 12
-static char *uint32_to_str(uint32_t in, char out[static INT32_BUFLEN])
+static char *uint32_to_str(uint32_t in, char *out)
 {
         int i;
 	int digits;

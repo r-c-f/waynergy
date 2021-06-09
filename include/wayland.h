@@ -48,6 +48,7 @@ struct wlContext {
 	struct org_kde_kwin_idle *idle_manager;
 	struct org_kde_kwin_idle_timeout *idle_timeout;
 	// keyboard layout handling
+	int xkb_key_offset;
 	struct xkb_context *xkb_ctx;
 	struct xkb_keymap *xkb_map;
 	struct xkb_state *xkb_state;
