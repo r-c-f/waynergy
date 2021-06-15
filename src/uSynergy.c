@@ -831,8 +831,12 @@ void uSynergyUpdate(uSynergyContext *context)
 				Exit(context->m_lastError);
 			}
 		}
-		if (context->m_connectFunc(context->m_cookie))
+		if (context->m_connectFunc(context->m_cookie)) {
 			context->m_connected = true;
+		} else {
+			logErr("Connection attempt failed, trying to reconnect in a second");
+			context->m_sleepFunc(context->m_cookie, 1000);
+		}
 	}
 }
 
