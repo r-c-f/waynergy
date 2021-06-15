@@ -277,6 +277,8 @@ opterror:
 	wlIdleInhibit(&wlContext, true);
 	netPollInit();
 	while(1) {
+		/* no matter what handling signals is a good idea */
+	       	sigHandleRun();	
 		if (!synContext.m_connected) {
 			/* always try updating first so we initially connect */
 			uSynergyUpdate(&synContext);
