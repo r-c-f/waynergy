@@ -123,7 +123,7 @@ void sigWaitSIGCHLD(bool state)
 	static bool we_set_wait;
 	if (state || !we_set_wait) {
 		sa.sa_sigaction = sig_handle;
-		sa.sa_flags = SA_RESTART | (state ? 0 : SA_NOCLDWAIT);
+		sa.sa_flags = SA_SIGINFO | SA_RESTART | (state ? 0 : SA_NOCLDWAIT);
 		sigaction(SIGCHLD, &sa, &sa_old);
 	} else {
 		//use old sigaction, in case weird flags exist.
