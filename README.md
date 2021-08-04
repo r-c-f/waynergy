@@ -70,13 +70,15 @@ USAGE: waynergy [-h|--help] [-c|--host host] [-p|--port port] [-W|--width width]
 Also note that `SIGUSR1` triggers re-execution. Useful until proper recconect
 procedures exist. 
 ### Configuration
-
 The configuration files are stored in `$XDG_CONFIG_HOME/waynergy`, which is
-probably at `~/.config/waynergy` in most cases. A single variable goes into 
-each file named for the setting, because parsing is for those who are not lazy.
-
-The basics are `port`, `host`, `name`, `width`, and `height`, which do exactly
-what the command line option would do. 
+probably at `~/.config/waynergy` in most cases. Aside from keymaps and hashes,
+most things should go in `config.ini`; the old approach of
+single-value-per-file is retained strictly for compatibility, and because 
+ripping it out would be annoying for cases where that approach is really
+genuinely useful (i.e. xkb keymaps which have their file format). The basics 
+global values are `port`, `host`, `name`, `width`, and `height`, which do exactly
+what the command line option would do. Options within sections are referred to
+in the form `section/property` for the purposes of this document. 
 
 #### Keymap
 
@@ -88,7 +90,7 @@ setxkbmap -print
 ```
 For custom keycodes, one may run into issues with Xwayland if the minimum
 keycode is below 8. To work around this, an offset may be provided in 
-`xkb_key_offset`. 
+the configuration as `xkb_key_offset`. 
 
 ##### Windows primary
 
