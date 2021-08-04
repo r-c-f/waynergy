@@ -11,6 +11,8 @@
 #include <fcntl.h>
 
 
+/* initialize configuration -- used to load INI */
+extern bool configInitINI(void);
 /* read a configuration file from the proper directory, or return NULL */
 extern char *configReadFile(char *name);
 /* read a configuration file, into an array of strings representing each line*/

@@ -148,6 +148,8 @@ int main(int argc, char **argv)
 	gethostname(hostname, _POSIX_HOST_NAME_MAX - 1);
 
 	uSynergyInit(&synContext);
+	/*Intialize INI configuration*/
+	configInitINI();
 	/* Load defaults for everything */
 	port = configTryString("port", "24800");
 	host = configTryString("host", "localhost");

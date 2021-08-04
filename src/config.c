@@ -5,6 +5,11 @@
 #include "log.h"
 #include <stdbool.h>
 
+
+#define INI_IMPLEMENTATION
+#include "ini.h"
+static ini_t *config_ini = NULL;
+
 /* read file into a buffer, resizing as needed */
 static bool buf_append_file(char **buf, size_t *len, size_t *pos, char *path)
 {
@@ -24,11 +29,59 @@ static bool buf_append_file(char **buf, size_t *len, size_t *pos, char *path)
         fclose(f);
         return true;
 }
+static char *try_read_ini(char *name)
+{
+	char *section_buf = NULL;
+	char *prop_buf = name;
+	const char *val = NULL;
+	int section = INI_GLOBAL_SECTION;
+	int prop;
+	size_t i;
+
+	if (!config_ini)
+		return NULL;
+
+	for (i = 0; name[i]; ++i) {
+		if (name[i] == '/') {
+			section_buf = xstrdup(name);
+			section_buf[i] = '\0';
+			prop_buf += i + 1;
+		}
+	}
+	if (section_buf) {
+		if ((section = ini_find_section(config_ini, section_buf, strlen(section_buf))) == INI_NOT_FOUND) {
+			logInfo("Section %s not found in INI", section_buf);
+			goto done;
+		}
+	}
+	if ((prop = ini_find_property(config_ini, section, prop_buf, strlen(prop_buf))) == INI_NOT_FOUND) {
+		logInfo("Property %s not found in INI", prop_buf);
+		goto done;
+	}
+	if (!(val = ini_property_value(config_ini, section, prop))) {
+		logInfo("Could not retrieve INI value");
+		goto done;
+	}
+	if (val) {
+		logDbg("Got value from INI: %s: %s", name, val);
+	}
+done:
+	if (section_buf)
+		free(section_buf);
+	return val ? xstrdup(val) : NULL;
+}
+
 char *configReadFile(char *name)
 {
 	size_t len, pos;
 	char *buf, *path;
 
+	//We try the INI approach first
+	if ((buf = try_read_ini(name))) {
+		logDbg("Using INI value for %s: %s", name, buf);
+		return buf;
+	}
+	//and proceed from there.
 	if (!(path = osGetHomeConfigPath(name)))
 		return NULL;
 
@@ -78,9 +131,22 @@ char **configReadLines(char *name)
 	return xrealloc(line, sizeof(*line) * (pos + 1));
 }
 
+bool configInitINI(void)
+{
+	char *buf;
+	bool ret = true;
 
-
-
+	if (!(buf = configReadFile("config.ini"))) {
+		logWarn("Could not read INI configuration");
+		return true;
+	}
+	if (!(config_ini = ini_load(buf, NULL))) {
+		logErr("Could not load INI configuration");
+		ret = false;
+	}
+	free(buf);
+	return ret;
+}
 
 char *configTryStringFull(char *name, char *def)
 {
