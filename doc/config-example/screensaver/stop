@@ -1,2 +1,0 @@
-pkill -9 swaylock
-swaymsg 'output * dpms on'

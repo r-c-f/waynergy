@@ -1,1 +1,0 @@
-pkill -SIGUSR1 swayidle
