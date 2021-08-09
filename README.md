@@ -146,6 +146,8 @@ verification that it has not changed on subsequent connections.
 possible
 * wl-clipboard, because its watch mode turns it into a clipboard manager so I
 I don't have to.
+* [mattiasgustavsson](https://github.com/mattiasgustavsson/libs) for the INI 
+implementation.
 
 ## TODO
 
