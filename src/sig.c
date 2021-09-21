@@ -97,6 +97,8 @@ static void sig_handle(int sig, siginfo_t *si, void *context)
 			}
                         sigDoExit = sig;
                         break;
+		case SIGPIPE:
+			logOutSig(LOG_WARN, "Broken pipe, restarting");
                 case SIGUSR1:
                         sigDoRestart = true;
                         break;
@@ -151,6 +153,7 @@ void sigHandleInit(char **argv)
         sigaction(SIGINT, &sa, NULL);
         sigaction(SIGQUIT, &sa, NULL);
         sigaction(SIGUSR1, &sa, NULL);
+	sigaction(SIGPIPE, &sa, NULL);
 	//don't zombify
 	sa.sa_flags |= SA_NOCLDWAIT;
         sigaction(SIGCHLD, &sa, NULL);
