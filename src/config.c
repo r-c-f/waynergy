@@ -116,8 +116,8 @@ char **configReadLines(char *name)
 	line = xcalloc(sizeof(*line), len);
 	for (pos = 0; ;++pos) {
 		if (pos == len) {
-			len += len;
-			len /= 3;
+			len *= 3;
+			len /= 2;
 			line = xrealloc(line, sizeof(*line) * len);
 			memset(line + pos, 0, sizeof(*line) * (len - pos));
 		}
