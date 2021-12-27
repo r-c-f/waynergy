@@ -272,6 +272,8 @@ static void handle_global(void *data, struct wl_registry *registry, uint32_t nam
 		ctx->pointer_manager = wl_registry_bind(registry, name, &zwlr_virtual_pointer_manager_v1_interface, 1);
 	} else if (strcmp(interface, zwp_virtual_keyboard_manager_v1_interface.name) == 0) {
 		ctx->keyboard_manager = wl_registry_bind(registry, name, &zwp_virtual_keyboard_manager_v1_interface, 1);
+	} else if (strcmp(interface, org_kde_kwin_fake_input_interface.name) == 0) {
+		ctx->fake_input = wl_registry_bind(registry, name, &org_kde_kwin_fake_input_interface, 4);
 	} else if (strcmp(interface, zxdg_output_manager_v1_interface.name) ==0) {
 		ctx->output_manager = wl_registry_bind(registry, name, &zxdg_output_manager_v1_interface, 3);
 		if (ctx->outputs) {

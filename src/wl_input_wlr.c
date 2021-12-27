@@ -96,7 +96,6 @@ bool wlInputInitWlr(struct wlContext *ctx)
 	if (!(ctx->pointer_manager && ctx->keyboard_manager)) {
 		return false;
 	}
-	logInfo("Using wlroots protocols for fake input");
 	wlr = xmalloc(sizeof(*wlr));
 	wlr->pointer = zwlr_virtual_pointer_manager_v1_create_virtual_pointer(ctx->pointer_manager, ctx->seat);
         wlr->keyboard = zwp_virtual_keyboard_manager_v1_create_virtual_keyboard(ctx->keyboard_manager, ctx->seat);
