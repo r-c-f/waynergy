@@ -347,17 +347,12 @@ bool wlSetup(struct wlContext *ctx, int width, int height)
 	wl_display_dispatch(ctx->display);
 	wl_display_roundtrip(ctx->display);
 
-	if (!ctx->pointer_manager) {
-		logErr("Compositor does not support wlr_virtual_pointer_unstable_v1");
+	if (wlInputInitWlr(ctx)) {
+		logInfo("Using wlroots protocols for virtual input");
+	} else {
+		logErr("Virtual input not supported by compositor");
 		return false;
 	}
-	if (!ctx->keyboard_manager) {
-		logErr("Compositor does not support virtual_keyboard_unstable_v1");
-		return false;
-	}
-
-	ctx->pointer = zwlr_virtual_pointer_manager_v1_create_virtual_pointer(ctx->pointer_manager, ctx->seat);
-	ctx->keyboard = zwp_virtual_keyboard_manager_v1_create_virtual_keyboard(ctx->keyboard_manager, ctx->seat);
 	if(wlKeySetConfigLayout(ctx)) {
 		logErr("Could not configure virtual keyboard");
 		return false;
