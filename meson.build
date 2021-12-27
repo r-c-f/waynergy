@@ -7,6 +7,7 @@ src_c = files(
   'src/wl_idle.c',
   'src/wl_input.c',
   'src/wl_input_wlr.c',
+  'src/wl_input_kde.c',
   'src/main.c',
   'src/clip.c',
   'src/config.c',
