@@ -5,8 +5,9 @@ project('waynergy',
 
 src_c = files(
   'src/wl_idle.c',
-  'src/wl_key.c',
-  'src/wl_mouse.c',
+  'src/wl_input.c',
+  'src/wl_input_wlr.c',
+  'src/wl_input_kde.c',
   'src/main.c',
   'src/clip.c',
   'src/config.c',
@@ -51,4 +52,9 @@ executable(
   'src/clip-update.c', 
   install: true,
   include_directories: [include_directories('include')],
+)
+install_data(
+  'waynergy.desktop',
+  install_dir: get_option('datadir') / 'applications',
+  rename: meson.project_name() + '.desktop',
 )

@@ -47,7 +47,7 @@ void wlIdleInhibit(struct wlContext *ctx, bool on)
 			idle_timeout_listener.idle = on_idle_mouse;
 		} else if (!strcmp(idle_method, "key")) {
 			idle_timeout_listener.idle = on_idle_key;
-			idle_key = xkb_keymap_key_by_name(ctx->xkb_map, configTryString("idle-inhibit/keyname", "HYPR")); 
+			idle_key = xkb_keymap_key_by_name(ctx->input->xkb_map, configTryString("idle-inhibit/keyname", "HYPR")); 
 		} else {
 			logErr("Unknown idle inhibition method %s, ignoring inhibit request", idle_method);
 			free(idle_method);

@@ -1,6 +1,6 @@
 # waynergy
 
-An implementation of a synergy client for wlroots compositors. Based on the 
+An implementation of a synergy client for wayland compositors. Based on the 
 upstream uSynergy library (heavily modified for more protocol support and
 a bit of paranoia).
 
@@ -11,7 +11,8 @@ a bit of paranoia).
 * wayland, including wayland-scanner and the base protocols
 * libxkbcommon
 * libtls (either from libressl, or libretls)
-* A compositor making use of [wlroots](https://github.com/swaywm/wlroots)
+* A compositor making use of [wlroots](https://github.com/swaywm/wlroots), or
+(on an experimental basis) KDE
 * [wl-clipboard](https://github.com/bugaevc/wl-clipboard) for clipboard support
 
 ### Building
@@ -23,6 +24,11 @@ ninja
 ninja install
 ```
 
+Note that KDE users may need to adjust the absolute path in `waynergy.desktop`
+to satisfy kwin's trust checks; a mismatch will prevent the server from 
+offering the required interface. 
+
+
 ### Running
 
 See 
@@ -31,7 +37,7 @@ waynergy -h
 ```
 output:
 ```
-waynergy: Synergy client for wlroots compositors
+waynergy: Synergy client for wayland compositors
 
 USAGE: waynergy [-h|--help] [-c|--host host] [-p|--port port] [-W|--width width] [-H|--height height] [-N|--name name] [-l|--logfile file] [-L|--loglevel level] [-n|--no-clip] [--fatal-none] [--fatal-ebad] [--fatal-ebsy] [--fatal-timeout]
 	-h|--help:
@@ -102,7 +108,13 @@ on my own systems) in `doc/xkb/keycodes/win`.
 ##### macOS primary
 
 The same issue of keycodes applies here; see `doc/xkb/keycodes/mac` for
-a usable configuration. 
+a usable configuration.
+
+##### KDE
+
+Because the fake input protocol used by KDE doesn't support custom keymaps, 
+none of this works and you're essentially stuck with Linux server support
+only for the time being.  
 
 #### Screensaver
 
@@ -148,11 +160,16 @@ possible
 I don't have to.
 * [mattiasgustavsson](https://github.com/mattiasgustavsson/libs) for the INI 
 implementation.
+* kwin developers for supporting a fake input protocol these days 
 
 ## TODO
 
-* use the wayland protocols for clipboard management. wl-clipboard already existed
-and is mostly fine, but Synergy specifies the format of the data (negating the 
-need to guess at mimetypes) and multi-process coordination is annoying. 
-* De-uglify. This was one of those let's-not-really-plan-this-out-but-write-vaguely-working-code
-sort of things, and it shows, quite noticeably. 
+At this point I'm content with most things here save for the following
+
+* KDE does not support custom keymaps, so any mismatch between the server and
+the client is intractable even with the various xkb hacks discussed above;
+if any regular KDE users have any ideas on how to work around that
+contributions are welcome
+* KDE also likes to hide the mouse pointer if there is no pointing device 
+currently installed. I don't think it's too much work to plug in a mouse,
+but some would probably prefer a better workaround. 

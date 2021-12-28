@@ -1,0 +1,11 @@
+[Desktop Entry]
+Comment=A Barrier/Synergy client for Wayland compositors
+Exec=/usr/bin/waynergy
+Icon=system-run
+Name=Waynergy
+StartupNotify=true
+Terminal=true
+TerminalOptions=\s--noclose
+Type=Application
+X-KDE-Wayland-Interfaces=org_kde_kwin_fake_input
+X-Desktop-File-Install-Version=0.26

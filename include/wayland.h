@@ -11,6 +11,7 @@
 #include <unistd.h>
 #include <wayland-client.h>
 #include <wayland-client-protocol.h>
+#include "fake-input-client-protocol.h"
 #include "wlr-virtual-pointer-unstable-v1-client-protocol.h"
 #include "virtual-keyboard-unstable-v1-client-protocol.h"
 #include "xdg-output-unstable-v1-client-protocol.h"
@@ -35,23 +36,43 @@ struct wlOutput
 	struct wlOutput *next;
 };
 
-struct wlContext {
-	struct wl_registry *registry;
-	struct wl_display *display;
-	struct wl_seat *seat;
-	struct zwp_virtual_keyboard_manager_v1 *keyboard_manager;
-	struct zwlr_virtual_pointer_manager_v1 *pointer_manager;
-	struct zxdg_output_manager_v1 *output_manager;
-	struct zwlr_virtual_pointer_v1 *pointer;
-	struct zwp_virtual_keyboard_v1 *keyboard;
-	struct wlOutput *outputs;
-	struct org_kde_kwin_idle *idle_manager;
-	struct org_kde_kwin_idle_timeout *idle_timeout;
+struct wlInput {
+	/* module-specific state */
+	void *state;
+	/* key state information */
+	int *key_press_state;
+	size_t key_count;
 	// keyboard layout handling
 	int xkb_key_offset;
 	struct xkb_context *xkb_ctx;
 	struct xkb_keymap *xkb_map;
 	struct xkb_state *xkb_state;
+	/* wayland context */
+	struct wlContext *wl_ctx;
+	/* actual functions */
+	void (*mouse_rel_motion)(struct wlInput *, int, int);
+	void (*mouse_motion)(struct wlInput *, int, int);
+	void (*mouse_button)(struct wlInput *, int, int);
+	void (*mouse_wheel)(struct wlInput *, signed short dx, signed short dy);
+	void (*key)(struct wlInput *, int, int);
+	bool (*key_map)(struct wlInput *, char *);
+};
+
+extern bool wlInputInitWlr(struct wlContext *ctx);
+extern bool wlInputInitKde(struct wlContext *ctx);
+
+struct wlContext {
+	struct wl_registry *registry;
+	struct wl_display *display;
+	struct wl_seat *seat;
+	struct wlInput *input;
+	struct zwp_virtual_keyboard_manager_v1 *keyboard_manager;
+	struct zwlr_virtual_pointer_manager_v1 *pointer_manager;
+	struct org_kde_kwin_fake_input *fake_input;
+	struct zxdg_output_manager_v1 *output_manager;
+	struct wlOutput *outputs;
+	struct org_kde_kwin_idle *idle_manager;
+	struct org_kde_kwin_idle_timeout *idle_timeout;
 	//state
 	int width;
 	int height;
