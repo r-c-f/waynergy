@@ -13,21 +13,21 @@ static ini_t *config_ini = NULL;
 /* read file into a buffer, resizing as needed */
 static bool buf_append_file(char **buf, size_t *len, size_t *pos, char *path)
 {
-        FILE *f;
-        size_t read_count;
-        if (!path)
-                return false;
-        if (!(f = fopen(path, "r"))) {
-                return false;
-        }
-        while ((read_count = fread(*buf + *pos, 1, *len - *pos - 1, f))) {
-                *pos += read_count;
-                if (*len - *pos <= 2) {
-                        *buf = xrealloc(*buf, *len *= 2);
-                }
-        }
-        fclose(f);
-        return true;
+	FILE *f;
+	size_t read_count;
+	if (!path)
+		return false;
+	if (!(f = fopen(path, "r"))) {
+		return false;
+	}
+	while ((read_count = fread(*buf + *pos, 1, *len - *pos - 1, f))) {
+		*pos += read_count;
+		if (*len - *pos <= 2) {
+			*buf = xrealloc(*buf, *len *= 2);
+		}
+	}
+	fclose(f);
+	return true;
 }
 static char *try_read_ini(char *name)
 {

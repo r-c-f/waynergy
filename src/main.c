@@ -280,7 +280,7 @@ opterror:
 	netPollInit();
 	while(1) {
 		/* no matter what handling signals is a good idea */
-	       	sigHandleRun();	
+	       	sigHandleRun();
 		if (!synContext.m_connected) {
 			/* always try updating first so we initially connect */
 			uSynergyUpdate(&synContext);

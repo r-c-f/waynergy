@@ -17,17 +17,17 @@ static void log_print_ts(FILE *out)
 	if (!(start.tv_sec || start.tv_nsec)) {
 		clock_gettime(CLOCK_MONOTONIC, &start);
 	}
-        struct timespec ts;
-        clock_gettime(CLOCK_MONOTONIC, &ts);
+	struct timespec ts;
+	clock_gettime(CLOCK_MONOTONIC, &ts);
 	ts.tv_sec -= start.tv_sec;
 	ts.tv_nsec -= start.tv_nsec;
 	if (ts.tv_nsec < 0) {
 		--ts.tv_sec;
 		ts.tv_nsec += 1000000000;
 	}
-        fprintf(out, "%" PRIdMAX ".%09ld",
-                        (intmax_t)ts.tv_sec,
-                        ts.tv_nsec);
+	fprintf(out, "%" PRIdMAX ".%09ld",
+			(intmax_t)ts.tv_sec,
+			ts.tv_nsec);
 }
 static char *log_level_get_str(enum logLevel level)
 {

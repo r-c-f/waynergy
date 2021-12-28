@@ -195,7 +195,7 @@ bool clipWlCopy(enum uSynergyClipboardId id, const unsigned char *data, size_t l
 	posix_spawn_file_actions_addclose(&fa, fd[1]);
    	/* now we can spawn */
 	errno = 0;
-        if (posix_spawnp(&pid, "wl-copy", &fa, NULL, argv[id], environ)) {
+	if (posix_spawnp(&pid, "wl-copy", &fa, NULL, argv[id], environ)) {
 		logPErr("wl-copy spawn");
 		close(fd[0]);
 		close(fd[1]);

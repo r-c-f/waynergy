@@ -33,7 +33,7 @@ static bool local_mod_init(struct wlContext *wl_ctx, char *keymap_str) {
 	}
 	wl_ctx->input->key_count = xkb_keymap_max_keycode(wl_ctx->input->xkb_map) + 1;
 	wl_ctx->input->key_press_state = xcalloc(wl_ctx->input->key_count, sizeof(*wl_ctx->input->key_press_state));
-        return true;
+	return true;
 }
 
 
@@ -51,8 +51,8 @@ int wlKeySetConfigLayout(struct wlContext *ctx)
 	local_mod_init(ctx, keymap_str);
 	ctx->input->xkb_key_offset = configTryLong("xkb_key_offset", 0);
 	ret = !ctx->input->key_map(ctx->input, keymap_str);
-        free(keymap_str);
-        return ret;
+	free(keymap_str);
+	return ret;
 }
 
 void wlKey(struct wlContext *ctx, int key, int state)
@@ -66,7 +66,7 @@ void wlKey(struct wlContext *ctx, int key, int state)
 	xkb_state_update_key(ctx->input->xkb_state, key, state);
 	xkb_mod_mask_t depressed = xkb_state_serialize_mods(ctx->input->xkb_state, XKB_STATE_MODS_DEPRESSED);
 	xkb_mod_mask_t latched = xkb_state_serialize_mods(ctx->input->xkb_state, XKB_STATE_MODS_LATCHED);
-        xkb_mod_mask_t locked = xkb_state_serialize_mods(ctx->input->xkb_state, XKB_STATE_MODS_LOCKED);
+	xkb_mod_mask_t locked = xkb_state_serialize_mods(ctx->input->xkb_state, XKB_STATE_MODS_LOCKED);
 	xkb_layout_index_t group = xkb_state_serialize_layout(ctx->input->xkb_state, XKB_STATE_LAYOUT_EFFECTIVE);
 	logDbg("Modifiers: depressed: %x latched: %x locked: %x group: %x", depressed, latched, locked, group);
 	ctx->input->key(ctx->input, key, state);

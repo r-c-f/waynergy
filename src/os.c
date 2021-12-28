@@ -30,7 +30,7 @@ char *osConfigPathOverride;
 char *osGetHomeConfigPath(char *name)
 {
 	char *res;
-        char *env;
+	char *env;
 
 	if (osConfigPathOverride) {
 		xasprintf(&res, "%s/%s", osConfigPathOverride, name);

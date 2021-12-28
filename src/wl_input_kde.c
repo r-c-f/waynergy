@@ -30,17 +30,17 @@ static void mouse_motion(struct wlInput *input, int x, int y)
 static int button_map[] = {
 	0,
 	0x110,
-        0x112,
-        0x111,
-        0x150,
-        0x151,
+	0x112,
+	0x111,
+	0x150,
+	0x151,
 };
 
 
 static void mouse_button(struct wlInput *input, int button, int state)
 {
 	struct org_kde_kwin_fake_input *fake = input->state;
-        logDbg("mouse: button %d (mapped to %x) %s", button, button_map[button], state ? "down": "up");
+	logDbg("mouse: button %d (mapped to %x) %s", button, button_map[button], state ? "down": "up");
 	org_kde_kwin_fake_input_button(fake, button_map[button], state);
 	wl_display_flush(input->wl_ctx->display);
 }
@@ -48,17 +48,17 @@ static void mouse_button(struct wlInput *input, int button, int state)
 static void mouse_wheel(struct wlInput *input, signed short dx, signed short dy)
 {
 	struct org_kde_kwin_fake_input *fake = input->state;
-        if (dx < 0) {
-                org_kde_kwin_fake_input_axis(fake, 1, wl_fixed_from_int(15));
-        }else if (dx > 0) {
-                org_kde_kwin_fake_input_axis(fake, 1, wl_fixed_from_int(-15));
-        }
-        if (dy < 0) {
-                org_kde_kwin_fake_input_axis(fake, 0, wl_fixed_from_int(15));
-        } else if (dy > 0) {
-                org_kde_kwin_fake_input_axis(fake, 0, wl_fixed_from_int(-15));
-        }
-        wl_display_flush(input->wl_ctx->display);
+	if (dx < 0) {
+		org_kde_kwin_fake_input_axis(fake, 1, wl_fixed_from_int(15));
+	}else if (dx > 0) {
+		org_kde_kwin_fake_input_axis(fake, 1, wl_fixed_from_int(-15));
+	}
+	if (dy < 0) {
+		org_kde_kwin_fake_input_axis(fake, 0, wl_fixed_from_int(15));
+	} else if (dy > 0) {
+		org_kde_kwin_fake_input_axis(fake, 0, wl_fixed_from_int(-15));
+	}
+	wl_display_flush(input->wl_ctx->display);
 }
 
 bool wlInputInitKde(struct wlContext *ctx)
