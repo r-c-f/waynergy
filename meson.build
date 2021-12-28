@@ -53,3 +53,8 @@ executable(
   install: true,
   include_directories: [include_directories('include')],
 )
+install_data(
+  'waynergy.desktop',
+  install_dir: get_option('datadir') / 'applications',
+  rename: meson.project_name() + '.desktop',
+)
