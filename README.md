@@ -24,6 +24,11 @@ ninja
 ninja install
 ```
 
+Note that KDE users may need to adjust the absolute path in `waynergy.desktop`
+to satisfy kwin's trust checks; a mismatch will prevent the server from 
+offering the required interface. 
+
+
 ### Running
 
 See 
