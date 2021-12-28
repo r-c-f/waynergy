@@ -27,10 +27,21 @@ static void mouse_motion(struct wlInput *input, int x, int y)
 	wl_display_flush(input->wl_ctx->display);
 }
 
+static int button_map[] = {
+	0,
+	0x110,
+        0x112,
+        0x111,
+        0x150,
+        0x151,
+};
+
+
 static void mouse_button(struct wlInput *input, int button, int state)
 {
 	struct org_kde_kwin_fake_input *fake = input->state;
-	org_kde_kwin_fake_input_button(fake, button, state);
+        logDbg("mouse: button %d (mapped to %x) %s", button, button_map[button], state ? "down": "up");
+	org_kde_kwin_fake_input_button(fake, button_map[button], state);
 	wl_display_flush(input->wl_ctx->display);
 }
 
