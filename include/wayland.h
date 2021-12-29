@@ -47,6 +47,7 @@ struct wlInput {
 	struct xkb_context *xkb_ctx;
 	struct xkb_keymap *xkb_map;
 	struct xkb_state *xkb_state;
+	xkb_keycode_t *raw_keymap;
 	/* wayland context */
 	struct wlContext *wl_ctx;
 	/* actual functions */

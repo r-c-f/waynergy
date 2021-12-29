@@ -71,6 +71,37 @@ done:
 	return val ? xstrdup(val) : NULL;
 }
 
+int configReadFullSection(char *name, char ***key, char ***val)
+{
+	int count, i, section;
+	if (!config_ini) {
+		return -1;
+	}
+	if (!(key && val)) {
+		return -1;
+	}
+	if (*key || *val) {
+		logErr("key/value array must be unallocated!");
+		return -1;
+	}
+	if (!name) {
+		section = INI_GLOBAL_SECTION;
+	}
+	section = ini_find_section(config_ini, name, strlen(name));
+	if (section == INI_NOT_FOUND) {
+		logInfo("Could not find section %s", name);
+		return -1;
+	}
+	count = ini_property_count(config_ini, section);
+	*key = xcalloc(count + 1, sizeof((*key)[0]));
+	*val = xcalloc(count + 1, sizeof((*val)[0]));
+	for (i = 0; i < count; ++i) {
+		(*key)[i] = strdup(ini_property_name(config_ini, section, i));
+		(*val)[i] = strdup(ini_property_value(config_ini, section, i));
+	}
+	return count;
+}
+
 char *configReadFile(char *name)
 {
 	size_t len, pos;

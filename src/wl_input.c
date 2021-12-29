@@ -36,7 +36,30 @@ static bool local_mod_init(struct wlContext *wl_ctx, char *keymap_str) {
 	return true;
 }
 
+/* and code to handle raw mapping of keys */
 
+static void load_raw_keymap(struct wlContext *ctx)
+{
+	char **key, **val;
+	int i, count;
+	key = NULL;
+	val = NULL;
+	if (ctx->input->raw_keymap) {
+		free(ctx->input->raw_keymap);
+	}
+	ctx->input->raw_keymap = xcalloc(ctx->input->key_count, sizeof(*ctx->input->raw_keymap));
+	for (i = 0; i < ctx->input->key_count; ++i) {
+		ctx->input->raw_keymap[i] = i;
+	}
+	if ((count = configReadFullSection("raw-keymap", &key, &val)) == -1) {
+		return;
+	}
+	for (i = 0; i < count; ++i) {
+		ctx->input->raw_keymap[strtol(key[i], NULL, 0)] = strtol(val[i], NULL, 0);
+	}
+	strfreev(key);
+	strfreev(val);
+}
 
 int wlKeySetConfigLayout(struct wlContext *ctx)
 {
@@ -51,6 +74,7 @@ int wlKeySetConfigLayout(struct wlContext *ctx)
 	local_mod_init(ctx, keymap_str);
 	ctx->input->xkb_key_offset = configTryLong("xkb_key_offset", 0);
 	ret = !ctx->input->key_map(ctx->input, keymap_str);
+	load_raw_keymap(ctx);
 	free(keymap_str);
 	return ret;
 }
@@ -61,6 +85,7 @@ void wlKey(struct wlContext *ctx, int key, int state)
 		return;
 	}
 	ctx->input->key_press_state[key] += state ? 1 : -1;
+	key = ctx->input->raw_keymap[key];
 	key += ctx->input->xkb_key_offset;
 	logDbg("Keycode (with offset %d): %d, state %d", ctx->input->xkb_key_offset, key, state);
 	xkb_state_update_key(ctx->input->xkb_state, key, state);

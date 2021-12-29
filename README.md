@@ -113,9 +113,17 @@ a usable configuration.
 ##### KDE
 
 Because the fake input protocol used by KDE doesn't support custom keymaps, 
-none of this works and you're essentially stuck with Linux server support
-only for the time being.  
-
+using xkb for this doesn't work; instead, one must use the `raw-keymap`
+section to map the remote keycodes to the local keymap using the form 
+`remote = local`; for example, to use an OpenBSD server I must specify the 
+following section to get arrow keys working properly:
+```
+[raw-keymap]
+98 = 111
+100 = 113
+104 = 116
+102 = 114
+```
 #### Screensaver
 
 `screensaver/start` should contain a command to be run when the screensaver is
@@ -166,10 +174,6 @@ implementation.
 
 At this point I'm content with most things here save for the following
 
-* KDE does not support custom keymaps, so any mismatch between the server and
-the client is intractable even with the various xkb hacks discussed above;
-if any regular KDE users have any ideas on how to work around that
-contributions are welcome
-* KDE also likes to hide the mouse pointer if there is no pointing device 
+* KDE likes to hide the mouse pointer if there is no pointing device 
 currently installed. I don't think it's too much work to plug in a mouse,
 but some would probably prefer a better workaround. 

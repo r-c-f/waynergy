@@ -18,6 +18,9 @@ extern char *configReadFile(char *name);
 /* read a configuration file, into an array of strings representing each line*/
 extern char **configReadLines(char *name);
 
+/* read all properties from a given INI section */
+extern int configReadFullSection(char *name, char ***key, char ***val);
+
 /* the following make an attempt to read a configuration file, but will allow
  * specifying a default if it is not present or otherwise borked */
 
