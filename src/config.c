@@ -102,7 +102,7 @@ static int read_full_section_dir(char *name, char ***key, char ***val)
 		goto done;
 	}
 	while ((ent = readdir(dir))) {
-		asprintf(&path, "%s/%s", dir_path, ent->d_name);
+		xasprintf(&path, "%s/%s", dir_path, ent->d_name);
 	       	if (stat(path, &sbuf) == -1) {
 			ret = -1;
 			goto done;
