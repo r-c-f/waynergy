@@ -62,6 +62,7 @@ static char *try_read_ini(char *name)
 			section_buf = xstrdup(name);
 			section_buf[i] = '\0';
 			prop_buf += i + 1;
+			break;
 		}
 	}
 	if (section_buf) {
@@ -94,13 +95,13 @@ static int read_full_section_dir(char *name, char ***key, char ***val)
 	char *dir_path = NULL;
 	char *path = NULL;
 	struct stat sbuf;
-	*key = NULL;
-	*val = NULL;
 	dir_path = osGetHomeConfigPath(name);
 	if (!(dir = opendir(dir_path))) {
 		ret = -1;
 		goto done;
 	}
+	*key = xmalloc(sizeof((*key)[0]));
+	*val = xmalloc(sizeof((*val)[0]));
 	while ((ent = readdir(dir))) {
 		xasprintf(&path, "%s/%s", dir_path, ent->d_name);
 	       	if (stat(path, &sbuf) == -1) {
@@ -136,8 +137,9 @@ static int read_full_section_ini(char *name, char ***key, char ***val)
 	}
 	if (!name) {
 		section = INI_GLOBAL_SECTION;
+	} else {
+		section = ini_find_section(config_ini, name, strlen(name));
 	}
-	section = ini_find_section(config_ini, name, strlen(name));
 	if (section == INI_NOT_FOUND) {
 		logInfo("Could not find section %s", name);
 		return -1;
