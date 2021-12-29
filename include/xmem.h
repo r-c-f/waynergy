@@ -1,6 +1,6 @@
 /* xmem -- memory operations that can only fail catastrophically
  *
- * Version 1.0
+ * Version 1.1
  *
  * Copyright 2021 Ryan Farley <ryan.farley@gmx.com>
  *
@@ -23,6 +23,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdarg.h>
+#include <stdint.h>
 
 #ifdef __GNUC__
 __attribute__((unused))
@@ -52,6 +53,16 @@ static void *xrealloc(void *ptr, size_t len)
 	if (!(ptr = realloc(ptr, len)))
 		abort();
 	return ptr;
+}
+#ifdef __GNUC__
+__attribute__((unused))
+#endif
+static void *xreallocarray(void *ptr, size_t nmemb, size_t size)
+{
+	if (size && nmemb > SIZE_MAX / size) {
+		abort();
+	}
+	return xrealloc(ptr, nmemb * size);
 }
 #ifdef __GNUC__
 __attribute__((unused))

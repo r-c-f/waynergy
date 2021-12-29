@@ -4,7 +4,8 @@
 #include "fdio_full.h"
 #include "log.h"
 #include <stdbool.h>
-
+#include <dirent.h>
+#include <sys/stat.h>
 
 #define INI_IMPLEMENTATION
 #include "ini.h"
@@ -28,6 +29,21 @@ static bool buf_append_file(char **buf, size_t *len, size_t *pos, char *path)
 	}
 	fclose(f);
 	return true;
+}
+static char *read_file_dumb(char *path)
+{
+	size_t len, pos;
+	char *buf;
+
+	len = 4096;
+	buf = xmalloc(len);
+	pos = 0;
+	if (!buf_append_file(&buf, &len, &pos, path)) {
+		free(buf);
+		return NULL;
+	}
+	buf[pos] = 0;
+	return xrealloc(buf, pos + 1);
 }
 static char *try_read_ini(char *name)
 {
@@ -70,18 +86,52 @@ done:
 		free(section_buf);
 	return val ? xstrdup(val) : NULL;
 }
+static int read_full_section_dir(char *name, char ***key, char ***val)
+{
+	int ret = 0, count = 0;
+	DIR *dir = NULL;
+	struct dirent *ent;
+	char *dir_path = NULL;
+	char *path = NULL;
+	struct stat sbuf;
+	*key = NULL;
+	*val = NULL;
+	dir_path = osGetHomeConfigPath(name);
+	if (!(dir = opendir(dir_path))) {
+		ret = -1;
+		goto done;
+	}
+	while ((ent = readdir(dir))) {
+		asprintf(&path, "%s/%s", dir_path, ent->d_name);
+	       	if (stat(path, &sbuf) == -1) {
+			ret = -1;
+			goto done;
+		}
+		if (!S_ISREG(sbuf.st_mode)) {
+			free(path);
+			path = NULL;
+			continue;
+		}
+		*key = xreallocarray(*key, ++count + 1, sizeof((*key)[0]));
+		*val = xreallocarray(*val, count + 1, sizeof((*val)[0]));
+		(*key)[count - 1] = strdup(ent->d_name);
+		(*val)[count - 1] = read_file_dumb(path);
+		free(path);
+		path = NULL;
+	}
+	(*key)[count] = NULL;
+	(*val)[count] = NULL;
+	ret = count;
+	goto done;
+done:
+	free(dir_path);
+	return ret;
+}
 
-int configReadFullSection(char *name, char ***key, char ***val)
+static int read_full_section_ini(char *name, char ***key, char ***val)
 {
 	int count, i, section;
 	if (!config_ini) {
-		return -1;
-	}
-	if (!(key && val)) {
-		return -1;
-	}
-	if (*key || *val) {
-		logErr("key/value array must be unallocated!");
 		return -1;
 	}
 	if (!name) {
@@ -102,9 +152,19 @@ int configReadFullSection(char *name, char ***key, char ***val)
 	return count;
 }
 
+int configReadFullSection(char *name, char ***key, char ***val)
+{
+	int count;
+	*val = NULL;
+	*key = NULL;
+	if ((count = read_full_section_ini(name, key, val)) != -1) {
+		return count;
+	}
+	return read_full_section_dir(name, key, val);
+}
+
 char *configReadFile(char *name)
 {
-	size_t len, pos;
 	char *buf, *path;
 
 	//We try the INI approach first
@@ -115,18 +175,9 @@ char *configReadFile(char *name)
 	//and proceed from there.
 	if (!(path = osGetHomeConfigPath(name)))
 		return NULL;
-
-	len = 4096;
-	buf = xmalloc(len);
-	pos = 0;
-	if (!buf_append_file(&buf, &len, &pos, path)) {
-		free(buf);
-		free(path);
-		return NULL;
-	}
+	buf = read_file_dumb(path);
 	free(path);
-	buf[pos] = 0;
-	return xrealloc(buf, pos + 1);
+	return buf;
 }
 
 char **configReadLines(char *name)
