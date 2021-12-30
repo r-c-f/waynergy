@@ -41,7 +41,7 @@ static bool local_mod_init(struct wlContext *wl_ctx, char *keymap_str) {
 static void load_raw_keymap(struct wlContext *ctx)
 {
 	char **key, **val;
-	int i, count, offset = 0;
+	int i, count, offset, lkey, rkey;
 	key = NULL;
 	val = NULL;
 	if (ctx->input->raw_keymap) {
@@ -55,12 +55,17 @@ static void load_raw_keymap(struct wlContext *ctx)
 		return;
 	}
 	for (i = 0; i < count; ++i) {
-		if (strcmp(key[i], "offset") == 0) {
-			offset = strtol(val[i], NULL, 0);
-		} else {
-			ctx->input->raw_keymap[strtol(key[i], NULL, 0)] = strtol(val[i], NULL, 0);
-		}
+		errno = 0;
+		lkey = strtol(key[i], NULL, 0);
+		if (errno)
+			continue;
+		rkey = strtol(val[i], NULL, 0);
+		if (errno)
+			continue;
+
+		ctx->input->raw_keymap[lkey] = rkey;
 	}
+	offset = configTryLong("raw-keymap/offset", 0);
 	for (i = 0; i < ctx->input->key_count; ++i) {
 		ctx->input->raw_keymap[i] += offset;
 	}
