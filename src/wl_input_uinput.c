@@ -103,6 +103,7 @@ static bool init_key(struct state_uinput *ui)
 {
 	int i;
 	struct uinput_setup usetup = {0};
+	TRY_IOCTL(ui->key_fd, UI_SET_EVBIT, EV_SYN);
 	TRY_IOCTL(ui->key_fd, UI_SET_EVBIT, EV_KEY);
 	for (i = 0; i <= KEY_MAX; ++i) {
 		TRY_IOCTL(ui->key_fd, UI_SET_KEYBIT, i);
@@ -120,6 +121,7 @@ static bool init_mouse(struct state_uinput *ui)
 	int i;
 	struct uinput_setup usetup = {0};
 
+	TRY_IOCTL(ui->mouse_fd, UI_SET_EVBIT, EV_SYN);
 	TRY_IOCTL(ui->mouse_fd, UI_SET_EVBIT, EV_KEY);
 	for (i = 0; i < (sizeof(button_map)/sizeof(*button_map)); ++i) {
 		TRY_IOCTL(ui->mouse_fd, UI_SET_KEYBIT, button_map[i]);
