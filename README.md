@@ -12,7 +12,8 @@ a bit of paranoia).
 * libxkbcommon
 * libtls (either from libressl, or libretls)
 * A compositor making use of [wlroots](https://github.com/swaywm/wlroots), or
-(on an experimental basis) KDE
+(on an experimental basis) KDE, or (if all else fails) the willingness to run
+questionable networking utilities with the privileges to access /dev/uinput
 * [wl-clipboard](https://github.com/bugaevc/wl-clipboard) for clipboard support
 
 ### Building
@@ -30,6 +31,28 @@ offering the required interface.
 
 
 ### Running
+
+#### Permissions/Security
+
+Granting networking software written in questionable C the ability to 
+generate arbitrary inputs isn't exactly a recipe for success if people are 
+out to get you. Sway doesn't currently impose any restrictions on virtual 
+input yet, but the other modules will require some tweaking to deal with the
+less-trusting nature of kernel-level input or KDE. 
+
+##### KDE
+
+`waynergy.desktop` must be installed, and the path must be absolute or the
+required interface will not be offered. 
+
+##### uinput (everyone else)
+
+waynergy must be able to open `/dev/uinput` for this to work. In my case, a 
+udev rule and an additional `uinput` group has worked well for testing. Note
+that doing this is potentially exceptionally risky as it involves the kernel
+directly rather than just the compositor you're currently using. 
+
+#### CLI
 
 See 
 ```
@@ -110,13 +133,14 @@ on my own systems) in `doc/xkb/keycodes/win`.
 The same issue of keycodes applies here; see `doc/xkb/keycodes/mac` for
 a usable configuration.
 
-##### KDE
+##### KDE/uinput
 
 Because the fake input protocol used by KDE doesn't support custom keymaps, 
-using xkb for this doesn't work; instead, one must use the `raw-keymap`
-section to map the remote keycodes to the local keymap using the form 
-`remote = local`; for example, to use an OpenBSD server I must specify the 
-following section to get arrow keys working properly:
+while uinput doesn't involve xkb at all, using xkb for this doesn't work; 
+instead, one must use the `raw-keymap` section to map the remote keycodes to 
+the local keymap using the form `remote = local`; for example, to use an 
+OpenBSD server I must specify the following section to get arrow keys working 
+properly:
 ```
 [raw-keymap]
 98 = 111
