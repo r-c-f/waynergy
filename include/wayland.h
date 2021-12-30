@@ -61,6 +61,7 @@ struct wlInput {
 
 extern bool wlInputInitWlr(struct wlContext *ctx);
 extern bool wlInputInitKde(struct wlContext *ctx);
+extern bool wlInputInitUinput(struct wlContext *ctx);
 
 struct wlContext {
 	struct wl_registry *registry;

@@ -353,6 +353,8 @@ bool wlSetup(struct wlContext *ctx, int width, int height)
 		logInfo("Using wlroots protocols for virtual input");
 	} else if (wlInputInitKde(ctx)) {
 		logInfo("Using kde protocols for virtual input");
+	} else if (wlInputInitUinput(ctx)) {
+		logInfo("Using uinput for virtual input");
 	} else {
 		logErr("Virtual input not supported by compositor");
 		return false;
