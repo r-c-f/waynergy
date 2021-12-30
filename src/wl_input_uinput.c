@@ -19,6 +19,8 @@ struct state_uinput {
 	int mouse_fd;
 };
 
+#define UINPUT_KEY_MAX 256
+
 static int button_map[] = {
 	0,
 	0x110,
@@ -70,8 +72,8 @@ static void key(struct wlInput *input, int code, int state)
 {
 	struct state_uinput *ui = input->state;
 
-	if (code > KEY_MAX) {
-		logErr("Keycode %d is unsupported by uinput (max %d), dropping", code, KEY_MAX);
+	if (code >= UINPUT_KEY_MAX) {
+		logErr("Keycode %d is unsupported by uinput (max %d), dropping", code, UINPUT_KEY_MAX);
 		return;
 	}
 
@@ -105,7 +107,7 @@ static bool init_key(struct state_uinput *ui)
 	struct uinput_setup usetup = {0};
 	TRY_IOCTL(ui->key_fd, UI_SET_EVBIT, EV_SYN);
 	TRY_IOCTL(ui->key_fd, UI_SET_EVBIT, EV_KEY);
-	for (i = 0; i <= KEY_MAX; ++i) {
+	for (i = 0; i <= UINPUT_KEY_MAX; ++i) {
 		TRY_IOCTL(ui->key_fd, UI_SET_KEYBIT, i);
 	}
 	usetup.id.bustype = BUS_VIRTUAL;
@@ -116,10 +118,12 @@ static bool init_key(struct state_uinput *ui)
 	return true;
 }
 
-static bool init_mouse(struct state_uinput *ui)
+static bool init_mouse(struct state_uinput *ui, int max_x, int max_y)
 {
 	int i;
 	struct uinput_setup usetup = {0};
+	struct uinput_abs_setup x = {0};
+	struct uinput_abs_setup y = {0};
 
 	TRY_IOCTL(ui->mouse_fd, UI_SET_EVBIT, EV_SYN);
 	TRY_IOCTL(ui->mouse_fd, UI_SET_EVBIT, EV_KEY);
@@ -137,6 +141,14 @@ static bool init_mouse(struct state_uinput *ui)
 	usetup.id.bustype = BUS_VIRTUAL;
 	strcpy(usetup.name, "Waynergy mouse");
 	TRY_IOCTL(ui->mouse_fd, UI_DEV_SETUP, &usetup);
+
+	x.code = ABS_X;
+	x.absinfo.maximum = max_x;
+	y.code = ABS_Y;
+	y.absinfo.maximum = max_y;
+	TRY_IOCTL(ui->mouse_fd, UI_ABS_SETUP, &x);
+	TRY_IOCTL(ui->mouse_fd, UI_ABS_SETUP, &y);
+
 	TRY_IOCTL0(ui->mouse_fd, UI_DEV_CREATE);
 
 	return true;
@@ -162,7 +174,7 @@ bool wlInputInitUinput(struct wlContext *ctx)
 	}
 	if (!init_key(ui))
 		goto error;
-	if (!init_mouse(ui))
+	if (!init_mouse(ui, ctx->width, ctx->height))
 		goto error;
 
 	input->state = ui;
