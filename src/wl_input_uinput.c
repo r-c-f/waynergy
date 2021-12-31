@@ -73,14 +73,14 @@ static void mouse_wheel(struct wlInput *input, signed short dx, signed short dy)
 	struct state_uinput *ui = input->state;
 
 	if (dx < 0) {
-		emit(ui->mouse_fd, EV_REL, REL_HWHEEL, 1);
-	} else if (dx > 0) {
 		emit(ui->mouse_fd, EV_REL, REL_HWHEEL, -1);
+	} else if (dx > 0) {
+		emit(ui->mouse_fd, EV_REL, REL_HWHEEL, 1);
 	}
 	if (dy < 0) {
-		emit(ui->mouse_fd, EV_REL, REL_WHEEL, 1);
-	} else if (dx > 0) {
 		emit(ui->mouse_fd, EV_REL, REL_WHEEL, -1);
+	} else if (dy > 0) {
+		emit(ui->mouse_fd, EV_REL, REL_WHEEL, 1);
 	}
 	emit(ui->mouse_fd, EV_SYN, SYN_REPORT, 0);
 }
