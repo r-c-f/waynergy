@@ -67,16 +67,16 @@ static char *try_read_ini(char *name)
 	}
 	if (section_buf) {
 		if ((section = ini_find_section(config_ini, section_buf, strlen(section_buf))) == INI_NOT_FOUND) {
-			logInfo("Section %s not found in INI", section_buf);
+			logDbg("Section %s not found in INI", section_buf);
 			goto done;
 		}
 	}
 	if ((prop = ini_find_property(config_ini, section, prop_buf, strlen(prop_buf))) == INI_NOT_FOUND) {
-		logInfo("Property %s not found in INI", prop_buf);
+		logDbg("Property %s not found in INI", prop_buf);
 		goto done;
 	}
 	if (!(val = ini_property_value(config_ini, section, prop))) {
-		logInfo("Could not retrieve INI value");
+		logDbg("Could not retrieve INI value");
 		goto done;
 	}
 	if (val) {
@@ -141,7 +141,7 @@ static int read_full_section_ini(char *name, char ***key, char ***val)
 		section = ini_find_section(config_ini, name, strlen(name));
 	}
 	if (section == INI_NOT_FOUND) {
-		logInfo("Could not find section %s", name);
+		logDbg("Could not find section %s", name);
 		return -1;
 	}
 	count = ini_property_count(config_ini, section);
