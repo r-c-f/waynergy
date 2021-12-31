@@ -122,14 +122,19 @@ static bool key_map(struct wlInput *input, char *map)
 static bool init_key(struct state_uinput *ui)
 {
 	int i;
-	struct uinput_setup usetup = {0};
+
+	struct uinput_setup usetup = {
+		.id = {
+			.bustype = BUS_VIRTUAL,
+		},
+		.name = "waynergy keyboard",
+	};
+
 	TRY_IOCTL(ui->key_fd, UI_SET_EVBIT, EV_SYN);
 	TRY_IOCTL(ui->key_fd, UI_SET_EVBIT, EV_KEY);
 	for (i = 0; i <= UINPUT_KEY_MAX; ++i) {
 		TRY_IOCTL(ui->key_fd, UI_SET_KEYBIT, i);
 	}
-	usetup.id.bustype = BUS_VIRTUAL;
-	strcpy(usetup.name, "waynergy keyboard");
 
 	TRY_IOCTL(ui->key_fd, UI_DEV_SETUP, &usetup);
 	TRY_IOCTL0(ui->key_fd, UI_DEV_CREATE);
@@ -139,9 +144,25 @@ static bool init_key(struct state_uinput *ui)
 static bool init_mouse(struct state_uinput *ui, int max_x, int max_y)
 {
 	int i;
-	struct uinput_setup usetup = {0};
-	struct uinput_abs_setup x = {0};
-	struct uinput_abs_setup y = {0};
+
+	struct uinput_setup usetup = {
+		.id = {
+			.bustype = BUS_VIRTUAL,
+		},
+		.name = "waynergy mouse",
+	};
+	struct uinput_abs_setup x = {
+		.code = ABS_X,
+		.absinfo = {
+			.maximum = max_x,
+		},
+	};
+	struct uinput_abs_setup y = {
+		.code = ABS_Y,
+		.absinfo = {
+			.maximum = max_y,
+		},
+	};
 
 	TRY_IOCTL(ui->mouse_fd, UI_SET_EVBIT, EV_SYN);
 	TRY_IOCTL(ui->mouse_fd, UI_SET_EVBIT, EV_KEY);
@@ -158,14 +179,8 @@ static bool init_mouse(struct state_uinput *ui, int max_x, int max_y)
 	TRY_IOCTL(ui->mouse_fd, UI_SET_ABSBIT, ABS_X);
 	TRY_IOCTL(ui->mouse_fd, UI_SET_ABSBIT, ABS_Y);
 
-	usetup.id.bustype = BUS_VIRTUAL;
-	strcpy(usetup.name, "Waynergy mouse");
 	TRY_IOCTL(ui->mouse_fd, UI_DEV_SETUP, &usetup);
 
-	x.code = ABS_X;
-	x.absinfo.maximum = max_x;
-	y.code = ABS_Y;
-	y.absinfo.maximum = max_y;
 	TRY_IOCTL(ui->mouse_fd, UI_ABS_SETUP, &x);
 	TRY_IOCTL(ui->mouse_fd, UI_ABS_SETUP, &y);
 
