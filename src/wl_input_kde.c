@@ -4,6 +4,7 @@
 static bool key_map(struct wlInput *input, char *keymap_str)
 {
 	/* XXX: this is blatantly inadequate */
+	logWarn("KDE does not support xkb keymaps -- use raw-keymap instead");
 	return true;
 }
 

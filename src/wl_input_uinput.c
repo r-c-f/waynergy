@@ -3,6 +3,7 @@
 
 #include "wayland.h"
 #include "log.h"
+#include "fdio_full.h"
 
 #if !defined(__linux__)
 bool wlInputInitUinput(struct wlContext *ctx)
@@ -37,7 +38,9 @@ static void emit(int fd, int type, int code, int val)
 		.code = code,
 		.value = val,
 	};
-	write(fd, &ie, sizeof(ie));
+	if (!write_full(fd, &ie, sizeof(ie), 0)) {
+		logPErr("could not send uinput event");
+	}
 }
 
 static void mouse_rel_motion(struct wlInput *input, int dx, int dy)
@@ -67,7 +70,21 @@ static void mouse_button(struct wlInput *input, int button, int state)
 
 static void mouse_wheel(struct wlInput *input, signed short dx, signed short dy)
 {
+	struct state_uinput *ui = input->state;
+
+	if (dx < 0) {
+		emit(ui->mouse_fd, EV_REL, REL_HWHEEL, 1);
+	} else if (dx > 0) {
+		emit(ui->mouse_fd, EV_REL, REL_HWHEEL, -1);
+	}
+	if (dy < 0) {
+		emit(ui->mouse_fd, EV_REL, REL_WHEEL, 1);
+	} else if (dx > 0) {
+		emit(ui->mouse_fd, EV_REL, REL_WHEEL, -1);
+	}
+	emit(ui->mouse_fd, EV_SYN, SYN_REPORT, 0);
 }
+
 static void key(struct wlInput *input, int code, int state)
 {
 	struct state_uinput *ui = input->state;
@@ -82,6 +99,7 @@ static void key(struct wlInput *input, int code, int state)
 }
 static bool key_map(struct wlInput *input, char *map)
 {
+	logWarn("uinput does not support xkb keymaps -- use raw-keymap instead");
 	return true;
 }
 
@@ -134,6 +152,8 @@ static bool init_mouse(struct state_uinput *ui, int max_x, int max_y)
 	TRY_IOCTL(ui->mouse_fd, UI_SET_EVBIT, EV_REL);
 	TRY_IOCTL(ui->mouse_fd, UI_SET_RELBIT, REL_X);
 	TRY_IOCTL(ui->mouse_fd, UI_SET_RELBIT, REL_Y);
+	TRY_IOCTL(ui->mouse_fd, UI_SET_RELBIT, REL_WHEEL);
+	TRY_IOCTL(ui->mouse_fd, UI_SET_RELBIT, REL_HWHEEL);
 	TRY_IOCTL(ui->mouse_fd, UI_SET_EVBIT, EV_ABS);
 	TRY_IOCTL(ui->mouse_fd, UI_SET_ABSBIT, ABS_X);
 	TRY_IOCTL(ui->mouse_fd, UI_SET_ABSBIT, ABS_Y);
