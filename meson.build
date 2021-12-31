@@ -1,6 +1,6 @@
 project('waynergy',
  'c',
- version: '0.0.1'
+ version: '0.0.2'
 )
 
 src_c = files(
@@ -8,6 +8,7 @@ src_c = files(
   'src/wl_input.c',
   'src/wl_input_wlr.c',
   'src/wl_input_kde.c',
+  'src/wl_input_uinput.c',
   'src/main.c',
   'src/clip.c',
   'src/config.c',
