@@ -18,6 +18,8 @@
 #include "idle-client-protocol.h"
 #include "uSynergy.h"
 
+
+
 struct wlOutput
 {
 	uint32_t wl_name;
@@ -84,7 +86,7 @@ struct wlContext {
 };
 
 extern int wlKeySetConfigLayout(struct wlContext *ctx);
-extern bool wlSetup(struct wlContext *context, int width, int height);
+extern bool wlSetup(struct wlContext *context, int width, int height, char *backend);
 extern uint32_t wlTS(struct wlContext *context);
 extern void wlResUpdate(struct wlContext *context, int width, int height);
 extern void wlClose(struct wlContext *context);

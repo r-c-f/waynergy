@@ -339,8 +339,9 @@ void wlClose(struct wlContext *ctx)
 	return;
 }
 
-bool wlSetup(struct wlContext *ctx, int width, int height)
+bool wlSetup(struct wlContext *ctx, int width, int height, char *backend)
 {
+	bool input_init;
 	ctx->width = width;
 	ctx->height = height;
 	ctx->display = wl_display_connect(NULL);
@@ -352,16 +353,29 @@ bool wlSetup(struct wlContext *ctx, int width, int height)
 	wl_registry_add_listener(ctx->registry, &registry_listener, ctx);
 	wl_display_dispatch(ctx->display);
 	wl_display_roundtrip(ctx->display);
-
-	if (wlInputInitWlr(ctx)) {
-		logInfo("Using wlroots protocols for virtual input");
-	} else if (wlInputInitKde(ctx)) {
-		logInfo("Using kde protocols for virtual input");
-	} else if (wlInputInitUinput(ctx)) {
-		logInfo("Using uinput for virtual input");
-	} else {
-		logErr("Virtual input not supported by compositor");
-		return false;
+	if (backend) {
+		if (!strcmp(backend, "wlr")) {
+			input_init = wlInputInitWlr(ctx);
+		} else if (!strcmp(backend, "kde")) {
+			input_init = wlInputInitKde(ctx);
+		} else if (!strcmp(backend, "uinput")) {
+			input_init = wlInputInitUinput(ctx);
+		}
+		if (!input_init) {
+			logErr("Input backend %s not supported", backend);
+			return false;
+		}
+	} else { /* try them all */
+		if (wlInputInitWlr(ctx)) {
+			logInfo("Using wlroots protocols for virtual input");
+		} else if (wlInputInitKde(ctx)) {
+			logInfo("Using kde protocols for virtual input");
+		} else if (wlInputInitUinput(ctx)) {
+			logInfo("Using uinput for virtual input");
+		} else {
+			logErr("Virtual input not supported by compositor");
+			return false;
+		}
 	}
 	if(wlKeySetConfigLayout(ctx)) {
 		logErr("Could not configure virtual keyboard");

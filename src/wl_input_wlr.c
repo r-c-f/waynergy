@@ -109,6 +109,7 @@ bool wlInputInitWlr(struct wlContext *ctx)
 	input->key = key;
 	input->key_map = key_map;
 	ctx->input = input;
+	logInfo("Using wlroots virtual input protocols");
 	return true;
 }
 

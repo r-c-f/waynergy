@@ -221,6 +221,7 @@ bool wlInputInitUinput(struct wlContext *ctx)
 	input->key = key;
 	input->key_map = key_map;
 	ctx->input = input;
+	logInfo("Using uinput");
 	return true;
 error:
 	if (ui->key_fd != -1)

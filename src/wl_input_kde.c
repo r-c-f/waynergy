@@ -81,6 +81,7 @@ bool wlInputInitKde(struct wlContext *ctx)
 	input->key = key;
 	input->key_map = key_map;
 	ctx->input = input;
+	logInfo("Using KDE fake input protocol");
 	return true;
 }
 

@@ -20,6 +20,7 @@
 
 static struct sopt optspec[] = {
 	SOPT_INITL('h', "help", "Help text"),
+	SOPT_INIT_ARGL('b', "backend", "backend", "Input backend -- one of wlr, kde, uinput"),
 	SOPT_INIT_ARGL('C', "config", "path", "Configuration directory"),
 	SOPT_INIT_ARGL('c', "host", "host", "Server to connect to"),
 	SOPT_INIT_ARGL('p', "port", "port", "Port"),
@@ -132,6 +133,7 @@ int main(int argc, char **argv)
 	char *port = NULL;
 	char *name = NULL;
 	char *host = NULL;
+	char *backend = NULL;
 	char hostname[_POSIX_HOST_NAME_MAX] = {0};
 	char *log_path = NULL;
 	enum logLevel log_level;
@@ -154,6 +156,7 @@ int main(int argc, char **argv)
 	port = configTryString("port", "24800");
 	host = configTryString("host", "localhost");
 	name = configTryString("name", hostname);
+	backend = configTryString("backend", NULL);
 	enable_crypto = configTryBool("tls/enable", false);
 	enable_tofu = configTryBool("tls/tofu", false);
 	synContext.m_clientWidth = configTryLong("width", 0);
@@ -177,6 +180,9 @@ int main(int argc, char **argv)
 			case 'h':
 				sopt_usage_s();
 				goto done;
+			case 'b':
+				backend = xstrdup(optarg);
+				break;
 			case 'C':
 				osConfigPathOverride = xstrdup(optarg);
 				break;
@@ -274,7 +280,7 @@ opterror:
 	} else {
 		logWarn("wl-clipboard not found, no clipboard synchronization support");
 	}
-	if (!wlSetup(&wlContext, synContext.m_clientWidth, synContext.m_clientHeight))
+	if (!wlSetup(&wlContext, synContext.m_clientWidth, synContext.m_clientHeight, backend))
 		goto error;
 	wlIdleInhibit(&wlContext, true);
 	netPollInit();
