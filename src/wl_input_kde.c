@@ -11,7 +11,7 @@ static bool key_map(struct wlInput *input, char *keymap_str)
 static void key(struct wlInput *input, int key, int state)
 {
 	struct org_kde_kwin_fake_input *fake = input->state;
-	org_kde_kwin_fake_input_keyboard_key(fake, key, state);
+	org_kde_kwin_fake_input_keyboard_key(fake, key - 8, state);
 	wl_display_flush(input->wl_ctx->display);
 }
 static void mouse_rel_motion(struct wlInput *input, int dx, int dy)
