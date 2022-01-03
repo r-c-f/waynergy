@@ -163,7 +163,7 @@ int main(int argc, char **argv)
 	synContext.m_clientHeight = configTryLong("height", 0);
 	log_path = configTryString("log/path", NULL);
 	log_level = configTryLong("log/level", LOG_WARN);
-	sopt_usage_set(optspec, argv[0], "Synergy client for wlroots compositors");
+	sopt_usage_set(optspec, argv[0], "Synergy client for wayland compositors");
 	while ((opt = sopt_getopt(argc, argv, optspec, &optcpos, &optind, &optarg)) != -1) {
 		if (optarg) {
 			errno = 0;

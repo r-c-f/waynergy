@@ -60,11 +60,15 @@ waynergy -h
 ```
 output:
 ```
-waynergy: Synergy client for wayland compositors
+./waynergy: Synergy client for wayland compositors
 
-USAGE: waynergy [-h|--help] [-c|--host host] [-p|--port port] [-W|--width width] [-H|--height height] [-N|--name name] [-l|--logfile file] [-L|--loglevel level] [-n|--no-clip] [--fatal-none] [--fatal-ebad] [--fatal-ebsy] [--fatal-timeout]
+USAGE: ./waynergy [-h|--help] [-b|--backend backend] [-C|--config path] [-c|--host host] [-p|--port port] [-W|--width width] [-H|--height height] [-N|--name name] [-l|--logfile file] [-L|--loglevel level] [-n|--no-clip] [-e|--enable-crypto] [-t|--enable-tofu] [--fatal-none] [--fatal-ebad] [--fatal-ebsy] [--fatal-timeout]
 	-h|--help:
 		Help text
+	-b|--backend backend:
+		Input backend -- one of wlr, kde, uinput
+	-C|--config path:
+		Configuration directory
 	-c|--host host:
 		Server to connect to
 	-p|--port port:
@@ -93,7 +97,7 @@ USAGE: waynergy [-h|--help] [-c|--host host] [-p|--port port] [-W|--width width]
 		EBSY (client already exists with our name) errors are fatal
 	--fatal-timeout:
 		timeouts are fatal
-
+	
 ```
 
 Also note that `SIGUSR1` triggers re-execution. Useful until proper recconect
