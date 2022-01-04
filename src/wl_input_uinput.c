@@ -94,7 +94,7 @@ static void key(struct wlInput *input, int code, int state)
 		return;
 	}
 
-	emit(ui->key_fd, EV_KEY, code, state);
+	emit(ui->key_fd, EV_KEY, code - 8, state);
 	emit(ui->key_fd, EV_SYN, SYN_REPORT, 0);
 }
 static bool key_map(struct wlInput *input, char *map)
