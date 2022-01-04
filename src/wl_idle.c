@@ -61,12 +61,14 @@ void wlIdleInhibit(struct wlContext *ctx, bool on)
 			return;
 		}
 		org_kde_kwin_idle_timeout_add_listener(ctx->idle_timeout, &idle_timeout_listener, ctx);
+		wl_display_flush(ctx->display);
 	} else {
 		if (!ctx->idle_timeout) {
 			logDbg("Idle already not inhibited");
 			return;
 		}
 		org_kde_kwin_idle_timeout_release(ctx->idle_timeout);
+		wl_display_flush(ctx->display);
 		ctx->idle_timeout = NULL;
 	}
 }
