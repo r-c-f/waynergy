@@ -47,10 +47,35 @@ required interface will not be offered.
 
 ##### uinput (everyone else)
 
-waynergy must be able to open `/dev/uinput` for this to work. In my case, a 
-udev rule and an additional `uinput` group has worked well for testing. Note
-that doing this is potentially exceptionally risky as it involves the kernel
-directly rather than just the compositor you're currently using. 
+First and foremost it should be kept in mind that kernel-level virtual input
+may have undesirable side effects because the compositor is being completely
+bypassed. This most notably means that virtual consoles are no longer isolated
+as far as input is concerned, so simple lock screens can be easily bypassed if
+more than one session is active. I've not tested the usability of magic 
+SysRq, but that could also potentially be a great annoyance. With that out
+of the way....
+
+waynergy must be able to open `/dev/uinput` for this to work. Doing this for
+the general case as part of the installation would require setuid, which I'm
+not inclined to go with given obvious security implications (though it *will*
+still work, i.e. drop privileges as expected). The alternative approach is to 
+create an additional group specifically for uinput access, greatly reducing the 
+risk involved, but possibly varying between systems.
+
+In my case, a 'uinput' group is created, and a udev rule is used to modify the 
+permissions appropriately:
+```
+# /etc/udev/rules.d/49-input.rules, in my case
+KERNEL=="uinput",GROUP:="uinput",MODE:="0660"
+```
+From here, one *could* assign one's users to this group, but doing so would
+open up uinput to every program, with all the potential issues noted in the 
+first paragraph. The safest approach is probably setgid: 
+```
+# as root -- adjust path as needed
+chown :uinput waynergy`
+chmod g+s waynergy
+```
 
 #### CLI
 

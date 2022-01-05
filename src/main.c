@@ -123,6 +123,20 @@ static void syn_active_cb(uSynergyCookie cookie, bool active)
 	}
 }
 
+static void uinput_fd_open(int res[static 2])
+{
+	if ((res[0] = open("/dev/uinput", O_WRONLY)) == -1) {
+		/* can't use normal logs yet, still privileged */
+		perror("uinput fd open failed");
+		return;
+	}
+	if ((res[1] = open("/dev/uinput", O_WRONLY)) == -1) {
+		perror("uinput fd open failed");
+		close(res[0]);
+		res[0] = -1;
+	}
+}
+
 int main(int argc, char **argv)
 {
 	int ret = EXIT_SUCCESS;
@@ -145,6 +159,11 @@ int main(int argc, char **argv)
 	bool use_clipboard = true;
 	bool enable_crypto = false;
 	bool enable_tofu = false;
+
+	/* deal with privileged operations first */
+	uinput_fd_open(wlContext.uinput_fd);
+	/* and drop said privileges */
+	osDropPriv();
 
 	/* we default to name being hostname, so get it*/
 	gethostname(hostname, _POSIX_HOST_NAME_MAX - 1);

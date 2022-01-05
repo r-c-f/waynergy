@@ -377,6 +377,13 @@ bool wlSetup(struct wlContext *ctx, int width, int height, char *backend)
 			return false;
 		}
 	}
+	/* if these have been used, they'll be -1 in the wlContext and saved
+	 * in the input state structure; otherwise, they should be closed */
+	if (ctx->uinput_fd[0] != -1)
+		close(ctx->uinput_fd[0]);
+	if (ctx->uinput_fd[1] != -1)
+		close(ctx->uinput_fd[1]);
+
 	if(wlKeySetConfigLayout(ctx)) {
 		logErr("Could not configure virtual keyboard");
 		return false;

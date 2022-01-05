@@ -61,6 +61,9 @@ struct wlInput {
 	bool (*key_map)(struct wlInput *, char *);
 };
 
+/* uinput must open device fds before privileges are dropped, so this is
+ * necessary */
+
 extern bool wlInputInitWlr(struct wlContext *ctx);
 extern bool wlInputInitKde(struct wlContext *ctx);
 extern bool wlInputInitUinput(struct wlContext *ctx);
@@ -70,6 +73,7 @@ struct wlContext {
 	struct wl_display *display;
 	struct wl_seat *seat;
 	struct wlInput *input;
+	int uinput_fd[2];
 	struct zwp_virtual_keyboard_manager_v1 *keyboard_manager;
 	struct zwlr_virtual_pointer_manager_v1 *pointer_manager;
 	struct org_kde_kwin_fake_input *fake_input;

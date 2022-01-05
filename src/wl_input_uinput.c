@@ -194,19 +194,19 @@ bool wlInputInitUinput(struct wlContext *ctx)
 	struct wlInput *input;
 	struct state_uinput *ui;
 
+	if (ctx->uinput_fd[0] == -1 || ctx->uinput_fd[1] == -1) {
+		logDbg("Invalid uinput fds");
+		return false;
+	}
+
 	ui = xmalloc(sizeof(*ui));
-	ui->key_fd = -1;
-	ui->mouse_fd = -1;
+	ui->key_fd = ctx->uinput_fd[0];
+	ui->mouse_fd = ctx->uinput_fd[1];
+	/* we've consumed these */
+	ctx->uinput_fd[0] = -1;
+	ctx->uinput_fd[1] = -1;
 	input = xcalloc(1, sizeof(*input));
 
-	if ((ui->key_fd = open("/dev/uinput", O_WRONLY)) == -1) {
-		logPDbg("could not open uinput for keyboard device");
-		goto error;
-	}
-	if ((ui->mouse_fd = open("/dev/uinput", O_WRONLY)) == -1) {
-		logPDbg("Could not open uinput for mouse device");
-		goto error;
-	}
 	if (!init_key(ui))
 		goto error;
 	if (!init_mouse(ui, ctx->width, ctx->height))
