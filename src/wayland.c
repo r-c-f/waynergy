@@ -341,7 +341,7 @@ void wlClose(struct wlContext *ctx)
 
 bool wlSetup(struct wlContext *ctx, int width, int height, char *backend)
 {
-	bool input_init;
+	bool input_init = false;
 	ctx->width = width;
 	ctx->height = height;
 	ctx->display = wl_display_connect(NULL);

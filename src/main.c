@@ -301,6 +301,7 @@ done:
 	free(host);
 	free(name);
 	free(port);
+	free(backend);
 	return ret;
 }
 
