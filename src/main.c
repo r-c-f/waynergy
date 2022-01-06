@@ -41,7 +41,7 @@ static struct sopt optspec[] = {
 
 
 uSynergyContext synContext;
-struct wlContext wlContext;
+struct wlContext wlContext = {0};
 struct synNetContext synNetContext;
 
 static void syn_mouse_wheel_cb(uSynergyCookie cookie, int16_t x, int16_t y)
@@ -283,8 +283,6 @@ opterror:
 	synContext.m_screensaverCallback = syn_screensaver_cb;
 	synContext.m_screenActiveCallback = syn_active_cb;
 	/* wayland context events */
-	//first zero everything
-	memset(&wlContext, 0, sizeof(wlContext));
 	//now callbacks
 	wlContext.on_output_update = man_geom ? NULL : wl_output_update_cb;
 	/*run*/

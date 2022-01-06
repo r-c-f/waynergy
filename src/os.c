@@ -56,7 +56,8 @@ void osDropPriv(void)
 	old_gid = getegid();
 
 	if (!old_uid) {
-		if (setgroups(1, &new_gid) != 1) {
+		fprintf(stderr, "Running as root, dropping ancilary groups\n");
+		if (setgroups(1, &new_gid)) {
 			/* if we're privileged we have not initialized the
 			 * log yet */
 			perror("Could not drop ancillary groups");
@@ -66,12 +67,14 @@ void osDropPriv(void)
 	/* POSIX calls this permanent, and it seems to be the case on the BSDs
 	 * and Linux. */
 	if (new_gid != old_gid) {
+		fprintf(stderr, "Dropping gid from %d to %d\n", old_gid, new_gid);
 		if (setregid(new_gid, new_gid)) {
 			perror("Could not set group IDs");
 			abort();
 		}
 	}
 	if (new_uid != old_uid) {
+		fprintf(stderr, "Dropping uid from %d to %d\n", old_uid, new_uid);
 		if (setreuid(new_uid, new_uid)) {
 			perror("Could not set user IDs");
 			abort();
