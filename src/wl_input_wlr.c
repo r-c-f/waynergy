@@ -91,7 +91,6 @@ static void mouse_wheel(struct wlInput *input, signed short dx, signed short dy)
 
 bool wlInputInitWlr(struct wlContext *ctx)
 {
-	struct wlInput *input;
 	struct state_wlr *wlr;
 	if (!(ctx->pointer_manager && ctx->keyboard_manager)) {
 		return false;
@@ -99,16 +98,16 @@ bool wlInputInitWlr(struct wlContext *ctx)
 	wlr = xmalloc(sizeof(*wlr));
 	wlr->pointer = zwlr_virtual_pointer_manager_v1_create_virtual_pointer(ctx->pointer_manager, ctx->seat);
 	wlr->keyboard = zwp_virtual_keyboard_manager_v1_create_virtual_keyboard(ctx->keyboard_manager, ctx->seat);
-	input = xcalloc(1, sizeof(*input));
-	input->state = wlr;
-       	input->wl_ctx = ctx;
-	input->mouse_rel_motion = mouse_rel_motion;
-	input->mouse_motion = mouse_motion;
-	input->mouse_button = mouse_button;
-	input->mouse_wheel = mouse_wheel;
-	input->key = key;
-	input->key_map = key_map;
-	ctx->input = input;
+	ctx->input = (struct wlInput) {
+		.state = wlr,
+		.wl_ctx = ctx,
+		.mouse_rel_motion = mouse_rel_motion,
+		.mouse_motion = mouse_motion,
+		.mouse_button = mouse_button,
+		.mouse_wheel = mouse_wheel,
+		.key = key,
+		.key_map = key_map,
+	};
 	logInfo("Using wlroots virtual input protocols");
 	return true;
 }

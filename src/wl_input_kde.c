@@ -65,22 +65,21 @@ static void mouse_wheel(struct wlInput *input, signed short dx, signed short dy)
 bool wlInputInitKde(struct wlContext *ctx)
 {
 	logDbg("Trying KDE fake input protocol for input");
-	struct wlInput *input;
 	if (!(ctx->fake_input)) {
 		logDbg("Fake input not supported");
 		return false;
 	}
 	org_kde_kwin_fake_input_authenticate(ctx->fake_input, "waynergy", "control keyboard and mouse with Synergy/Barrier server");
-	input = xcalloc(1, sizeof(*input));
-	input->state = ctx->fake_input;
-	input->wl_ctx = ctx;
-	input->mouse_motion = mouse_motion;
-	input->mouse_rel_motion = mouse_rel_motion;
-	input->mouse_button = mouse_button;
-	input->mouse_wheel = mouse_wheel;
-	input->key = key;
-	input->key_map = key_map;
-	ctx->input = input;
+	ctx->input = (struct wlInput) {
+		.state = ctx->fake_input,
+		.wl_ctx = ctx,
+		.mouse_motion = mouse_motion,
+		.mouse_rel_motion = mouse_rel_motion,
+		.mouse_button = mouse_button,
+		.mouse_wheel = mouse_wheel,
+		.key = key,
+		.key_map = key_map,
+	};
 	logInfo("Using KDE fake input protocol");
 	return true;
 }

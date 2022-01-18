@@ -283,9 +283,8 @@ opterror:
 	synContext.m_screensaverCallback = syn_screensaver_cb;
 	synContext.m_screenActiveCallback = syn_active_cb;
 	/* wayland context events */
-	//now callbacks
 	wlContext.on_output_update = man_geom ? NULL : wl_output_update_cb;
-	/*run*/
+	/* set up clipboard */
 	if (clipHaveWlClipboard() && use_clipboard) {
 		synContext.m_clipboardCallback = syn_clip_cb;
 		if (!clipSetupSockets())
@@ -297,10 +296,13 @@ opterror:
 	} else {
 		logWarn("wl-clipboard not found, no clipboard synchronization support");
 	}
+	/* setup wayland */
 	if (!wlSetup(&wlContext, synContext.m_clientWidth, synContext.m_clientHeight, backend))
 		goto error;
 	wlIdleInhibit(&wlContext, true);
+	/* initialize main loop */
 	netPollInit();
+	/* and actual main loop */
 	while(1) {
 		/* no matter what handling signals is a good idea */
 	       	sigHandleRun();

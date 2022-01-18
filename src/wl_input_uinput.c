@@ -191,7 +191,6 @@ static bool init_mouse(struct state_uinput *ui, int max_x, int max_y)
 
 bool wlInputInitUinput(struct wlContext *ctx)
 {
-	struct wlInput *input;
 	struct state_uinput *ui;
 
 	if (ctx->uinput_fd[0] == -1 || ctx->uinput_fd[1] == -1) {
@@ -205,22 +204,22 @@ bool wlInputInitUinput(struct wlContext *ctx)
 	/* we've consumed these */
 	ctx->uinput_fd[0] = -1;
 	ctx->uinput_fd[1] = -1;
-	input = xcalloc(1, sizeof(*input));
 
 	if (!init_key(ui))
 		goto error;
 	if (!init_mouse(ui, ctx->width, ctx->height))
 		goto error;
 
-	input->state = ui;
-	input->wl_ctx = ctx;
-	input->mouse_motion = mouse_motion;
-	input->mouse_rel_motion = mouse_rel_motion;
-	input->mouse_button = mouse_button;
-	input->mouse_wheel = mouse_wheel;
-	input->key = key;
-	input->key_map = key_map;
-	ctx->input = input;
+	ctx->input = (struct wlInput) {
+		.state = ui,
+		.wl_ctx = ctx,
+		.mouse_motion = mouse_motion,
+		.mouse_rel_motion = mouse_rel_motion,
+		.mouse_button = mouse_button,
+		.mouse_wheel = mouse_wheel,
+		.key = key,
+		.key_map = key_map,
+	};
 	logInfo("Using uinput");
 	return true;
 error:
@@ -229,7 +228,6 @@ error:
 	if (ui->mouse_fd != -1)
 		close(ui->mouse_fd);
 	free(ui);
-	free(input);
 	return false;
 }
 
