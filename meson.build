@@ -1,6 +1,6 @@
 project('waynergy',
  'c',
- version: '0.0.4444'
+ version: '0.0.4'
 )
 
 src_c = files(

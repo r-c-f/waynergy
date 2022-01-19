@@ -126,6 +126,17 @@ void clipMonitorPollProc(struct pollfd *pfd)
 					netPollFd[i].fd = accept(clipMonitorFd, NULL, NULL);
 					if (netPollFd[i].fd == -1) {
 						logPErr("accept");
+						switch (errno) {
+							case ECONNABORTED:
+							case EINTR:
+								break;
+							default:
+								logErr("clipboard update socket is broken");
+								close(clipMonitorFd);
+								clipMonitorFd = -1;
+								netPollFd[POLLFD_CLIP_MON].fd = -1;
+								break;
+						}
 					}
 					return;
 				}
