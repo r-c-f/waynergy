@@ -1,11 +1,23 @@
 #include <sys/mman.h>
+#include <stdbool.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <fcntl.h>
 #include <grp.h>
 #include <unistd.h>
 #include <sys/types.h>
+#include <sys/stat.h>
 #include "xmem.h"
+
+bool osFileExists(const char *path)
+{
+	struct stat buf;
+
+	if (stat(path, &buf)) {
+		return false;
+	}
+	return true;
+}
 
 int osGetAnonFd(void)
 {

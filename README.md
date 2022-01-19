@@ -212,6 +212,9 @@ There is also the option to trust on first use by setting `tls/tofu` or
 running with the `--enable-tofu` option on the command line, which will allow
 verification that it has not changed on subsequent connections. 
 
+Client certificates are now supported as well; simply place the certificate at
+`tls/cert`.
+
 ## Acknowledgements
 
 * [uSynergy](https://github.com/symless/synergy-micro-client) for the protocol library

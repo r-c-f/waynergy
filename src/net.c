@@ -3,6 +3,7 @@
 #include "fdio_full.h"
 #include "clip.h"
 #include "net.h"
+#include "os.h"
 #include <stdlib.h>
 #include <stdbool.h>
 #include <unistd.h>
@@ -44,6 +45,7 @@ static bool syn_connect_setup(struct synNetContext *snet_ctx, struct addrinfo *a
 {
 	struct tls_config *cfg;
 	const char *peer_hash;
+	char *cert_path;
 
 	if ((snet_ctx->fd = socket(ai->ai_family, ai->ai_socktype | SOCK_CLOEXEC, ai->ai_protocol)) == -1)
 		return false;
@@ -69,6 +71,18 @@ static bool syn_connect_setup(struct synNetContext *snet_ctx, struct addrinfo *a
 			/* if we are trusting on frist use we just defer this
 			 * until a successful handshake */
 		}
+		/* set client certificate */
+		cert_path = osGetHomeConfigPath("tls/cert");
+		if (osFileExists(cert_path)) {
+			if (tls_config_set_cert_file(cfg, cert_path)) {
+				logErr("Could not load client certificate: %s", tls_error(snet_ctx->tls_ctx));
+				tls_config_free(cfg);
+				tls_free(snet_ctx->tls_ctx);
+				free(cert_path);
+				return false;
+			}
+		}
+		free(cert_path);
 		/* we operate on hashes instead -- this is fine for now */
 		tls_config_insecure_noverifycert(cfg);
 		tls_config_insecure_noverifyname(cfg);
