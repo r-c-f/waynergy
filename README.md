@@ -14,7 +14,7 @@ a bit of paranoia).
 * A compositor making use of [wlroots](https://github.com/swaywm/wlroots), or
 (on an experimental basis) KDE, or (if all else fails) the willingness to run
 questionable networking utilities with the privileges to access /dev/uinput
-* [wl-clipboard](https://github.com/bugaevc/wl-clipboard) for clipboard support
+* [wl-clipboard](https://github.com/bugaevc/wl-clipboard) for clipboard support (*may not work on all compositors*)
 
 ### Building
 
