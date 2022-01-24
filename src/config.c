@@ -293,6 +293,11 @@ bool configWriteString(char *name, const char *val, bool overwrite)
 	if (!(path = osGetHomeConfigPath(name))) {
 		return false;
 	}
+	if (!osMakeParentDir(path, S_IRWXU)) {
+		logPErr("Could not create parent directory structure");
+		free(path);
+		return false;
+	}
 	errno = 0;
 	oflag = O_WRONLY | O_CREAT | (overwrite ? O_EXCL : 0);
 	if ((fd = open(path, oflag, S_IRWXU)) == -1) {

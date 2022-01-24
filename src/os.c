@@ -2,6 +2,7 @@
 #include <stdbool.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <errno.h>
 #include <fcntl.h>
 #include <grp.h>
 #include <unistd.h>
@@ -15,6 +16,27 @@ bool osFileExists(const char *path)
 
 	if (stat(path, &buf)) {
 		return false;
+	}
+	return true;
+}
+bool osMakeParentDir(const char *path, mode_t mode)
+{
+	char *c;
+	char parent_path[strlen(path) + 1];
+
+	if (!strchr(path, '/'))
+		return true;
+	strcpy(parent_path, path);
+
+	for (c = strchr(parent_path + 1, '/'); c; c = strchr(c + 1, '/')) {
+		*c = '\0';
+		if (mkdir(parent_path, mode)) {
+			if (errno != EEXIST) {
+				*c = '/';
+				return false;
+			}
+		}
+		*c = '/';
 	}
 	return true;
 }
