@@ -47,10 +47,14 @@ static bool syn_connect_setup(struct synNetContext *snet_ctx, struct addrinfo *a
 	const char *peer_hash;
 	char *cert_path;
 
-	if ((snet_ctx->fd = socket(ai->ai_family, ai->ai_socktype | SOCK_CLOEXEC, ai->ai_protocol)) == -1)
+	if ((snet_ctx->fd = socket(ai->ai_family, ai->ai_socktype | SOCK_CLOEXEC, ai->ai_protocol)) == -1) {
+		logPErr("socket");
 		return false;
-	if (connect(snet_ctx->fd, ai->ai_addr, ai->ai_addrlen))
+	}
+	if (connect(snet_ctx->fd, ai->ai_addr, ai->ai_addrlen)) {
+		logPErr("connect");
 		return false;
+	}
 	if (snet_ctx->tls) {
 		if (!(snet_ctx->tls_ctx = tls_client())) {
 			logErr("Could not create tls client context");
@@ -128,6 +132,7 @@ static bool syn_connect_setup(struct synNetContext *snet_ctx, struct addrinfo *a
 static bool syn_connect(uSynergyCookie cookie)
 {
 	bool ret = false;
+	int gai_ret;
 	struct addrinfo *hostinfo, *h;
 	struct synNetContext *snet_ctx = cookie;
 	uSynergyContext *syn_ctx = snet_ctx->syn_ctx;
@@ -136,8 +141,10 @@ static bool syn_connect(uSynergyCookie cookie)
 		.ai_family = AF_UNSPEC,
 		.ai_socktype = SOCK_STREAM
 	};
-	if (getaddrinfo(snet_ctx->host, snet_ctx->port, &hints, &hostinfo))
+	if ((gai_ret = getaddrinfo(snet_ctx->host, snet_ctx->port, &hints, &hostinfo))) {
+		logErr("getaddrinfo failed: %s", gai_strerror(gai_ret));
 		return false;
+	}
 	synNetDisconnect(snet_ctx);
 	for (h = hostinfo; h; h = h->ai_next) {
 		if (syn_connect_setup(snet_ctx, h)) {
