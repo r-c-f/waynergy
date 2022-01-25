@@ -11,7 +11,7 @@ a bit of paranoia).
 * wayland, including wayland-scanner and the base protocols
 * libxkbcommon
 * libtls (either from libressl, or libretls)
-* A compositor making use of [wlroots](https://github.com/swaywm/wlroots), or
+* A compositor making use of [wlroots](https://gitlab.freedesktop.org/wlroots/wlroots), or
 (on an experimental basis) KDE, or (if all else fails) the willingness to run
 questionable networking utilities with the privileges to access /dev/uinput
 * [wl-clipboard](https://github.com/bugaevc/wl-clipboard) for clipboard support (*may not work on all compositors*)
@@ -36,9 +36,13 @@ offering the required interface.
 
 Granting networking software written in questionable C the ability to 
 generate arbitrary inputs isn't exactly a recipe for success if people are 
-out to get you. Sway doesn't currently impose any restrictions on virtual 
-input yet, but the other modules will require some tweaking to deal with the
-less-trusting nature of kernel-level input or KDE. 
+out to get you. Using TLS is essential in any case. 
+
+##### wlroots (sway et al.)
+
+There are no restrictions on privileged protocols at the moment (though that
+[may eventually change](https://gitlab.freedesktop.org/wlroots/wlroots/-/issues/3339)).
+As such it should Just Work™. 
 
 ##### KDE
 
