@@ -62,14 +62,12 @@ static bool syn_connect_setup(struct synNetContext *snet_ctx, struct addrinfo *a
 		}
 		if (!(cfg = tls_config_new())) {
 			logErr("Could not create tls configuration structure");
-			tls_free(snet_ctx->tls_ctx);
 			return false;
 		}
 		/* figure out certificate hash business */
 		if (!(snet_ctx->tls_hash = load_cert_hash(snet_ctx->host))) {
 			if (!snet_ctx->tls_tofu) {
 				logErr("No certificate hash available");
-				tls_free(snet_ctx->tls_ctx);
 				return false;
 			}
 			/* if we are trusting on frist use we just defer this
@@ -81,7 +79,6 @@ static bool syn_connect_setup(struct synNetContext *snet_ctx, struct addrinfo *a
 			if (tls_config_set_cert_file(cfg, cert_path)) {
 				logErr("Could not load client certificate: %s", tls_error(snet_ctx->tls_ctx));
 				tls_config_free(cfg);
-				tls_free(snet_ctx->tls_ctx);
 				free(cert_path);
 				return false;
 			}
@@ -93,35 +90,35 @@ static bool syn_connect_setup(struct synNetContext *snet_ctx, struct addrinfo *a
 		if (tls_configure(snet_ctx->tls_ctx, cfg)) {
 			logErr("Could not configure TLS context: %s", tls_error(snet_ctx->tls_ctx));
 			tls_config_free(cfg);
-			tls_free(snet_ctx->tls_ctx);
 			return false;
 		}
 		tls_config_free(cfg);
 		if (tls_connect_socket(snet_ctx->tls_ctx, snet_ctx->fd, snet_ctx->host)) {
 			logErr("tls_connect error: %s", tls_error(snet_ctx->tls_ctx));
-			synNetDisconnect(snet_ctx);
 			return false;
 		}
 		if (tls_handshake(snet_ctx->tls_ctx)) {
 			logErr("tls_handshake error: %s", tls_error(snet_ctx->tls_ctx));
-			synNetDisconnect(snet_ctx);
 			return false;
 		}
 		if (!(peer_hash = tls_peer_cert_hash(snet_ctx->tls_ctx))) {
 			logErr("Server provided no certificate");
-			synNetDisconnect(snet_ctx);
 			return false;
 		}
 		if (!snet_ctx->tls_hash) {
 			logInfo("Trust-on-first-use enabled, saving hash %s", tls_peer_cert_hash(snet_ctx->tls_ctx));
 			snet_ctx->tls_hash = xstrdup(peer_hash);
 			if (!store_cert_hash(snet_ctx->host, peer_hash)) {
-				logErr("Could not save hash");
+				logErr("Could not save certificate hash");
+				/* we don't want the connection to proceed if
+				 * we can't save the hash -- otherwise, 'trust
+				 * on first use' just becomes 'trust on every
+				 * use' and a total waste of time */
+				return false;
 			}
 		}
 		if (strcasecmp(snet_ctx->tls_hash, peer_hash)) {
 			logErr("CERTIFICATE HASH MISMATCH: %s (client) != %s (server)", snet_ctx->tls_hash, peer_hash);
-			synNetDisconnect(snet_ctx);
 			return false;
 		}
 	}
@@ -142,7 +139,12 @@ static bool syn_connect(uSynergyCookie cookie)
 		.ai_socktype = SOCK_STREAM
 	};
 	if ((gai_ret = getaddrinfo(snet_ctx->host, snet_ctx->port, &hints, &hostinfo))) {
-		logErr("getaddrinfo failed: %s", gai_strerror(gai_ret));
+		if (gai_ret == EAI_SYSTEM) {
+			logPErr("getaddrinfo system error");
+			return false;
+		} else {
+			logErr("getaddrinfo failed: %s", gai_strerror(gai_ret));
+		}
 		return false;
 	}
 	synNetDisconnect(snet_ctx);
@@ -151,6 +153,11 @@ static bool syn_connect(uSynergyCookie cookie)
 			syn_ctx->m_lastMessageTime = syn_ctx->m_getTimeFunc();
 			ret = true;
 			break;
+		} else {
+			/* it didn't work, so we aren't strictly connected...
+			 * but this prevents fd and memory leakage by cleaning
+			 * up after the partial failure */
+			synNetDisconnect(snet_ctx);
 		}
 	}
 	freeaddrinfo(hostinfo);
