@@ -30,6 +30,7 @@ void wlIdleInhibit(struct wlContext *ctx, bool on)
 {
 	long idle_time;
 	char *idle_method;
+	char *idle_keyname;
 	logDbg("got idle inhibit request");
 	if (!ctx->idle_manager) {
 		logWarn("Idle inhibit request, but no idle manager support");
@@ -47,7 +48,9 @@ void wlIdleInhibit(struct wlContext *ctx, bool on)
 			idle_timeout_listener.idle = on_idle_mouse;
 		} else if (!strcmp(idle_method, "key")) {
 			idle_timeout_listener.idle = on_idle_key;
-			idle_key = xkb_keymap_key_by_name(ctx->input.xkb_map, configTryString("idle-inhibit/keyname", "HYPR"));
+			idle_keyname = configTryString("idle-inhibit/keyname", "HYPR");
+			idle_key = xkb_keymap_key_by_name(ctx->input.xkb_map, idle_keyname);
+			free(idle_keyname);
 		} else {
 			logErr("Unknown idle inhibition method %s, ignoring inhibit request", idle_method);
 			free(idle_method);

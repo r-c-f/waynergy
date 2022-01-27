@@ -140,15 +140,20 @@ void logDbg(const char *fmt, ...)
 }
 bool logInit(enum logLevel level, char *path)
 {
+	char *mode;
+
+	mode = configTryString("log/mode", "w");
 	log_level = level;
 	if (path) {
-		if (!(log_file = fopen(path, configTryString("log/mode", "w")))) {
+		if (!(log_file = fopen(path, mode))) {
 			logErr("Could not open extra logfile at path %s", path);
+			free(mode);
 			return false;
 		}
 		log_file_fd = fileno(log_file);
 	}
 	logInfo("Log initialized at level %d\n", level);
+	free(mode);
 	return true;
 }
 void logClose(void)

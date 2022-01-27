@@ -259,6 +259,8 @@ static bool ini_d_load(ini_t *dst)
 			}
 		}
 	}
+	strfreev(name);
+	strfreev(txt);
 	return true;
 }
 
