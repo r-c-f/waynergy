@@ -39,7 +39,7 @@ static bool local_mod_init(struct wlContext *wl_ctx, char *keymap_str) {
 
 static void load_raw_keymap(struct wlContext *ctx)
 {
-	char **key, **val;
+	char **key, **val, *endstr;
 	int i, count, offset, lkey, rkey;
 	key = NULL;
 	val = NULL;
@@ -55,8 +55,8 @@ static void load_raw_keymap(struct wlContext *ctx)
 	 * First pass -- just find the *real* maximum raw keycode */
 	for (i = 0; i < count; ++i) {
 		errno = 0;
-		lkey = strtol(key[i], NULL, 0);
-		if (errno)
+		lkey = strtol(key[i], &endstr, 0);
+		if (errno || endstr == key[i])
 			continue;
 		if (lkey >= ctx->input.key_count) {
 			ctx->input.key_count = lkey + 1;
@@ -71,11 +71,12 @@ static void load_raw_keymap(struct wlContext *ctx)
 	offset = configTryLong("raw-keymap/offset", 0);
 	for (i = 0; i < count; ++i) {
 		errno = 0;
-		lkey = strtol(key[i], NULL, 0);
-		if (errno)
+		lkey = strtol(key[i], &endstr, 0);
+		if (errno || endstr == key[i])
 			continue;
-		rkey = strtol(val[i], NULL, 0);
-		if (errno)
+		errno = 0;
+		rkey = strtol(val[i], &endstr, 0);
+		if (errno || endstr == val[i])
 			continue;
 		ctx->input.raw_keymap[lkey] = rkey + offset;
 	}
