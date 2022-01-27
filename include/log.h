@@ -14,7 +14,9 @@ enum logLevel {
 	LOG_WARN,
 	LOG_INFO,
 	LOG_DBG,
+	LOG__INVALID, /* also serves as count */
 };
+enum logLevel logLevelFromString(const char *s);
 
 bool logInit(enum logLevel level, char *path);
 void logOut(enum logLevel level, const char *fmt, ...);

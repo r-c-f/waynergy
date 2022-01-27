@@ -28,7 +28,7 @@ static struct sopt optspec[] = {
 	SOPT_INIT_ARGL('H', "height", "height", "Height of screen in pixels (manual override, must be given with width)"),
 	SOPT_INIT_ARGL('N', "name", "name", "Name of client screen"),
 	SOPT_INIT_ARGL('l', "logfile", "file", "Name of logfile to use"),
-	SOPT_INIT_ARGL('L', "loglevel", "level", "Log level -- number, increasing from 0 for more verbosity"),
+	SOPT_INIT_ARGL('L', "loglevel", "level", "Log level -- number, increasing from 0 for more verbosity up to 5, or one of 'none', 'error', 'warn', 'info', 'debug'"),
 	SOPT_INITL('n', "no-clip", "Don't synchronize the clipboard"),
 	SOPT_INITL('e', "enable-crypto", "Enable TLS encryption"),
 	SOPT_INITL('t', "enable-tofu", "Enable trust-on-first-use for TLS certificate"),
@@ -228,7 +228,9 @@ int main(int argc, char **argv)
 				name = xstrdup(optarg);
 				break;
 			case 'L':
-				log_level = optshrt;
+				if ((log_level = logLevelFromString(optarg)) == LOG__INVALID) {
+					goto opterror;
+				}
 				break;
 			case 'l':
 				log_path = xstrdup(optarg);

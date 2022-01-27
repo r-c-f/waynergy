@@ -29,15 +29,42 @@ static void log_print_ts(FILE *out)
 			(intmax_t)ts.tv_sec,
 			ts.tv_nsec);
 }
+static char *log_level_str[] = {
+	"NONE",
+	"ERROR",
+	"WARN",
+	"INFO",
+	"DEBUG",
+	NULL,
+};
+enum logLevel logLevelFromString(const char *s)
+{
+	enum logLevel ll;
+	char *endptr;
+
+	for (ll = LOG_NONE; ll < LOG__INVALID; ++ll) {
+		if (!strcasecmp(log_level_str[ll], s)) {
+			return ll;
+		}
+	}
+	/* try numeric value */
+	errno = 0;
+	ll = strtol(s, &endptr, 0);
+	if (endptr == s) {
+		fprintf(stderr, "loglevel: invalid string, and no digits\n");
+		ll = LOG__INVALID;
+	} else if (errno) {
+		perror("loglevel: strtol error");
+		ll = LOG__INVALID;
+	} else if (ll >= LOG__INVALID) {
+		fprintf(stderr, "loglevel: invalid numerical value\n");
+		ll = LOG__INVALID;
+	}
+	return ll;
+}
+
 static char *log_level_get_str(enum logLevel level)
 {
-	static char *log_level_str[] = {
-		"NONE",
-		"ERROR",
-		"WARN",
-		"INFO",
-		"DEBUG"
-	};
 	assert(level < (sizeof(log_level_str)/sizeof(*log_level_str)));
 	return log_level_str[level];
 }
