@@ -215,6 +215,53 @@ char **configReadLines(char *name)
 	return xrealloc(line, sizeof(*line) * (pos + 1));
 }
 
+/* combine ini files, overwriting conflicting values */
+static void ini_cat(ini_t *dst, ini_t *src)
+{
+	int sec_src, sec_dst, prop_src, prop_dst;
+	const char *sec_name, *prop_name;
+	for (sec_src = 0; sec_src < ini_section_count(src); ++sec_src) {
+		sec_name = ini_section_name(src, sec_src);
+		if ((sec_dst = ini_find_section(dst, sec_name, 0)) == INI_NOT_FOUND) {
+			sec_dst = ini_section_add(dst, sec_name, 0);
+		}
+		for (prop_src = 0; prop_src < ini_property_count(src, sec_src); ++prop_src) {
+			prop_name = ini_property_name(src, sec_src, prop_src);
+			if ((prop_dst = ini_find_property(dst, sec_dst, prop_name, 0)) == INI_NOT_FOUND) {
+				ini_property_add(dst, sec_dst, prop_name, 0, ini_property_value(src, sec_src, prop_src), 0);
+			} else {
+				ini_property_value_set(dst, sec_dst, prop_dst, ini_property_value(src, sec_src, prop_src), 0);
+			}
+		}
+	}
+}
+
+/* read all INI files from config.ini.d, combining them into a destination
+ *
+ * slightly hackish because it's treating 'config.ini.d' as a section*/
+static bool ini_d_load(ini_t *dst)
+{
+	char *suffix;
+	char **name, **txt;
+	int count, i;
+	ini_t *src;
+
+	if ((count = read_full_section_dir("config.ini.d", &name, &txt)) == -1) {
+		return false;
+	}
+
+	for (i = 0; i < count; ++i) {
+		/* we only want INI files */
+		if ((suffix = strstr(name[i], ".ini")) && *(suffix + 4) == '\0') {
+			if ((src = ini_load(txt[i], NULL))) {
+				ini_cat(dst, src);
+				ini_destroy(src);
+			}
+		}
+	}
+	return true;
+}
+
 bool configInitINI(void)
 {
 	char *buf;
@@ -227,6 +274,9 @@ bool configInitINI(void)
 	if (!(config_ini = ini_load(buf, NULL))) {
 		logErr("Could not load INI configuration");
 		ret = false;
+	}
+	if (!ini_d_load(config_ini)) {
+		logWarn("Could not read ini.d configurations");
 	}
 	free(buf);
 	return ret;
