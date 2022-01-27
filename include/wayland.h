@@ -49,8 +49,7 @@ struct wlInput {
 	struct xkb_context *xkb_ctx;
 	struct xkb_keymap *xkb_map;
 	struct xkb_state *xkb_state;
-	/* an array of size key_count -- all calls to key() will be translated
-	 * to raw_keymap[code] */
+	/* raw keymap -- distinct from xkb */
 	int *raw_keymap;
 	/* wayland context */
 	struct wlContext *wl_ctx;

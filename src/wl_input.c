@@ -32,7 +32,6 @@ static bool local_mod_init(struct wlContext *wl_ctx, char *keymap_str) {
 		free(wl_ctx->input.key_press_state);
 	}
 	wl_ctx->input.key_count = xkb_keymap_max_keycode(wl_ctx->input.xkb_map) + 1;
-	wl_ctx->input.key_press_state = xcalloc(wl_ctx->input.key_count, sizeof(*wl_ctx->input.key_press_state));
 	return true;
 }
 
@@ -47,13 +46,29 @@ static void load_raw_keymap(struct wlContext *ctx)
 	if (ctx->input.raw_keymap) {
 		free(ctx->input.raw_keymap);
 	}
+	/* start with the xkb maximum */
+	ctx->input.key_count = xkb_keymap_max_keycode(ctx->input.xkb_map);
+	if ((count = configReadFullSection("raw-keymap", &key, &val)) == -1) {
+		return;
+	}
+	/* slightly inefficient approach, but it will actually work
+	 * First pass -- just find the *real* maximum raw keycode */
+	for (i = 0; i < count; ++i) {
+		errno = 0;
+		lkey = strtol(key[i], NULL, 0);
+		if (errno)
+			continue;
+		if (lkey >= ctx->input.key_count) {
+			ctx->input.key_count = lkey + 1;
+		}
+	}
+	/* initialize everything */
 	ctx->input.raw_keymap = xcalloc(ctx->input.key_count, sizeof(*ctx->input.raw_keymap));
 	for (i = 0; i < ctx->input.key_count; ++i) {
 		ctx->input.raw_keymap[i] = i;
 	}
-	if ((count = configReadFullSection("raw-keymap", &key, &val)) == -1) {
-		return;
-	}
+	/* and second pass -- store any actually mappings, apply offset */
+	offset = configTryLong("raw-keymap/offset", 0);
 	for (i = 0; i < count; ++i) {
 		errno = 0;
 		lkey = strtol(key[i], NULL, 0);
@@ -62,13 +77,11 @@ static void load_raw_keymap(struct wlContext *ctx)
 		rkey = strtol(val[i], NULL, 0);
 		if (errno)
 			continue;
+		ctx->input.raw_keymap[lkey] = rkey + offset;
+	}
+	/* while here, initialize state tracking */
+	ctx->input.key_press_state = xcalloc(ctx->input.key_count, sizeof(*ctx->input.key_press_state));
 
-		ctx->input.raw_keymap[lkey] = rkey;
-	}
-	offset = configTryLong("raw-keymap/offset", 0);
-	for (i = 0; i < ctx->input.key_count; ++i) {
-		ctx->input.raw_keymap[i] += offset;
-	}
 	strfreev(key);
 	strfreev(val);
 }
@@ -100,12 +113,16 @@ void wlKey(struct wlContext *ctx, int key, int state)
 	key = ctx->input.raw_keymap[key];
 	key += ctx->input.xkb_key_offset;
 	logDbg("Keycode (with offset %d): %d, state %d", ctx->input.xkb_key_offset, key, state);
-	xkb_state_update_key(ctx->input.xkb_state, key, state);
-	xkb_mod_mask_t depressed = xkb_state_serialize_mods(ctx->input.xkb_state, XKB_STATE_MODS_DEPRESSED);
-	xkb_mod_mask_t latched = xkb_state_serialize_mods(ctx->input.xkb_state, XKB_STATE_MODS_LATCHED);
-	xkb_mod_mask_t locked = xkb_state_serialize_mods(ctx->input.xkb_state, XKB_STATE_MODS_LOCKED);
-	xkb_layout_index_t group = xkb_state_serialize_layout(ctx->input.xkb_state, XKB_STATE_LAYOUT_EFFECTIVE);
-	logDbg("Modifiers: depressed: %x latched: %x locked: %x group: %x", depressed, latched, locked, group);
+	if (key > xkb_keymap_max_keycode(ctx->input.xkb_map)) {
+		logDbg("keycode greater than xkb maximum, mod not tracked");
+	} else {
+		xkb_state_update_key(ctx->input.xkb_state, key, state);
+		xkb_mod_mask_t depressed = xkb_state_serialize_mods(ctx->input.xkb_state, XKB_STATE_MODS_DEPRESSED);
+		xkb_mod_mask_t latched = xkb_state_serialize_mods(ctx->input.xkb_state, XKB_STATE_MODS_LATCHED);
+		xkb_mod_mask_t locked = xkb_state_serialize_mods(ctx->input.xkb_state, XKB_STATE_MODS_LOCKED);
+		xkb_layout_index_t group = xkb_state_serialize_layout(ctx->input.xkb_state, XKB_STATE_LAYOUT_EFFECTIVE);
+		logDbg("Modifiers: depressed: %x latched: %x locked: %x group: %x", depressed, latched, locked, group);
+	}
 	ctx->input.key(&ctx->input, key, state);
 }
 
