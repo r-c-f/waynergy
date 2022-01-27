@@ -94,10 +94,12 @@ __attribute__((unused))
 static void strfreev(char **strv)
 {
 	size_t i;
-	for (i = 0; strv[i]; ++i) {
-		free(strv[i]);
+	if (strv) {
+		for (i = 0; strv[i]; ++i) {
+			free(strv[i]);
+		}
+		free(strv);
 	}
-	free(strv);
 }
 
 #endif

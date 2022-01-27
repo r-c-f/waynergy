@@ -241,13 +241,15 @@ static void ini_cat(ini_t *dst, ini_t *src)
  * slightly hackish because it's treating 'config.ini.d' as a section*/
 static bool ini_d_load(ini_t *dst)
 {
+	bool ret = true;
 	char *suffix;
-	char **name, **txt;
+	char **name = NULL, **txt = NULL;
 	int count, i;
 	ini_t *src;
 
 	if ((count = read_full_section_dir("config.ini.d", &name, &txt)) == -1) {
-		return false;
+		ret = false;
+		goto done;
 	}
 
 	for (i = 0; i < count; ++i) {
@@ -259,9 +261,10 @@ static bool ini_d_load(ini_t *dst)
 			}
 		}
 	}
+done:
 	strfreev(name);
 	strfreev(txt);
-	return true;
+	return ret;
 }
 
 bool configInitINI(void)
@@ -269,17 +272,26 @@ bool configInitINI(void)
 	char *buf;
 	bool ret = true;
 
-	if (!(buf = configReadFile("config.ini"))) {
-		logWarn("Could not read INI configuration");
-		return true;
+	if ((buf = configReadFile("config.ini"))) {
+		if (!(config_ini = ini_load(buf, NULL))) {
+			logErr("Could not load INI configuration");
+			ret = false;
+			goto done;
+		}
 	}
-	if (!(config_ini = ini_load(buf, NULL))) {
-		logErr("Could not load INI configuration");
-		ret = false;
+	/* we need to have an empty INI to merge stuff into */
+	if (!config_ini) {
+		if (!(config_ini = ini_create(NULL))) {
+			logErr("Could not create new INI structure");
+			ret = false;
+			goto done;
+		}
 	}
+
 	if (!ini_d_load(config_ini)) {
 		logWarn("Could not read ini.d configurations");
 	}
+done:
 	free(buf);
 	return ret;
 }

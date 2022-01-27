@@ -142,6 +142,10 @@ global values are `port`, `host`, `name`, `width`, and `height`, which do exactl
 what the command line option would do. Options within sections are referred to
 in the form `section/property` for the purposes of this document. 
 
+In addition to `config.ini`, there is now support for snippets (with `.ini`
+extension) under `config.ini.d/`. Any duplicate options will overwrite any
+read previously. 
+
 #### Keymap
 
 There's also an xkb format keymap to provide, if the default is not sufficient;
