@@ -289,7 +289,7 @@ static void handle_global(void *data, struct wl_registry *registry, uint32_t nam
 			}
 		}
 	} else if (strcmp(interface, wl_output_interface.name) == 0) {
-		wl_output = wl_registry_bind(registry, name, &wl_output_interface, version);
+		wl_output = wl_registry_bind(registry, name, &wl_output_interface, 2);
 		wl_output_add_listener(wl_output, &output_listener, ctx);
 		if (ctx->output_manager) {
 			xdg_output = zxdg_output_manager_v1_get_xdg_output(ctx->output_manager, wl_output);
