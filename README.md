@@ -36,7 +36,13 @@ offering the required interface.
 
 Granting networking software written in questionable C the ability to 
 generate arbitrary inputs isn't exactly a recipe for success if people are 
-out to get you. Using TLS is essential in any case. 
+out to get you. Using TLS is essential in any case.
+
+__For anyone posting an issue or otherwise seeking assistance: *debug logs
+are key logs*__. So far people have been prudent but it pays to make this
+clear I think. Posting a full debug log will make any targeted network attack
+far less concerning than your bank login credentials ending up on a public
+issue page, even if they are slightly obfuscated by key mapping translations. 
 
 ##### wlroots (sway et al.)
 
@@ -148,9 +154,17 @@ read previously.
 
 #### Keymap
 
-There's also an xkb format keymap to provide, if the default is not sufficient;
-it should be placed in `xkb_keymap`. The easiest way to obtain this if the
-default is insufficient is to use the output of
+For the time being there are two key mapping mechanisms: xkb, which works
+with the wlr backend, and raw, which will work on everything. xkb appears a
+bit more complex, but has the advantage that the targets of the keycodes will
+remain effectively the same across any client that can run waynergy. For 
+raw, both the source and the target will vary, based on the underlying
+operating systems and layout configurations. 
+
+##### XKB
+
+If the default is not sufficient; it should be placed in `xkb_keymap`. 
+The easiest way to obtain this is to use the output of
 ```
 setxkbmap -print
 ```
@@ -158,19 +172,19 @@ For custom keycodes, one may run into issues with Xwayland if the minimum
 keycode is below 8. To work around this, an offset may be provided in 
 the configuration as `xkb_key_offset`. 
 
-##### Windows primary
+###### Windows primary
 
 Unfortunately there is no existing `xkb_keycodes` section included in
 xkbcommon that will work with a Windows primary. To deal with this I've
 included one that mostly works (minus the keys I don't actually have to test
 on my own systems) in `doc/xkb/keycodes/win`. 
 
-##### macOS primary
+###### macOS primary
 
 The same issue of keycodes applies here; see `doc/xkb/keycodes/mac` for
 a usable configuration.
 
-##### KDE/uinput
+##### Raw keymapping
 
 Because the fake input protocol used by KDE doesn't support custom keymaps, 
 while uinput doesn't involve xkb at all, using xkb for this doesn't work; 
@@ -185,6 +199,22 @@ properly:
 104 = 116
 102 = 114
 ```
+Because these will vary on the source and target end, providing
+general-purpose mappings is more difficult, but if anyone wants to
+contribute some under `doc` with clearly-defined server and client 
+targets they would be appreciated by somebody probably. 
+
+The process of generating them can probably best be seen in
+[issue 27](https://github.com/r-c-f/waynergy/issues/27) toward the 
+end of the thread, the gist of it is: 
+- increase log level in Barrier/Synergy on the server to display the button being 
+sent,
+- compare to the keycode displayed in xev/wev on the client system when
+using a hardware keyboard,
+- add them to the `[raw-keymap]` section as `server = client` pair,
+- repeat for any keys that don't work right. 
+
+
 #### Screensaver
 
 `screensaver/start` should contain a command to be run when the screensaver is
@@ -224,7 +254,7 @@ Client certificates are now supported as well; simply place the certificate at
 `tls/cert`.
 
 ## Acknowledgements
-
+I would like to thank
 * [uSynergy](https://github.com/symless/synergy-micro-client) for the protocol library
 * The swaywm people, who've provided the protocols to make something like this
 possible
@@ -233,6 +263,11 @@ I don't have to.
 * [mattiasgustavsson](https://github.com/mattiasgustavsson/libs) for the INI 
 implementation.
 * kwin developers for supporting a fake input protocol these days 
+* the kernel developers for supplying uinput on Linux
+* and __users like you__, whose contributions (even through simple reporting
+of issues) are instrumental in making this suck just a little bit less over
+time. Adding multiple backend support, for compositors I don't even use,
+has proven entirely worthwhile for this reason, for example. 
 
 ## TODO
 
