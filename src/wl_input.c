@@ -110,6 +110,10 @@ void wlKey(struct wlContext *ctx, int key, int state)
 	if (!ctx->input.key_press_state[key] && !state) {
 		return;
 	}
+	if (key >= ctx->input.key_count) {
+		logWarn("Key %d outside configured keymap, dropping", key);
+		return;
+	}
 	ctx->input.key_press_state[key] += state ? 1 : -1;
 	key = ctx->input.raw_keymap[key];
 	key += ctx->input.xkb_key_offset;
