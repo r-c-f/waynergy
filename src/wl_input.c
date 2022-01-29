@@ -48,18 +48,17 @@ static void load_raw_keymap(struct wlContext *ctx)
 	}
 	/* start with the xkb maximum */
 	ctx->input.key_count = xkb_keymap_max_keycode(ctx->input.xkb_map);
-	if ((count = configReadFullSection("raw-keymap", &key, &val)) == -1) {
-		return;
-	}
-	/* slightly inefficient approach, but it will actually work
-	 * First pass -- just find the *real* maximum raw keycode */
-	for (i = 0; i < count; ++i) {
-		errno = 0;
-		lkey = strtol(key[i], &endstr, 0);
-		if (errno || endstr == key[i])
-			continue;
-		if (lkey >= ctx->input.key_count) {
-			ctx->input.key_count = lkey + 1;
+	if ((count = configReadFullSection("raw-keymap", &key, &val)) != -1) {
+		/* slightly inefficient approach, but it will actually work
+		 * First pass -- just find the *real* maximum raw keycode */
+		for (i = 0; i < count; ++i) {
+			errno = 0;
+			lkey = strtol(key[i], &endstr, 0);
+			if (errno || endstr == key[i])
+				continue;
+			if (lkey >= ctx->input.key_count) {
+				ctx->input.key_count = lkey + 1;
+			}
 		}
 	}
 	/* initialize everything */
@@ -67,6 +66,8 @@ static void load_raw_keymap(struct wlContext *ctx)
 	for (i = 0; i < ctx->input.key_count; ++i) {
 		ctx->input.raw_keymap[i] = i;
 	}
+	/* initialize key state tracking now that the size is known */
+	ctx->input.key_press_state = xcalloc(ctx->input.key_count, sizeof(*ctx->input.key_press_state));
 	/* and second pass -- store any actually mappings, apply offset */
 	offset = configTryLong("raw-keymap/offset", 0);
 	for (i = 0; i < count; ++i) {
@@ -99,8 +100,6 @@ int wlKeySetConfigLayout(struct wlContext *ctx)
 	ctx->input.xkb_key_offset = configTryLong("xkb_key_offset", 0);
 	ret = !ctx->input.key_map(&ctx->input, keymap_str);
 	load_raw_keymap(ctx);
-	/* initialize key state tracking now that the size is known */
-	ctx->input.key_press_state = xcalloc(ctx->input.key_count, sizeof(*ctx->input.key_press_state));
 	free(keymap_str);
 	return ret;
 }
