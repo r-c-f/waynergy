@@ -127,11 +127,11 @@ static void uinput_fd_open(int res[static 2])
 {
 	if ((res[0] = open("/dev/uinput", O_WRONLY | O_CLOEXEC)) == -1) {
 		/* can't use normal logs yet, still privileged */
-		perror("uinput fd open failed");
+		perror("uinput fd open failed (this is normal if not using uinput backend)");
 		return;
 	}
 	if ((res[1] = open("/dev/uinput", O_WRONLY | O_CLOEXEC)) == -1) {
-		perror("uinput fd open failed");
+		perror("uinput fd open failed (this is normal if not using uinput backend)");
 		close(res[0]);
 		res[0] = -1;
 	}
