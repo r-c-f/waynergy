@@ -80,8 +80,6 @@ static void load_raw_keymap(struct wlContext *ctx)
 			continue;
 		ctx->input.raw_keymap[lkey] = rkey + offset;
 	}
-	/* while here, initialize state tracking */
-	ctx->input.key_press_state = xcalloc(ctx->input.key_count, sizeof(*ctx->input.key_press_state));
 
 	strfreev(key);
 	strfreev(val);
@@ -101,6 +99,8 @@ int wlKeySetConfigLayout(struct wlContext *ctx)
 	ctx->input.xkb_key_offset = configTryLong("xkb_key_offset", 0);
 	ret = !ctx->input.key_map(&ctx->input, keymap_str);
 	load_raw_keymap(ctx);
+	/* initialize key state tracking now that the size is known */
+	ctx->input.key_press_state = xcalloc(ctx->input.key_count, sizeof(*ctx->input.key_press_state));
 	free(keymap_str);
 	return ret;
 }
