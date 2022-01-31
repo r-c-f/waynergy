@@ -276,6 +276,8 @@ opterror:
 		logErr("Could not initialize network code");
 		goto error;
 	}
+	/* key code type */
+	synContext.m_useRawKeyCodes = configTryBool("syn_raw_key_codes", true);
 	/* populate events */
 	synContext.m_mouseMoveCallback = syn_mouse_move_cb;
 	synContext.m_mouseButtonDownCallback = syn_mouse_button_down_cb;

@@ -335,6 +335,7 @@ typedef struct uSynergyContext
 	uint16_t						m_clientHeight;									/* Height of screen */
 
 	/* Optional configuration data, filled in by client */
+	bool 					m_useRawKeyCodes; 						/* determine which key codes are sent to events */
 	bool 					m_errorIsFatal[USYNERGY_ERROR__COUNT]; 				/* determines whether or not a given error code is fatal (i.e. we just give up rather than reconnect*/
 	uSynergyCookie					m_cookie;										/* Cookie pointer passed to callback functions (can be NULL) */
 	uSynergyScreenActiveCallback	m_screenActiveCallback;							/* Callback for entering and leaving screen */
