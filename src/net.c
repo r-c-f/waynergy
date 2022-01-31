@@ -301,6 +301,8 @@ bool synNetDisconnect(struct synNetContext *snet_ctx)
 		if (tls_close(snet_ctx->tls_ctx)) {
 			logErr("tls_close error: %s", snet_ctx->tls_ctx);
 		}
+		free(snet_ctx->tls_hash);
+		snet_ctx->tls_hash = NULL;
 		tls_free(snet_ctx->tls_ctx);
 		snet_ctx->tls_ctx = NULL;
 	}
