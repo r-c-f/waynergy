@@ -48,6 +48,7 @@ static void load_raw_keymap(struct wlContext *ctx)
 	}
 	/* start with the xkb maximum */
 	ctx->input.key_count = xkb_keymap_max_keycode(ctx->input.xkb_map);
+	logDbg("max key: %zu", ctx->input.key_count);
 	if ((count = configReadFullSection("raw-keymap", &key, &val)) != -1) {
 		/* slightly inefficient approach, but it will actually work
 		 * First pass -- just find the *real* maximum raw keycode */
@@ -58,12 +59,15 @@ static void load_raw_keymap(struct wlContext *ctx)
 				continue;
 			if (lkey >= ctx->input.key_count) {
 				ctx->input.key_count = lkey + 1;
+				logDbg("max key update: %zu", ctx->input.key_count);
+
 			}
 		}
 	}
 	/* initialize everything */
 	ctx->input.raw_keymap = xcalloc(ctx->input.key_count, sizeof(*ctx->input.raw_keymap));
 	offset = configTryLong("raw-keymap/offset", 0);
+	logDbg("Initial raw key offset: %d", offset);
 	for (i = 0; i < ctx->input.key_count; ++i) {
 		ctx->input.raw_keymap[i] = i + offset;
 	}
@@ -80,6 +84,7 @@ static void load_raw_keymap(struct wlContext *ctx)
 		if (errno || endstr == val[i])
 			continue;
 		ctx->input.raw_keymap[lkey] = rkey + offset;
+		logDbg("set raw key map: %d = %d", lkey, ctx->input.raw_keymap[lkey]);
 	}
 
 	strfreev(key);
