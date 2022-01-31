@@ -63,13 +63,13 @@ static void load_raw_keymap(struct wlContext *ctx)
 	}
 	/* initialize everything */
 	ctx->input.raw_keymap = xcalloc(ctx->input.key_count, sizeof(*ctx->input.raw_keymap));
+	offset = configTryLong("raw-keymap/offset", 0);
 	for (i = 0; i < ctx->input.key_count; ++i) {
-		ctx->input.raw_keymap[i] = i;
+		ctx->input.raw_keymap[i] = i + offset;
 	}
 	/* initialize key state tracking now that the size is known */
 	ctx->input.key_press_state = xcalloc(ctx->input.key_count, sizeof(*ctx->input.key_press_state));
 	/* and second pass -- store any actually mappings, apply offset */
-	offset = configTryLong("raw-keymap/offset", 0);
 	for (i = 0; i < count; ++i) {
 		errno = 0;
 		lkey = strtol(key[i], &endstr, 0);
