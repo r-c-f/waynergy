@@ -67,6 +67,7 @@ static void load_raw_keymap(struct wlContext *ctx)
 	/* initialize everything */
 	ctx->input.raw_keymap = xcalloc(ctx->input.key_count, sizeof(*ctx->input.raw_keymap));
 	offset = configTryLong("raw-keymap/offset", 0);
+	offset += configTryLong("xkb_key_offset", 0);
 	logDbg("Initial raw key offset: %d", offset);
 	for (i = 0; i < ctx->input.key_count; ++i) {
 		ctx->input.raw_keymap[i] = i + offset;
@@ -102,7 +103,6 @@ int wlKeySetConfigLayout(struct wlContext *ctx)
 		xkb_geometry  { include \"pc(pc105)\"   }; \
 };");
 	local_mod_init(ctx, keymap_str);
-	ctx->input.xkb_key_offset = configTryLong("xkb_key_offset", 0);
 	ret = !ctx->input.key_map(&ctx->input, keymap_str);
 	load_raw_keymap(ctx);
 	free(keymap_str);
@@ -120,8 +120,7 @@ void wlKey(struct wlContext *ctx, int key, int state)
 	}
 	ctx->input.key_press_state[key] += state ? 1 : -1;
 	key = ctx->input.raw_keymap[key];
-	key += ctx->input.xkb_key_offset;
-	logDbg("Keycode (with offset %d): %d, state %d", ctx->input.xkb_key_offset, key, state);
+	logDbg("Keycode: %d, state %d", key, state);
 	if (key > xkb_keymap_max_keycode(ctx->input.xkb_map)) {
 		logDbg("keycode greater than xkb maximum, mod not tracked");
 	} else {

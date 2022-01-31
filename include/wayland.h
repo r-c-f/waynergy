@@ -45,7 +45,6 @@ struct wlInput {
 	int *key_press_state;
 	size_t key_count;
 	// keyboard layout handling
-	int xkb_key_offset;
 	struct xkb_context *xkb_ctx;
 	struct xkb_keymap *xkb_map;
 	struct xkb_state *xkb_state;
