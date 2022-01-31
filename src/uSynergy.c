@@ -491,7 +491,7 @@ static void sProcessMessage(uSynergyContext *context, struct sspBuf *msg)
 		if (!(sspNetU16(msg, &id) && sspNetU16(msg, &mod) && sspNetU16(msg, &key))) {
 			PARSE_ERROR();
 		}
-		sSendKeyboardCallback(context, key, mod, true, false);
+		sSendKeyboardCallback(context, context->m_useRawKeyCodes ? key : id, mod, true, false);
 	}
 	else if (!strcmp(pkt_id, "DKRP"))
 	{
@@ -505,7 +505,7 @@ static void sProcessMessage(uSynergyContext *context, struct sspBuf *msg)
 		      sspNetU16(msg, &key))) {
 			PARSE_ERROR();
 		}
-		sSendKeyboardCallback(context, key, mod, true, true);
+		sSendKeyboardCallback(context, context->m_useRawKeyCodes ? key : id, mod, true, true);
 	}
 	else if (!strcmp(pkt_id, "DKUP"))
 	{
@@ -516,7 +516,7 @@ static void sProcessMessage(uSynergyContext *context, struct sspBuf *msg)
 		if (!(sspNetU16(msg, &id) && sspNetU16(msg, &mod) && sspNetU16(msg, &key))) {
 			PARSE_ERROR();
 		}
-		sSendKeyboardCallback(context, key, mod, false, false);
+		sSendKeyboardCallback(context, context->m_useRawKeyCodes ? key : id, mod, false, false);
 	}
 	else if (!strcmp(pkt_id, "DGBT"))
 	{
