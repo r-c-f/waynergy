@@ -93,7 +93,8 @@ default xkb_keycodes "win" {
     <LWIN> = 354;
     <LALT> = 0x3f;
     <SPCE> = 0x40;
-    <RALT> = 319;
+    //<LVL3> = 319; //necessary for some layouts to type accented characters
+    <RALT> = 319; // standard US layout
     <RWIN> = 0x203;
     <MENU> = 356;
     <RCTL> = 292;
