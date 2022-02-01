@@ -39,6 +39,7 @@ static bool local_mod_init(struct wlContext *wl_ctx, char *keymap_str) {
 
 static void load_raw_keymap(struct wlContext *ctx)
 {
+	bool offset_on_explicit;
 	char **key, **val, *endstr;
 	int i, count, offset, lkey, rkey;
 	key = NULL;
@@ -75,6 +76,7 @@ static void load_raw_keymap(struct wlContext *ctx)
 	/* initialize key state tracking now that the size is known */
 	ctx->input.key_press_state = xcalloc(ctx->input.key_count, sizeof(*ctx->input.key_press_state));
 	/* and second pass -- store any actually mappings, apply offset */
+	offset_on_explicit = configTryBool("raw-keymap/offset_on_explicit", true);
 	for (i = 0; i < count; ++i) {
 		errno = 0;
 		lkey = strtol(key[i], &endstr, 0);
@@ -84,7 +86,7 @@ static void load_raw_keymap(struct wlContext *ctx)
 		rkey = strtol(val[i], &endstr, 0);
 		if (errno || endstr == val[i])
 			continue;
-		ctx->input.raw_keymap[lkey] = rkey + offset;
+		ctx->input.raw_keymap[lkey] = rkey + offset_on_explicit ? offset : 0;
 		logDbg("set raw key map: %d = %d", lkey, ctx->input.raw_keymap[lkey]);
 	}
 

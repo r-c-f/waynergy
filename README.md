@@ -219,6 +219,9 @@ using a hardware keyboard,
 - add them to the `[raw-keymap]` section as `server = client` pair,
 - repeat for any keys that don't work right. 
 
+The offset functionality is enabled through `raw-keymap/offset`, though it
+can also be disabled for explicit mappings by setting `raw-keymap/offset_on_explicit`
+to `false`. 
 
 #### Screensaver
 
