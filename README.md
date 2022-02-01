@@ -161,6 +161,11 @@ remain effectively the same across any client that can run waynergy. For
 raw, both the source and the target will vary, based on the underlying
 operating systems and layout configurations. 
 
+There is also now support for using the Synergy mapped key codes rather
+than the raw buttons, by setting `syn_raw_key_codes` to `false`. Eventually
+this may make a more universal approach possible for the defaults, though
+I'll leave that for anyone who wants to have a go at doing it. 
+
 ##### XKB
 
 If the default is not sufficient; it should be placed in `xkb_keymap`. 
