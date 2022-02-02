@@ -86,7 +86,7 @@ static void load_raw_keymap(struct wlContext *ctx)
 		rkey = strtol(val[i], &endstr, 0);
 		if (errno || endstr == val[i])
 			continue;
-		ctx->input.raw_keymap[lkey] = rkey + offset_on_explicit ? offset : 0;
+		ctx->input.raw_keymap[lkey] = rkey + (offset_on_explicit ? offset : 0);
 		logDbg("set raw key map: %d = %d", lkey, ctx->input.raw_keymap[lkey]);
 	}
 
