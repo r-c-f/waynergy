@@ -83,7 +83,7 @@ open up uinput to every program, with all the potential issues noted in the
 first paragraph. The safest approach is probably setgid: 
 ```
 # as root -- adjust path as needed
-chown :uinput waynergy`
+chown :uinput waynergy
 chmod g+s waynergy
 ```
 
