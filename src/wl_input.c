@@ -27,11 +27,6 @@ static bool local_mod_init(struct wlContext *wl_ctx, char *keymap_str) {
 		xkb_context_unref(wl_ctx->input.xkb_ctx);
 		return false;
 	}
-	/* initialize keystats */
-	if (wl_ctx->input.key_press_state) {
-		free(wl_ctx->input.key_press_state);
-	}
-	wl_ctx->input.key_count = xkb_keymap_max_keycode(wl_ctx->input.xkb_map) + 1;
 	return true;
 }
 
@@ -48,7 +43,7 @@ static void load_raw_keymap(struct wlContext *ctx)
 		free(ctx->input.raw_keymap);
 	}
 	/* start with the xkb maximum */
-	ctx->input.key_count = xkb_keymap_max_keycode(ctx->input.xkb_map);
+	ctx->input.key_count = xkb_keymap_max_keycode(ctx->input.xkb_map) + 1;
 	logDbg("max key: %zu", ctx->input.key_count);
 	if ((count = configReadFullSection("raw-keymap", &key, &val)) != -1) {
 		/* slightly inefficient approach, but it will actually work
@@ -74,6 +69,9 @@ static void load_raw_keymap(struct wlContext *ctx)
 		ctx->input.raw_keymap[i] = i + offset;
 	}
 	/* initialize key state tracking now that the size is known */
+	if (ctx->input.key_press_state) {
+		free(ctx->input.key_press_state);
+	}
 	ctx->input.key_press_state = xcalloc(ctx->input.key_count, sizeof(*ctx->input.key_press_state));
 	/* and second pass -- store any actually mappings, apply offset */
 	offset_on_explicit = configTryBool("raw-keymap/offset_on_explicit", true);
