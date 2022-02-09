@@ -24,7 +24,7 @@ questionable networking utilities with the privileges to access /dev/uinput
 - [AUR (git master)](https://aur.archlinux.org/packages/waynergy-git)
 - [Gentoo ebuilds (by nrndda)](https://github.com/nrndda/nrndda-overlay/tree/master/gui-apps/waynergy)
 
-####Manual
+#### Manual
 
 ```
 meson build
