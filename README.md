@@ -16,7 +16,15 @@ a bit of paranoia).
 questionable networking utilities with the privileges to access /dev/uinput
 * [wl-clipboard](https://github.com/bugaevc/wl-clipboard) for clipboard support (*may not work on all compositors*)
 
-### Building
+### Building/Installation
+
+####Packages
+
+-[AUR (release)](https://aur.archlinux.org/packages/waynergy)
+-[AUR (git master)](https://aur.archlinux.org/packages/waynergy-git)
+-[Gentoo ebuilds (by nrndda)](https://github.com/nrndda/nrndda-overlay/tree/master/gui-apps/waynergy)
+
+####Manual
 
 ```
 meson build
