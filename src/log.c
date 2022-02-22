@@ -10,17 +10,15 @@ static enum logLevel log_level = LOG_NONE;
 
 static FILE *log_file;
 static int log_file_fd;
+static struct timespec log_start = {0};
+
 
 static void log_print_ts(FILE *out)
 {
-	static struct timespec start = {0};
-	if (!(start.tv_sec || start.tv_nsec)) {
-		clock_gettime(CLOCK_MONOTONIC, &start);
-	}
 	struct timespec ts;
 	clock_gettime(CLOCK_MONOTONIC, &ts);
-	ts.tv_sec -= start.tv_sec;
-	ts.tv_nsec -= start.tv_nsec;
+	ts.tv_sec -= log_start.tv_sec;
+	ts.tv_nsec -= log_start.tv_nsec;
 	if (ts.tv_nsec < 0) {
 		--ts.tv_sec;
 		ts.tv_nsec += 1000000000;
@@ -29,6 +27,7 @@ static void log_print_ts(FILE *out)
 			(intmax_t)ts.tv_sec,
 			ts.tv_nsec);
 }
+
 static char *log_level_str[] = {
 	"NONE",
 	"ERROR",
@@ -86,18 +85,6 @@ static void log_out_v(enum logLevel level, const char *fmt, va_list ap)
 	if (log_file)
 		log_out_v_(log_file, level, fmt, ap);
 }
-static void log_out_ss(enum logLevel level, const char *msg)
-{
-	char lf = '\n';
-	if (level > log_level)
-		return;
-	write_full(STDERR_FILENO, msg, strlen(msg), 0);
-	write_full(STDERR_FILENO, &lf, 1, 0);
-	if (log_file) {
-		write_full(log_file_fd, msg, strlen(msg), 0);
-		write_full(log_file_fd, &lf, 1, 0);
-	}
-}
 
 void logOut(enum logLevel level, const char *fmt, ...)
 {
@@ -106,10 +93,7 @@ void logOut(enum logLevel level, const char *fmt, ...)
 	log_out_v(level, fmt, ap);
 	va_end(ap);
 }
-void logOutSig(enum logLevel level, const char *msg)
-{
-	log_out_ss(level, msg);
-}
+
 void logErr(const char *fmt, ...)
 {
 	va_list ap;
@@ -144,6 +128,7 @@ bool logInit(enum logLevel level, char *path)
 
 	mode = configTryString("log/mode", "w");
 	log_level = level;
+	clock_gettime(CLOCK_MONOTONIC, &log_start);
 	if (path) {
 		if (!(log_file = fopen(path, mode))) {
 			logErr("Could not open extra logfile at path %s", path);
@@ -152,7 +137,7 @@ bool logInit(enum logLevel level, char *path)
 		}
 		log_file_fd = fileno(log_file);
 	}
-	logInfo("Log initialized at level %d\n", level);
+	logInfo("Log initialized at level %d", level);
 	free(mode);
 	return true;
 }
@@ -160,5 +145,115 @@ void logClose(void)
 {
 	if (log_file)
 		fclose(log_file);
+}
+
+/* signal-safe logging */ 
+
+#define INT32_BUFLEN 12
+static char *uint32_to_str(uint32_t in, char *out)
+{
+        int i;
+        int digits;
+        if (!in) {
+                strcpy(out, "0");
+                return out;
+        }
+        for (i = INT32_BUFLEN - 2; in; --i) {
+                out[i] = '0' + (in % 10);
+                in /= 10;
+        }
+        /* shift back by number of unused digits */
+        digits = INT32_BUFLEN - 2 - i;
+        memmove(out, out + i + 1, digits);
+        out[digits] = 0;
+        return out;
+}
+static char *int32_to_str(int32_t in, char out[static INT32_BUFLEN])
+{
+        if (in == INT_MIN) {
+                strcpy(out, "INT_MIN");
+                return out;
+        } else if (in < 0) {
+                in *= -1;
+                uint32_to_str(in, out + 1);
+                out[0] = '-';
+        } else {
+                uint32_to_str(in, out);
+        }
+        return out;
+}
+static void log_out_ss(enum logLevel level, const char *str)
+{
+	if (level > log_level)
+		return;
+	write_full(STDERR_FILENO, str, strlen(str), 0);
+	if (log_file) {
+		write_full(log_file_fd, str, strlen(str), 0);
+	}
+}
+static void log_print_ts_ss(int out_fd)
+{
+	char buf[INT32_BUFLEN];
+	char zero = '0';
+	char dot = '.';
+	struct timespec ts;
+	int i, numlen;
+	clock_gettime(CLOCK_MONOTONIC, &ts);
+	ts.tv_sec -= log_start.tv_sec;
+	ts.tv_nsec -= log_start.tv_nsec;
+	if (ts.tv_nsec < 0 ) {
+		--ts.tv_sec;
+		ts.tv_nsec += 1000000000;
+	}
+	uint32_to_str(ts.tv_sec, buf);
+	write_full(out_fd, buf, strlen(buf), 0);
+	write_full(out_fd, &dot, 1, 0);
+	uint32_to_str(ts.tv_nsec, buf);
+	numlen = strlen(buf);
+	for (i = 0; i < 9 - numlen; ++i ) {
+		write_full(out_fd, &zero, 1, 0);
+	}
+	write_full(out_fd, buf, strlen(buf), 0);
+}
+void logOutSigStart(enum logLevel level)
+{
+	log_print_ts_ss(STDERR_FILENO);
+	if (log_file) {
+		log_print_ts_ss(log_file_fd);
+	}
+	log_out_ss(level, ": [");
+	log_out_ss(level, log_level_get_str(level));
+	log_out_ss(level, "] ");
+}
+void logOutSigChar(enum logLevel level, char c)
+{
+	char buf[2] = {c};
+	log_out_ss(level, buf);
+}
+void logOutSigEnd(enum logLevel level)
+{
+	logOutSigChar(level, '\n');
+}
+void logOutSigStr(enum logLevel level, const char *str)
+{
+	log_out_ss(level, str);
+}
+void logOutSig(enum logLevel level, const char *msg)
+{
+	logOutSigStart(level);
+	logOutSigStr(level, msg);
+	logOutSigEnd(level);
+}
+void logOutSigI32(enum logLevel level, int32_t val)
+{
+	char buf[INT32_BUFLEN];
+	int32_to_str(val, buf);
+	log_out_ss(level, buf);
+}
+void logOutSigU32(enum logLevel level, uint32_t val)
+{
+	char buf[INT32_BUFLEN];
+	uint32_to_str(val, buf);
+	log_out_ss(level, buf);
 }
 

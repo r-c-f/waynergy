@@ -1,6 +1,7 @@
 #pragma once
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include <string.h>
 #include <stdbool.h>
 #include <stdarg.h>
@@ -20,8 +21,7 @@ enum logLevel logLevelFromString(const char *s);
 
 bool logInit(enum logLevel level, char *path);
 void logOut(enum logLevel level, const char *fmt, ...);
-/* signal-safe version of logOut */
-void logOutSig(enum logLevel level, const char *msg);
+/* standard log functions */
 void logErr(const char *fmt, ...);
 void logWarn(const char *fmt, ...);
 void logInfo(const char *fmt, ...);
@@ -40,3 +40,17 @@ void logDbg(const char *fmt, ...);
 } while (0)
 void logClose(void);
 
+/* Signal-safe logging
+ *
+ * - Start with logOutSigStart(YOU_LEVEL)
+ * - Use any combination of the logOutSigTYPE functions
+ * - End with logOutSigEnd()
+*/
+void logOutSigStart(enum logLevel level);
+void logOutSigEnd(enum logLevel level);
+void LogOutSigChar(enum logLevel level, char c);
+void logOutSigStr(enum logLevel level, const char *str);
+void logOutSigI32(enum logLevel level, int32_t val);
+void logOutSigU32(enum logLevel level, uint32_t val);
+/* logOutSig retains normal behavior */
+void logOutSig(enum logLevel level, const char *msg);

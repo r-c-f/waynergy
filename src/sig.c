@@ -45,45 +45,9 @@ void Restart(void)
 	exit(EXIT_FAILURE);
 }
 
-
-#define INT32_BUFLEN 12
-static char *uint32_to_str(uint32_t in, char *out)
-{
-	int i;
-	int digits;
-	if (!in) {
-		strcpy(out, "0");
-		return out;
-	}
-	for (i = INT32_BUFLEN - 2; in; --i) {
-		out[i] = '0' + (in % 10);
-		in /= 10;
-	}
-	/* shift back by number of unused digits */
-	digits = INT32_BUFLEN - 2 - i;
-	memmove(out, out + i + 1, digits);
-	out[digits] = 0;
-	return out;
-}
-static char *int32_to_str(int32_t in, char out[static INT32_BUFLEN])
-{
-	if (in == INT_MIN) {
-		strcpy(out, "INT_MIN");
-		return out;
-	} else if (in < 0) {
-		in *= -1;
-		uint32_to_str(in, out + 1);
-		out[0] = '-';
-	} else {
-		uint32_to_str(in, out);
-	}
-	return out;
-}
-
 static void sig_handle(int sig, siginfo_t *si, void *context)
 {
 	int level;
-	char buf[INT32_BUFLEN];
 	switch (sig) {
 		case SIGALRM:
 			logOutSig(LOG_ERR, "Alarm timeout encountered -- probably disconnecting");
@@ -105,10 +69,12 @@ static void sig_handle(int sig, siginfo_t *si, void *context)
 		case SIGCHLD:
 			if (si && si->si_code == CLD_EXITED) {
 				level = si->si_status ? LOG_WARN : LOG_DBG;
-				logOutSig(level, "Child died:");
-				logOutSig(level, int32_to_str(si->si_pid, buf));
-				logOutSig(level, "Status:");
-				logOutSig(level, int32_to_str(si->si_status, buf));
+				logOutSigStart(level);
+				logOutSigStr(level, "Child died: PID ");
+				logOutSigI32(level, si->si_pid);
+				logOutSigStr(level, ", Status ");
+				logOutSigI32(level, si->si_status);
+				logOutSigEnd(level);
 			} else {
 				logOutSig(LOG_DBG, "SIGCHLD sent without exit");
 			}
