@@ -166,7 +166,10 @@ int main(int argc, char **argv)
 	osDropPriv();
 
 	/* we default to name being hostname, so get it*/
-	gethostname(hostname, _POSIX_HOST_NAME_MAX - 1);
+	if (gethostname(hostname, _POSIX_HOST_NAME_MAX - 1) == -1) {
+		perror("gethostname");
+		goto error;
+	}
 
 	uSynergyInit(&synContext);
 	/*Intialize INI configuration*/
