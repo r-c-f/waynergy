@@ -1,0 +1,2 @@
+#pragma once
+#define WAYNERGY_VERSION_STR "@VCS_DESC@"

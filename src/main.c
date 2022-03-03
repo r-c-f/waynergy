@@ -16,10 +16,11 @@
 #include "clip.h"
 #include "log.h"
 #include "sig.h"
-
+#include "ver.h"
 
 static struct sopt optspec[] = {
 	SOPT_INITL('h', "help", "Help text"),
+	SOPT_INITL('v', "version", "Version information"),
 	SOPT_INIT_ARGL('b', "backend", "backend", "Input backend -- one of wlr, kde, uinput"),
 	SOPT_INIT_ARGL('C', "config", "path", "Configuration directory"),
 	SOPT_INIT_ARGL('c', "host", "host", "Server to connect to"),
@@ -202,6 +203,9 @@ int main(int argc, char **argv)
 			case 'h':
 				sopt_usage_s();
 				goto done;
+			case 'v':
+				fprintf(stderr, "%s version %s\n", argv[0], WAYNERGY_VERSION_STR);
+				goto done;
 			case 'b':
 				backend = xstrdup(optarg);
 				break;
@@ -261,6 +265,7 @@ opterror:
 	}
 	/* set up logging */
 	logInit(log_level, log_path);
+	logInfo("%s version %s", argv[0], WAYNERGY_VERSION_STR);
 	/* now we decide if we should use manual geom */
 	if (synContext.m_clientWidth || synContext.m_clientHeight) {
 		if (!(synContext.m_clientWidth && synContext.m_clientHeight)) {

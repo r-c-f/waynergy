@@ -35,6 +35,7 @@ else
 endif
 
 subdir('protocol')
+subdir('include')
 
 executable(
   'waynergy', 
@@ -44,7 +45,8 @@ executable(
     client_protos,
     libtls,
     wayland_client, 
-    xkbcommon
+    xkbcommon,
+    ver_dep,
   ],
   include_directories: [include_directories('include')],
 )
