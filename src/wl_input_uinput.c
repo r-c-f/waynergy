@@ -89,12 +89,13 @@ static void key(struct wlInput *input, int code, int state)
 {
 	struct state_uinput *ui = input->state;
 
-	if (code >= UINPUT_KEY_MAX) {
+	code -= 8;
+	if (code > UINPUT_KEY_MAX) {
 		logErr("Keycode %d is unsupported by uinput (max %d), dropping", code, UINPUT_KEY_MAX);
 		return;
 	}
 
-	emit(ui->key_fd, EV_KEY, code - 8, state);
+	emit(ui->key_fd, EV_KEY, code, state);
 	emit(ui->key_fd, EV_SYN, SYN_REPORT, 0);
 }
 static bool key_map(struct wlInput *input, char *map)
