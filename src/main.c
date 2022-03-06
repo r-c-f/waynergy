@@ -142,8 +142,6 @@ int main(int argc, char **argv)
 {
 	int ret = EXIT_SUCCESS;
 	int opt;
-	int optind = 0;
-	int optcpos = 0;
 	char *optarg = NULL;
 	char *port = NULL;
 	char *name = NULL;
@@ -187,7 +185,7 @@ int main(int argc, char **argv)
 	log_path = configTryString("log/path", NULL);
 	log_level = configTryLong("log/level", LOG_WARN);
 	sopt_usage_set(optspec, argv[0], "Synergy client for wayland compositors");
-	while ((opt = sopt_getopt(argc, argv, optspec, &optcpos, &optind, &optarg)) != -1) {
+	while ((opt = sopt_getopt_s(argc, argv, optspec, NULL, NULL, &optarg)) != -1) {
 		if (optarg) {
 			errno = 0;
 			optlong = strtol(optarg, NULL, 0);
