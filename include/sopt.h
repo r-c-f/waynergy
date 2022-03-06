@@ -1,6 +1,6 @@
 /* sopt -- simple option parsing
  *
- * Version 1.0
+ * Version 1.2
  *
  * Copyright 2021 Ryan Farley <ryan.farley@gmx.com>
  *
@@ -61,7 +61,7 @@ struct sopt {
  * 		SOPT...(...),
  * 		SOPT...(...),
  * 		...
- * 		SOPT_END
+ * 		SOPT_INIT_END
  * 	};
 */
 /* Define a simple option like -o (takes no parameter) */
@@ -258,6 +258,41 @@ shortopt:
 		*optarg = NULL;
 	}
 	return opt->val;
+}
+
+/* A replacement for getopt() that allows the use of static allocation.
+ * NOT THREAD SAFE
+ *
+ * Paramaters are same as sopt_getopt(), with new semantics:
+ *
+ * opt:
+ * 	If NULL, nothing is done save for reinitialization to a clean state
+ * 	If different from the last call, reset only optind and cpos
+ * cpos:
+ * 	If NULL, a static allocation is used. Reset whenever opt changes.
+ * optind:
+ * 	If NULL, a static allocation is used. Reset whenever opt changes.
+*/
+static int sopt_getopt_s(int argc, char **argv, struct sopt *opt, int *cpos, int *optind, char **optarg)
+{
+	static struct sopt *opt_last = NULL;
+	static int cpos_s = 0;
+	static int optind_s = 0;
+
+	if (!cpos)
+		cpos = &cpos_s;
+	if (!optind)
+		optind = &optind_s;
+	if (opt != opt_last) {
+		*cpos = 0;
+		*optind = 0;
+		opt_last = opt;
+	}
+
+	if (!opt)
+		return SOPT_INVAL;
+
+	return sopt_getopt(argc, argv, opt, cpos, optind, optarg);
 }
 
 #endif

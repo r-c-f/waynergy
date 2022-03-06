@@ -1,6 +1,6 @@
 /* xmem -- memory operations that can only fail catastrophically
  *
- * Version 1.1
+ * Version 1.2
  *
  * Copyright 2021 Ryan Farley <ryan.farley@gmx.com>
  *
@@ -79,13 +79,20 @@ static char *xstrdup(const char *str)
 #ifdef __GNUC__
 __attribute__((unused))
 #endif
+static void xvasprintf(char **strp, const char *fmt, va_list ap)
+{
+	if (vasprintf(strp, fmt, ap) == -1)
+		abort();
+}
+#ifdef __GNUC__
+__attribute__((unused))
+#endif
 static void xasprintf(char **strp, const char *fmt, ...)
 {
 	va_list ap;
 
 	va_start(ap, fmt);
-	if (vasprintf(strp, fmt, ap) == -1)
-		abort();
+	xvasprintf(strp, fmt, ap);
 	va_end(ap);
 }
 #ifdef __GNUC__
