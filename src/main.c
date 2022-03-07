@@ -21,15 +21,15 @@
 static struct sopt optspec[] = {
 	SOPT_INITL('h', "help", "Help text"),
 	SOPT_INITL('v', "version", "Version information"),
-	SOPT_INIT_ARGL('b', "backend", "backend", "Input backend -- one of wlr, kde, uinput"),
-	SOPT_INIT_ARGL('C', "config", "path", "Configuration directory"),
-	SOPT_INIT_ARGL('c', "host", "host", "Server to connect to"),
-	SOPT_INIT_ARGL('p', "port", "port", "Port"),
-	SOPT_INIT_ARGL('W', "width", "width", "Width of screen in pixels (manual override, must be given with height)"),
-	SOPT_INIT_ARGL('H', "height", "height", "Height of screen in pixels (manual override, must be given with width)"),
-	SOPT_INIT_ARGL('N', "name", "name", "Name of client screen"),
-	SOPT_INIT_ARGL('l', "logfile", "file", "Name of logfile to use"),
-	SOPT_INIT_ARGL('L', "loglevel", "level", "Log level -- number, increasing from 0 for more verbosity up to 5, or one of 'none', 'error', 'warn', 'info', 'debug'"),
+	SOPT_INIT_ARGL('b', "backend", SOPT_ARGTYPE_STR, "backend", "Input backend -- one of wlr, kde, uinput"),
+	SOPT_INIT_ARGL('C', "config", SOPT_ARGTYPE_STR, "path", "Configuration directory"),
+	SOPT_INIT_ARGL('c', "host", SOPT_ARGTYPE_STR, "host", "Server to connect to"),
+	SOPT_INIT_ARGL('p', "port", SOPT_ARGTYPE_STR, "port", "Port"),
+	SOPT_INIT_ARGL('W', "width", SOPT_ARGTYPE_SHORT, "width", "Width of screen in pixels (manual override, must be given with height)"),
+	SOPT_INIT_ARGL('H', "height", SOPT_ARGTYPE_SHORT, "height", "Height of screen in pixels (manual override, must be given with width)"),
+	SOPT_INIT_ARGL('N', "name", SOPT_ARGTYPE_STR, "name", "Name of client screen"),
+	SOPT_INIT_ARGL('l', "logfile", SOPT_ARGTYPE_STR, "file", "Name of logfile to use"),
+	SOPT_INIT_ARGL('L', "loglevel", SOPT_ARGTYPE_STR, "level", "Log level -- number, increasing from 0 for more verbosity up to 5, or one of 'none', 'error', 'warn', 'info', 'debug'"),
 	SOPT_INITL('n', "no-clip", "Don't synchronize the clipboard"),
 	SOPT_INITL('e', "enable-crypto", "Enable TLS encryption"),
 	SOPT_INITL('t', "enable-tofu", "Enable trust-on-first-use for TLS certificate"),
@@ -142,7 +142,7 @@ int main(int argc, char **argv)
 {
 	int ret = EXIT_SUCCESS;
 	int opt;
-	char *optarg = NULL;
+	struct sopt_arg soptarg;
 	char *port = NULL;
 	char *name = NULL;
 	char *host = NULL;
@@ -150,10 +150,6 @@ int main(int argc, char **argv)
 	char hostname[_POSIX_HOST_NAME_MAX] = {0};
 	char *log_path = NULL;
 	enum logLevel log_level;
-	short optshrt = 0;
-	long optlong = 0;
-	bool optshrt_valid = false;
-	bool optlong_valid = false;
 	bool man_geom = false;
 	bool use_clipboard = true;
 	bool enable_crypto = false;
@@ -185,18 +181,7 @@ int main(int argc, char **argv)
 	log_path = configTryString("log/path", NULL);
 	log_level = configTryLong("log/level", LOG_WARN);
 	sopt_usage_set(optspec, argv[0], "Synergy client for wayland compositors");
-	while ((opt = sopt_getopt_s(argc, argv, optspec, NULL, NULL, &optarg)) != -1) {
-		if (optarg) {
-			errno = 0;
-			optlong = strtol(optarg, NULL, 0);
-			optlong_valid = !errno;
-			if (optlong_valid) {
-				optshrt = optlong & 0xFFFF;
-				optshrt_valid = ((long)optshrt == optlong);
-			} else {
-				optshrt_valid = false;
-			}
-		}
+	while ((opt = sopt_getopt_s(argc, argv, optspec, NULL, NULL, &soptarg)) != -1) {
 		switch (opt) {
 			case 'h':
 				sopt_usage_s();
@@ -205,40 +190,36 @@ int main(int argc, char **argv)
 				fprintf(stderr, "%s version %s\n", argv[0], WAYNERGY_VERSION_STR);
 				goto done;
 			case 'b':
-				backend = xstrdup(optarg);
+				backend = xstrdup(soptarg.val.str);
 				break;
 			case 'C':
-				osConfigPathOverride = xstrdup(optarg);
+				osConfigPathOverride = xstrdup(soptarg.val.str);
 				break;
 			case 'c':
 				free(host);
-				host = xstrdup(optarg);
+				host = xstrdup(soptarg.val.str);
 				break;
 			case 'p':
 				free(port);
-				port = xstrdup(optarg);
+				port = xstrdup(soptarg.val.str);
 				break;
 			case 'W':
-				if (!optshrt_valid)
-					goto opterror;
-				synContext.m_clientWidth = optshrt;
+				synContext.m_clientWidth = soptarg.val.s;
 				break;
 			case 'H':
-				if (!optshrt_valid)
-				       	goto opterror;
-				synContext.m_clientHeight = optshrt;
+				synContext.m_clientHeight = soptarg.val.s;
 				break;
 			case 'N':
 				free(name);
-				name = xstrdup(optarg);
+				name = xstrdup(soptarg.val.str);
 				break;
 			case 'L':
-				if ((log_level = logLevelFromString(optarg)) == LOG__INVALID) {
+				if ((log_level = logLevelFromString(soptarg.val.str)) == LOG__INVALID) {
 					goto opterror;
 				}
 				break;
 			case 'l':
-				log_path = xstrdup(optarg);
+				log_path = xstrdup(soptarg.val.str);
 				break;
 			case 'n':
 				use_clipboard = false;

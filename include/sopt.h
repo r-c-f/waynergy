@@ -1,6 +1,6 @@
 /* sopt -- simple option parsing
  *
- * Version 1.2
+ * Version 1.3
  *
  * Copyright 2021 Ryan Farley <ryan.farley@gmx.com>
  *
@@ -24,6 +24,19 @@
 #include <stdbool.h>
 #include <stdlib.h>
 #include <ctype.h>
+#include <limits.h>
+#include <inttypes.h>
+#include <errno.h> 
+
+enum sopt_argtype {
+	SOPT_ARGTYPE_NULL,
+	SOPT_ARGTYPE_STR,
+	SOPT_ARGTYPE_SHORT,
+	SOPT_ARGTYPE_INT,
+	SOPT_ARGTYPE_LONG,
+	SOPT_ARGTYPE_LONGLONG,
+	SOPT_ARGTYPE_FLOAT,
+};
 
 /* By setting SOPT_INVAL to '?', and terminating with it, we ensure that --
  * should a simple search through the option array yield no match, the final
@@ -49,10 +62,24 @@ struct sopt {
 	int val;
 	/* Long option name, if not null. i.e. --long-option would be "long-option" */
 	char *name;
+	/* type of parameter, if not null */
+	enum sopt_argtype argtype;
 	/* Parameter, if not null. Or name of unparsed argument, if SOPT_AFTER */
 	char *arg;
 	/* Description for usage text */
 	char *desc;
+};
+
+struct sopt_arg {
+	enum sopt_argtype type;
+	union {
+		char *str;
+		short s;
+		int i;
+		long l;
+		long long ll;
+		double f;
+	} val;
 };
 
 
@@ -65,17 +92,17 @@ struct sopt {
  * 	};
 */
 /* Define a simple option like -o (takes no parameter) */
-#define SOPT_INIT(opt, desc) { (opt), NULL, NULL, (desc) }
+#define SOPT_INIT(opt, desc) { (opt), NULL, SOPT_ARGTYPE_NULL, NULL, (desc) }
 /* Same as above, but with a long option name given */
-#define SOPT_INITL(opt, name, desc) { (opt), (name), NULL, (desc) }
+#define SOPT_INITL(opt, name, desc) { (opt), (name), SOPT_ARGTYPE_NULL, NULL, (desc) }
 /* Define an option with an argument, i.e. -o foo */
-#define SOPT_INIT_ARG(opt, param, desc) { (opt), NULL, (param), (desc)}
+#define SOPT_INIT_ARG(opt, type, param, desc) { (opt), NULL, (type), (param), (desc)}
 /* Same as above, but with long option name given */
-#define SOPT_INIT_ARGL(opt, name, param, desc) {(opt), (name), (param), (desc)}
+#define SOPT_INIT_ARGL(opt, name, type, param, desc) {(opt), (name), (type), (param), (desc)}
 /* Define an unparsed argument, i.e. after -- */
-#define SOPT_INIT_AFTER(str, desc) {SOPT_AFTER, NULL, (str), (desc)}
+#define SOPT_INIT_AFTER(str, desc) {SOPT_AFTER, NULL, SOPT_ARGTYPE_NULL, (str), (desc)}
 /* Terminate the option array. Must be last element. */
-#define SOPT_INIT_END {SOPT_INVAL, NULL, NULL, NULL}
+#define SOPT_INIT_END {SOPT_INVAL, NULL, SOPT_ARGTYPE_NULL, NULL, NULL}
 
 #define SOPT_VALID(opt) ((opt)->val != SOPT_INVAL)
 
@@ -180,6 +207,30 @@ static inline void sopt_usage_s(void)
 	sopt_usage_static(NULL, NULL, NULL, false);
 }
 
+static bool sopt_argconv_int(char *s, intmax_t *out)
+{
+	char *endptr;
+	errno = 0;
+	*out = strtoimax(s, &endptr, 0);
+	if (endptr == s)
+		return false;
+	if (errno)
+		return false;
+	return true;
+}
+
+static bool sopt_argconv_dbl(char *s, double *out)
+{
+	char *endptr;
+	errno = 0;
+	*out = strtod(s, &endptr);
+	if (endptr == s)
+		return false;
+	if (errno)
+		return false;
+	return true;
+}
+
 /* replacement for getopt()
  * argc:
  * 	argc, obviously
@@ -201,9 +252,15 @@ static inline void sopt_usage_s(void)
  * 	'?' if unknown or invalid input given,
  * 	opt->val for the found option otherwise.
  */
-static int sopt_getopt(int argc, char **argv, struct sopt *opt, int *cpos, int *optind, char **optarg)
+static int sopt_getopt(int argc, char **argv, struct sopt *opt, int *cpos, int *optind, struct sopt_arg *arg)
 {
-	if (!(opt && cpos &&argv && optind && optarg && argc))
+	char *arg_str;
+	intmax_t arg_int;
+	bool arg_int_valid;
+	double arg_float;
+	bool arg_float_valid;
+
+	if (!(opt && cpos &&argv && optind && arg && argc))
 		return -1;
 	/* handle the case of combined options */
 	if (*cpos)
@@ -244,18 +301,67 @@ shortopt:
 			/* make sure that we're not expecting a param for
 			 * this argument -- if we are, someone fucked up */
 			if (opt->arg)
-				return '?';
+				return SOPT_INVAL;
 		} else {
 			*cpos = 0;
 		}
 	}
 	if (opt->arg) {
-		if (!(*optarg = argv[++*optind])) {
-			/* we were expecting an argument, got none */
-			return '?';
+		if (!(arg_str = argv[++*optind])) {
+			arg->type = SOPT_ARGTYPE_NULL;
+			return SOPT_INVAL;
+		}
+		arg_int_valid = sopt_argconv_int(arg_str, &arg_int);
+		arg_float_valid = sopt_argconv_dbl(arg_str, &arg_float);
+		arg->type = opt->argtype;
+
+		switch (opt->argtype) {
+			case SOPT_ARGTYPE_STR:
+				arg->val.str = arg_str;
+				break;
+			case SOPT_ARGTYPE_SHORT:
+				if (!(arg_int_valid &&
+				      arg_int >= SHRT_MIN &&
+				      arg_int <= SHRT_MAX)) {
+					return SOPT_INVAL;
+				}
+				arg->val.s = arg_int;
+				break;
+			case SOPT_ARGTYPE_INT:
+				if (!(arg_int_valid &&
+				      arg_int >= INT_MIN &&
+				      arg_int <= INT_MAX)) {
+					return SOPT_INVAL;
+				}
+				arg->val.i = arg_int;
+				break;
+			case SOPT_ARGTYPE_LONG:
+				if (!(arg_int_valid &&
+				      arg_int >= LONG_MIN &&
+				      arg_int <= LONG_MAX)) {
+					return SOPT_INVAL;
+				}
+				arg->val.l = arg_int;
+				break;
+			case SOPT_ARGTYPE_LONGLONG:
+				if (!(arg_int_valid &&
+				      arg_int >= LLONG_MIN &&
+				      arg_int <= LLONG_MAX)) {
+					return SOPT_INVAL;
+				}
+				arg->val.ll = arg_int;
+				break;
+			case SOPT_ARGTYPE_FLOAT:
+				if (!arg_float_valid) {
+					return SOPT_INVAL;
+				}
+				arg->val.f = arg_float;
+				break;
+			default:
+				return SOPT_INVAL;
 		}
 	} else {
-		*optarg = NULL;
+		arg->type = SOPT_ARGTYPE_NULL;
 	}
 	return opt->val;
 }
@@ -273,7 +379,7 @@ shortopt:
  * optind:
  * 	If NULL, a static allocation is used. Reset whenever opt changes.
 */
-static int sopt_getopt_s(int argc, char **argv, struct sopt *opt, int *cpos, int *optind, char **optarg)
+static int sopt_getopt_s(int argc, char **argv, struct sopt *opt, int *cpos, int *optind, struct sopt_arg *arg)
 {
 	static struct sopt *opt_last = NULL;
 	static int cpos_s = 0;
@@ -292,7 +398,7 @@ static int sopt_getopt_s(int argc, char **argv, struct sopt *opt, int *cpos, int
 	if (!opt)
 		return SOPT_INVAL;
 
-	return sopt_getopt(argc, argv, opt, cpos, optind, optarg);
+	return sopt_getopt(argc, argv, opt, cpos, optind, arg);
 }
 
 #endif
