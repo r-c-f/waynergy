@@ -142,7 +142,7 @@ int main(int argc, char **argv)
 {
 	int ret = EXIT_SUCCESS;
 	int opt;
-	struct sopt_arg soptarg;
+	union sopt_arg soptarg;
 	char *port = NULL;
 	char *name = NULL;
 	char *host = NULL;
@@ -190,36 +190,36 @@ int main(int argc, char **argv)
 				fprintf(stderr, "%s version %s\n", argv[0], WAYNERGY_VERSION_STR);
 				goto done;
 			case 'b':
-				backend = xstrdup(soptarg.val.str);
+				backend = xstrdup(soptarg.str);
 				break;
 			case 'C':
-				osConfigPathOverride = xstrdup(soptarg.val.str);
+				osConfigPathOverride = xstrdup(soptarg.str);
 				break;
 			case 'c':
 				free(host);
-				host = xstrdup(soptarg.val.str);
+				host = xstrdup(soptarg.str);
 				break;
 			case 'p':
 				free(port);
-				port = xstrdup(soptarg.val.str);
+				port = xstrdup(soptarg.str);
 				break;
 			case 'W':
-				synContext.m_clientWidth = soptarg.val.s;
+				synContext.m_clientWidth = soptarg.s;
 				break;
 			case 'H':
-				synContext.m_clientHeight = soptarg.val.s;
+				synContext.m_clientHeight = soptarg.s;
 				break;
 			case 'N':
 				free(name);
-				name = xstrdup(soptarg.val.str);
+				name = xstrdup(soptarg.str);
 				break;
 			case 'L':
-				if ((log_level = logLevelFromString(soptarg.val.str)) == LOG__INVALID) {
+				if ((log_level = logLevelFromString(soptarg.str)) == LOG__INVALID) {
 					goto opterror;
 				}
 				break;
 			case 'l':
-				log_path = xstrdup(soptarg.val.str);
+				log_path = xstrdup(soptarg.str);
 				break;
 			case 'n':
 				use_clipboard = false;

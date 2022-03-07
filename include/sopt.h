@@ -1,6 +1,6 @@
 /* sopt -- simple option parsing
  *
- * Version 1.3
+ * Version 1.4
  *
  * Copyright 2021 Ryan Farley <ryan.farley@gmx.com>
  *
@@ -23,6 +23,7 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include <stdlib.h>
+#include <string.h>
 #include <ctype.h>
 #include <limits.h>
 #include <inttypes.h>
@@ -70,16 +71,13 @@ struct sopt {
 	char *desc;
 };
 
-struct sopt_arg {
-	enum sopt_argtype type;
-	union {
-		char *str;
-		short s;
-		int i;
-		long l;
-		long long ll;
-		double f;
-	} val;
+union sopt_arg {
+	char *str;
+	short s;
+	int i;
+	long l;
+	long long ll;
+	double f;
 };
 
 
@@ -231,6 +229,21 @@ static bool sopt_argconv_dbl(char *s, double *out)
 	return true;
 }
 
+static void sopt_perror(struct sopt *opt, char *msg)
+{
+	fprintf(stderr, "Error parsing argument ");
+	if (isalnum(opt->val)) {
+		fprintf(stderr, "-%c", opt->val);
+		if (opt->name) {
+			fprintf(stderr, "/");
+		}
+	}
+	if (opt->name) {
+		fprintf(stderr, "--%s", opt->name);
+	}
+	fprintf(stderr, ": %s\n", msg);
+}
+
 /* replacement for getopt()
  * argc:
  * 	argc, obviously
@@ -245,14 +258,14 @@ static bool sopt_argconv_dbl(char *s, double *out)
  * 	Current position in the argv array. At end of processing, will point
  * 	to first non-parsed argument.
  * 	*optind MUST BE ZERO ON FIRST CALL
- * optarg:
- * 	Pointer to any argument given after the option, or NULL.
+ * arg:
+ * 	Pointer to an sopt_arg union to contain the parsed argument.
  *
  * RETURNS:
  * 	'?' if unknown or invalid input given,
  * 	opt->val for the found option otherwise.
  */
-static int sopt_getopt(int argc, char **argv, struct sopt *opt, int *cpos, int *optind, struct sopt_arg *arg)
+static int sopt_getopt(int argc, char **argv, struct sopt *opt, int *cpos, int *optind, union sopt_arg *arg)
 {
 	char *arg_str;
 	intmax_t arg_int;
@@ -308,60 +321,74 @@ shortopt:
 	}
 	if (opt->arg) {
 		if (!(arg_str = argv[++*optind])) {
-			arg->type = SOPT_ARGTYPE_NULL;
+			sopt_perror(opt, "Missing required argument");
 			return SOPT_INVAL;
 		}
 		arg_int_valid = sopt_argconv_int(arg_str, &arg_int);
 		arg_float_valid = sopt_argconv_dbl(arg_str, &arg_float);
-		arg->type = opt->argtype;
 
 		switch (opt->argtype) {
 			case SOPT_ARGTYPE_STR:
-				arg->val.str = arg_str;
+				arg->str = arg_str;
 				break;
 			case SOPT_ARGTYPE_SHORT:
-				if (!(arg_int_valid &&
-				      arg_int >= SHRT_MIN &&
-				      arg_int <= SHRT_MAX)) {
+				if (!arg_int_valid) {
+					sopt_perror(opt, "Argument is not an integer");
 					return SOPT_INVAL;
 				}
-				arg->val.s = arg_int;
+				if (!(arg_int >= SHRT_MIN &&
+				      arg_int <= SHRT_MAX)) {
+					sopt_perror(opt, "Argument out of range");
+					return SOPT_INVAL;
+				}
+				arg->s = arg_int;
 				break;
 			case SOPT_ARGTYPE_INT:
-				if (!(arg_int_valid &&
-				      arg_int >= INT_MIN &&
-				      arg_int <= INT_MAX)) {
+				if (!arg_int_valid) {
+					sopt_perror(opt, "Argument is not an integer");
 					return SOPT_INVAL;
 				}
-				arg->val.i = arg_int;
+				if (!(arg_int >= INT_MIN &&
+				      arg_int <= INT_MAX)) {
+					sopt_perror(opt, "Argument out of range");
+					return SOPT_INVAL;
+				}
+				arg->i = arg_int;
 				break;
 			case SOPT_ARGTYPE_LONG:
-				if (!(arg_int_valid &&
-				      arg_int >= LONG_MIN &&
-				      arg_int <= LONG_MAX)) {
+				if (!arg_int_valid) {
+					sopt_perror(opt, "Argument is not an integer");
 					return SOPT_INVAL;
 				}
-				arg->val.l = arg_int;
+				if (!(arg_int >= LONG_MIN &&
+				      arg_int <= LONG_MAX)) {
+					sopt_perror(opt, "Argument out of range");
+					return SOPT_INVAL;
+				}
+				arg->l = arg_int;
 				break;
 			case SOPT_ARGTYPE_LONGLONG:
-				if (!(arg_int_valid &&
-				      arg_int >= LLONG_MIN &&
-				      arg_int <= LLONG_MAX)) {
+				if (!arg_int_valid) {
+					sopt_perror(opt, "Argument is not an integer");
 					return SOPT_INVAL;
 				}
-				arg->val.ll = arg_int;
+				if (!(arg_int >= LLONG_MIN &&
+				      arg_int <= LLONG_MAX)) {
+					sopt_perror(opt, "Argument out of range");
+					return SOPT_INVAL;
+				}
+				arg->ll = arg_int;
 				break;
 			case SOPT_ARGTYPE_FLOAT:
 				if (!arg_float_valid) {
+					sopt_perror(opt, "Argument is not a valid floating-point number");
 					return SOPT_INVAL;
 				}
-				arg->val.f = arg_float;
+				arg->f = arg_float;
 				break;
 			default:
 				return SOPT_INVAL;
 		}
-	} else {
-		arg->type = SOPT_ARGTYPE_NULL;
 	}
 	return opt->val;
 }
@@ -379,7 +406,7 @@ shortopt:
  * optind:
  * 	If NULL, a static allocation is used. Reset whenever opt changes.
 */
-static int sopt_getopt_s(int argc, char **argv, struct sopt *opt, int *cpos, int *optind, struct sopt_arg *arg)
+static int sopt_getopt_s(int argc, char **argv, struct sopt *opt, int *cpos, int *optind, union sopt_arg *arg)
 {
 	static struct sopt *opt_last = NULL;
 	static int cpos_s = 0;
