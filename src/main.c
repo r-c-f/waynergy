@@ -32,6 +32,7 @@ static struct sopt optspec[] = {
 	SOPT_INIT_ARGL('L', "loglevel", SOPT_ARGTYPE_STR, "level", "Log level -- number, increasing from 0 for more verbosity up to 5, or one of 'none', 'error', 'warn', 'info', 'debug'"),
 	SOPT_INITL('n', "no-clip", "Don't synchronize the clipboard"),
 	SOPT_INITL('e', "enable-crypto", "Enable TLS encryption"),
+	SOPT_INITL('E', "disable-crypto", "Force disable TLS encryption"),
 	SOPT_INITL('t', "enable-tofu", "Enable trust-on-first-use for TLS certificate"),
 	SOPT_INITL(CHAR_MAX + USYNERGY_ERROR_NONE, "fatal-none", "Consider *normal* disconnect (i.e. CBYE) to be fatal"),
 	SOPT_INITL(CHAR_MAX + USYNERGY_ERROR_EBAD, "fatal-ebad", "Protocol errors are fatal"),
@@ -226,6 +227,9 @@ int main(int argc, char **argv)
 				break;
 			case 'e':
 				enable_crypto = true;
+				break;
+			case 'E':
+				enable_crypto = false;
 				break;
 			case 't':
 				enable_tofu = true;
