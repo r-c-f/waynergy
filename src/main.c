@@ -87,7 +87,7 @@ static void syn_screensaver_cb(uSynergyCookie cookie, bool state)
 	for (i = 0; cmd[i]; ++i) {
 		ret = system(cmd[i]);
 		if (ret) {
-			fprintf(stderr, "Screensaver callback state %s command #%zd (%s) failed with code %d\n", state ? "start" : "stop", i, cmd[i], ret);
+			logWarn("Screensaver callback state %s command #%zd (%s) failed with code %d", state ? "start" : "stop", i, cmd[i], ret);
 		}
 	}
 	strfreev(cmd);

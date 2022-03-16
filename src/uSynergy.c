@@ -253,7 +253,7 @@ void uSynergySendClipboard(uSynergyContext *context, int id, uint32_t len, const
 	unsigned char chunk[max_length];
 
 	// Assemble start packet.
-	sprintf(buffer, "%d", len);
+	sprintf(buffer, "%" PRIu32, len);
 	if (!(sAddString(context, "DCLP") &&
 	      sAddUInt8(context, id) &&				/* Clipboard index */
 	      sAddUInt32(context, context->m_sequenceNumber) &&
