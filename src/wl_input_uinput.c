@@ -5,15 +5,20 @@
 #include "log.h"
 #include "fdio_full.h"
 
-#if !defined(__linux__)
+#if defined(__linux__)
+#include <linux/uinput.h>
+#elif defined(__FreeBSD__)
+#include <dev/evdev/uinput.h>
+#endif
+
+
+#if !defined(UINPUT_VERSION) || (UINPUT_VERSION < 5)
 bool wlInputInitUinput(struct wlContext *ctx)
 {
-	logDbg("uinput only works on Linux systems");
+	logDbg("uinput unavailable or too old on this platform");
 	return false;
 }
 #else
-
-#include <linux/uinput.h>
 
 struct state_uinput {
 	int key_fd;
