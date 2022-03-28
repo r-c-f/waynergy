@@ -331,6 +331,11 @@ static void sProcessMessage(uSynergyContext *context, struct sspBuf *msg)
 			PARSE_ERROR();
 		}
 		logInfo("Server is %s %" PRIu16 ".%" PRIu16, imp, server_major, server_minor);
+
+		// Initialize position in reply buffer -- discards leftovers from
+		// failed send attempts, ensures no protocol errors on initialization
+		context->m_replyCur = context->m_replyBuffer+4;
+
 		if(!(sAddString(context, imp) &&
 		      sAddUInt16(context, USYNERGY_PROTOCOL_MAJOR) &&
 		      sAddUInt16(context, USYNERGY_PROTOCOL_MINOR) &&
