@@ -130,6 +130,8 @@ USAGE: ./waynergy [-h|--help] [-b|--backend backend] [-C|--config path] [-c|--ho
 		Don't synchronize the clipboard
 	-e|--enable-crypto:
 		Enable TLS encryption
+	-E|--disable-crypto:
+		Force disable TLS encryption
 	-t|--enable-tofu:
 		Enable trust-on-first-use for TLS certificate
 	--fatal-none:
@@ -143,7 +145,7 @@ USAGE: ./waynergy [-h|--help] [-b|--backend backend] [-C|--config path] [-c|--ho
 	
 ```
 
-Also note that `SIGUSR1` triggers re-execution. Useful until proper recconect
+Also note that `SIGUSR1` triggers re-execution. Useful until proper reconnect
 procedures exist. 
 ### Configuration
 The configuration files are stored in `$XDG_CONFIG_HOME/waynergy`, which is
@@ -256,7 +258,7 @@ host. These can be obtained by running something like
 ```
 printf "SHA256:%s\n" $(openssl x509 -outform der -in $certpath | openssl dgst -sha256 | cut -d ' ' -f 2)
 ```
-on the host. Comman values of $certpath would be
+on the host. Common values of $certpath would be
 - `%LocalAppData%\Barrier\SSL\Barrier.pem`
 - `~/.local/share/barrier/SSL/Barrier.pem`
 - `$XDG_DATA_HOME/barrier/SSL/Barrier.pem`

@@ -256,7 +256,7 @@ opterror:
 			sopt_usage_s();
 			goto error;
 		}
-		logInfo("Using manaul dimensions: %dx%d", synContext.m_clientWidth, synContext.m_clientHeight);
+		logInfo("Using manual dimensions: %dx%d", synContext.m_clientWidth, synContext.m_clientHeight);
 		man_geom = true;
 	}
 	/* set up signal handler */

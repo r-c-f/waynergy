@@ -90,7 +90,7 @@ void osDropPriv(void)
 	old_gid = getegid();
 
 	if (!old_uid) {
-		fprintf(stderr, "Running as root, dropping ancilary groups\n");
+		fprintf(stderr, "Running as root, dropping ancillary groups\n");
 		if (setgroups(1, &new_gid)) {
 			/* if we're privileged we have not initialized the
 			 * log yet */

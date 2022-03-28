@@ -95,14 +95,14 @@ struct wlContext {
 };
 
 /* (re)set the keyboard layout according to the configuration
- * probably not usful outside wlSetup*/
+ * probably not useful outside wlSetup*/
 extern int wlKeySetConfigLayout(struct wlContext *ctx);
-/* set up the wayland contet */
+/* set up the wayland context */
 extern bool wlSetup(struct wlContext *context, int width, int height, char *backend);
 
 /* obtain a monotonic timestamp */
 extern uint32_t wlTS(struct wlContext *context);
-/* update sreen resolution */
+/* update screen resolution */
 extern void wlResUpdate(struct wlContext *context, int width, int height);
 /* close wayland connection */
 extern void wlClose(struct wlContext *context);

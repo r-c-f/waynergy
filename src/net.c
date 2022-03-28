@@ -70,7 +70,7 @@ static bool syn_connect_setup(struct synNetContext *snet_ctx, struct addrinfo *a
 				logErr("No certificate hash available");
 				return false;
 			}
-			/* if we are trusting on frist use we just defer this
+			/* if we are trusting on first use we just defer this
 			 * until a successful handshake */
 		}
 		/* set client certificate */
@@ -214,7 +214,7 @@ void netPoll(struct synNetContext *snet_ctx, struct wlContext *wl_ctx)
 			uSynergyUpdate(syn_ctx);
 		}
 		if ((syn_ctx->m_getTimeFunc() - syn_ctx->m_lastMessageTime) > USYNERGY_IDLE_TIMEOUT) {
-			logErr("Synergy imeout encountered -- disconnecting");
+			logErr("Synergy timeout encountered -- disconnecting");
 			synNetDisconnect(snet_ctx);
 			return;
 		}
@@ -233,7 +233,7 @@ void netPoll(struct synNetContext *snet_ctx, struct wlContext *wl_ctx)
 		nfd = syn_ctx->m_connected ? POLLFD_COUNT : 1;
 	}
 	if (!ret) {
-		logErr("Poll timeout encountered -- disconnectin synergy");
+		logErr("Poll timeout encountered -- disconnecting synergy");
 		synNetDisconnect(snet_ctx);
 	}
 	sigHandleRun();

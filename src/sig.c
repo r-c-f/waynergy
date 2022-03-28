@@ -17,7 +17,7 @@ static char **argv_reexec;
 static void cleanup(void)
 {
 	wlIdleInhibit(&wlContext, false);
-	/* stop clipbpoard monitors */
+	/* stop clipboard monitors */
 	for (int i = 0; i < 2; ++i) {
 		if (clipMonitorPid[i] != -1) {
 			kill(clipMonitorPid[i], SIGTERM);
@@ -56,7 +56,7 @@ static void sig_handle(int sig, siginfo_t *si, void *context)
 		case SIGINT:
 		case SIGQUIT:
 			if (sigDoExit) {
-				logOutSig(LOG_ERR, "received unhanlded quit request, aborting");
+				logOutSig(LOG_ERR, "received unhandled quit request, aborting");
 				abort();
 			}
 			sigDoExit = sig;
@@ -113,7 +113,7 @@ void sigHandleInit(char **argv)
 	//alarm should trigger EINTR
 	sa.sa_flags = SA_SIGINFO;
 	sigaction(SIGALRM, &sa, NULL);
-	//otherse can restart
+	//others can restart
 	sa.sa_flags |= SA_RESTART;
 	sigaction(SIGTERM, &sa, NULL);
 	sigaction(SIGINT, &sa, NULL);

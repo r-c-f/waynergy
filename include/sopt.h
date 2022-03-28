@@ -1,6 +1,6 @@
 /* sopt -- simple option parsing
  *
- * Version 1.4
+ * Version 1.5
  *
  * Copyright 2021 Ryan Farley <ryan.farley@gmx.com>
  *
@@ -178,7 +178,7 @@ static void sopt_usage(struct sopt *optspec, char *name, char *desc)
 	/*make it prettier*/
 	fprintf(stderr, "\n");
 }
-/*print out usage message, but with static storage of paramters.
+/*print out usage message, but with static storage of parameters.
  * If 'set' is true, other parameters are stored, and the function returns.
  * If 'set' is false, other parameters are ignored, and sopt_usage() is called
  * with stored values used */
@@ -309,10 +309,9 @@ shortopt:
 			if (opt->val == argv[*optind][*cpos])
 				break;
 		}
-		/* check if we're ina combined option */
+		/* check if we're in a combined option */
 		if (argv[*optind][++*cpos]) {
-			/* make sure that we're not expecting a param for
-			 * this argument -- if we are, someone fucked up */
+			/* make sure that we're not expecting a param */
 			if (opt->arg)
 				return SOPT_INVAL;
 		} else {
@@ -396,7 +395,7 @@ shortopt:
 /* A replacement for getopt() that allows the use of static allocation.
  * NOT THREAD SAFE
  *
- * Paramaters are same as sopt_getopt(), with new semantics:
+ * Parameters are same as sopt_getopt(), with new semantics:
  *
  * opt:
  * 	If NULL, nothing is done save for reinitialization to a clean state
