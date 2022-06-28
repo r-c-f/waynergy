@@ -95,6 +95,10 @@ chown :uinput waynergy
 chmod g+s waynergy
 ```
 
+If this doesn't still doesn't seem to work (as in #38) be sure that the
+`uintput` module is loaded properly. This is might be done by creating a file
+`/etc/modules-load.d/uinput.conf` with the contents of `uinput`.
+
 #### CLI
 
 See 
