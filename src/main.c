@@ -74,7 +74,10 @@ static void syn_key_cb(uSynergyCookie cookie, uint16_t key, uint16_t mod, bool d
 }
 static void syn_clip_cb(uSynergyCookie cookie, enum uSynergyClipboardId id, uint32_t format, const uint8_t *data, uint32_t size)
 {
-	clipWlCopy(id, data, size);
+	//XXX: Only text makes any sense to process here.
+	if (format == 0) {
+		clipWlCopy(id, data, size);
+	}
 }
 static void syn_screensaver_cb(uSynergyCookie cookie, bool state)
 {
