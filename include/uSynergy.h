@@ -261,11 +261,12 @@ This callback is called when a key is pressed or released.
 
 @param cookie		Cookie supplied in the Synergy context
 @param key			Key code of key that was pressed or released
+@param id 		Synergy key ID code of the key that was pressed or released
 @param modifiers	Status of modifier keys (alt, shift, etc.)
 @param down			Down or up status, 1 is key is pressed down, 0 if key is released (up)
 @param repeat		Repeat flag, 1 if the key is down because the key is repeating, 0 if the key is initially pressed by the user
 **/
-typedef void		(*uSynergyKeyboardCallback)(uSynergyCookie cookie, uint16_t key, uint16_t modifiers, bool down, bool repeat);
+typedef void		(*uSynergyKeyboardCallback)(uSynergyCookie cookie, uint16_t key, uint16_t id, uint16_t modifiers, bool down, bool repeat);
 
 
 

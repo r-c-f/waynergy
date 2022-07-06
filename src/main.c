@@ -67,10 +67,10 @@ static void syn_mouse_move_cb(uSynergyCookie cookie, bool rel, int16_t x, int16_
 		wlMouseMotion(&wlContext, x, y);
 	}
 }
-static void syn_key_cb(uSynergyCookie cookie, uint16_t key, uint16_t mod, bool down, bool repeat)
+static void syn_key_cb(uSynergyCookie cookie, uint16_t key, uint16_t id, uint16_t mod, bool down, bool repeat)
 {
 	if (!repeat)
- 		wlKey(&wlContext, key, down);
+ 		wlKey(&wlContext, key, id, down);
 }
 static void syn_clip_cb(uSynergyCookie cookie, enum uSynergyClipboardId id, uint32_t format, const uint8_t *data, uint32_t size)
 {

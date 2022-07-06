@@ -237,6 +237,19 @@ The offset functionality is enabled through `raw-keymap/offset`, though it
 can also be disabled for explicit mappings by setting `raw-keymap/offset_on_explicit`
 to `false`. 
 
+###### Synergy ID keymapping
+
+In some cases (see recent comments on #35) Windows servers are sending 
+duplicate button values for keys which are clearly different. In these cases
+using the synergy key IDs might make sense in an `id-keymap` section:
+```
+[id-keymap]
+57218 = 199
+57219 = 200
+```
+with actual values based on the above process, using the `id` parameter in the
+server log instead of `button`.
+
 #### Screensaver
 
 `screensaver/start` should contain a command to be run when the screensaver is
@@ -247,8 +260,9 @@ it when it is deactivated.
 
 Due to issues with the idle inhibition protocol, idle is actually inhibited by
 sending a hopefully-meaningless event to the compositor: if `idle-inhibit/method`
-is `key`, the key associated with the xkb-style name in `idle-inhibit/keyname` is
-pressed (defaults to `HYPR`). If `idle-inhbibit/method` is `mouse`, then a relative 
+is `key`, the raw keycode given in `idle-inhibit/keycode` is sent if defined, 
+falling back on the xkb-style key name in `idle-inhibit/keyname`, which will
+default to `HYPR`. If `idle-inhbibit/method` is `mouse`, then a relative 
 move of 0,0 is sent (this is the default). 
 
 The mouse approach prevents any clashes with keys, but will prevent cursor

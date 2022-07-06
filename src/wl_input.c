@@ -92,6 +92,64 @@ static void load_raw_keymap(struct wlContext *ctx)
 	strfreev(val);
 }
 
+static void load_id_keymap(struct wlContext *ctx)
+{
+	char **key, **val, *endstr;
+	int i, count,lkey, rkey;
+	key = NULL;
+	val = NULL;
+	if (ctx->input.id_keymap) {
+		free(ctx->input.id_keymap);
+	}
+	/* start with the known synergy maximum */
+	ctx->input.id_count = 0xF000;
+	logDbg("max key: %zu", ctx->input.id_count);
+	if ((count = configReadFullSection("id-keymap", &key, &val)) != -1) {
+		/* slightly inefficient approach, but it will actually work
+		 * First pass -- just find the *real* maximum id keycode */
+		for (i = 0; i < count; ++i) {
+			errno = 0;
+			lkey = strtol(key[i], &endstr, 0);
+			if (errno || endstr == key[i])
+				continue;
+			if (lkey >= ctx->input.id_count) {
+				ctx->input.id_count = lkey + 1;
+				logDbg("max id update: %zu", ctx->input.id_count);
+
+			}
+		}
+	}
+	/* initialize everything */
+	ctx->input.id_keymap = xcalloc(ctx->input.id_count, sizeof(*ctx->input.id_keymap));
+	/* initialize key state tracking now that the size is known */
+	if (ctx->input.id_press_state) {
+		free(ctx->input.id_press_state);
+	}
+	ctx->input.id_press_state = xcalloc(ctx->input.id_count, sizeof(*ctx->input.id_press_state));
+	/* and set everything as invalid initially, to trigger raw key map */
+	if (ctx->input.id_keymap_valid) {
+		free(ctx->input.id_keymap_valid);
+	}
+	ctx->input.id_keymap_valid = xcalloc(ctx->input.id_count, sizeof(*ctx->input.id_keymap_valid));
+	/* and second pass -- store any actually mappings, set valid */
+	for (i = 0; i < count; ++i) {
+		errno = 0;
+		lkey = strtol(key[i], &endstr, 0);
+		if (errno || endstr == key[i])
+			continue;
+		errno = 0;
+		rkey = strtol(val[i], &endstr, 0);
+		if (errno || endstr == val[i])
+			continue;
+		ctx->input.id_keymap[lkey] = rkey;
+		ctx->input.id_keymap_valid[lkey] = true;
+		logDbg("set id key map: %d = %d", lkey, ctx->input.id_keymap[lkey]);
+	}
+
+	strfreev(key);
+	strfreev(val);
+}
+
 int wlKeySetConfigLayout(struct wlContext *ctx)
 {
 	int ret = 0;
@@ -105,22 +163,13 @@ int wlKeySetConfigLayout(struct wlContext *ctx)
 	local_mod_init(ctx, keymap_str);
 	ret = !ctx->input.key_map(&ctx->input, keymap_str);
 	load_raw_keymap(ctx);
+	load_id_keymap(ctx);
 	free(keymap_str);
 	return ret;
 }
 
-void wlKey(struct wlContext *ctx, int key, int state)
+void wlKeyRaw(struct wlContext *ctx, int key, int state)
 {
-	if (!ctx->input.key_press_state[key] && !state) {
-		return;
-	}
-	if (key >= ctx->input.key_count) {
-		logWarn("Key %d outside configured keymap, dropping", key);
-		return;
-	}
-	ctx->input.key_press_state[key] += state ? 1 : -1;
-	key = ctx->input.raw_keymap[key];
-	logDbg("Keycode: %d, state %d", key, state);
 	if (key > xkb_keymap_max_keycode(ctx->input.xkb_map)) {
 		logDbg("keycode greater than xkb maximum, mod not tracked");
 	} else {
@@ -131,7 +180,31 @@ void wlKey(struct wlContext *ctx, int key, int state)
 		xkb_layout_index_t group = xkb_state_serialize_layout(ctx->input.xkb_state, XKB_STATE_LAYOUT_EFFECTIVE);
 		logDbg("Modifiers: depressed: %x latched: %x locked: %x group: %x", depressed, latched, locked, group);
 	}
+	logDbg("Keycode: %d, state %d", key, state);
 	ctx->input.key(&ctx->input, key, state);
+}
+
+
+void wlKey(struct wlContext *ctx, int key, int id, int state)
+{
+	if ((id < ctx->input.id_count) && ctx->input.id_keymap_valid[id]) {
+		if (!ctx->input.id_press_state[id] && !state) {
+			return;
+		}
+		ctx->input.id_press_state[id] += state ? 1 : -1;
+		key = ctx->input.id_keymap[id];
+	} else {
+		if (key >= ctx->input.key_count) {
+			logWarn("Key %d outside configured keymap, dropping", key);
+			return;
+		}
+		if (!ctx->input.key_press_state[key] && !state) {
+			return;
+		}
+		ctx->input.key_press_state[key] += state ? 1 : -1;
+		key = ctx->input.raw_keymap[key];
+	}
+	wlKeyRaw(ctx, key, state);
 }
 
 void wlKeyReleaseAll(struct wlContext *ctx)
@@ -140,7 +213,13 @@ void wlKeyReleaseAll(struct wlContext *ctx)
 	for (i = 0; i < ctx->input.key_count; ++i) {
 		while (ctx->input.key_press_state[i]) {
 			logDbg("Release all: key %zd, pressed %d times", i, ctx->input.key_press_state[i]);
-			wlKey(ctx, i, 0);
+			wlKey(ctx, i, 0, 0);
+		}
+	}
+	for (i = 0; i < ctx->input.id_count; ++i) {
+		while (ctx->input.id_press_state[i]) {
+			logDbg("Release all: id %zd, pressed %d times", i, ctx->input.id_press_state[i]);
+			wlKey(ctx, 0, i, 0);
 		}
 	}
 }
