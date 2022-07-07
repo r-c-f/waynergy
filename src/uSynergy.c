@@ -204,14 +204,14 @@ static void sSendScreensaverCallback(uSynergyContext *context, bool state)
 /**
 @brief Send keyboard callback when a key has been pressed or released
 **/
-static void sSendKeyboardCallback(uSynergyContext *context, uint16_t key, uint16_t modifiers, bool down, bool repeat)
+static void sSendKeyboardCallback(uSynergyContext *context, uint16_t key, uint16_t id, uint16_t modifiers, bool down, bool repeat)
 {
 	// Skip if no callback is installed
 	if (context->m_keyboardCallback == 0L)
 		return;
 
 	// Send callback
-	context->m_keyboardCallback(context->m_cookie, key, modifiers, down, repeat);
+	context->m_keyboardCallback(context->m_cookie, key, id, modifiers, down, repeat);
 }
 
 
@@ -496,7 +496,7 @@ static void sProcessMessage(uSynergyContext *context, struct sspBuf *msg)
 		if (!(sspNetU16(msg, &id) && sspNetU16(msg, &mod) && sspNetU16(msg, &key))) {
 			PARSE_ERROR();
 		}
-		sSendKeyboardCallback(context, context->m_useRawKeyCodes ? key : id, mod, true, false);
+		sSendKeyboardCallback(context, context->m_useRawKeyCodes ? key : id, id, mod, true, false);
 	}
 	else if (!strcmp(pkt_id, "DKRP"))
 	{
@@ -510,7 +510,7 @@ static void sProcessMessage(uSynergyContext *context, struct sspBuf *msg)
 		      sspNetU16(msg, &key))) {
 			PARSE_ERROR();
 		}
-		sSendKeyboardCallback(context, context->m_useRawKeyCodes ? key : id, mod, true, true);
+		sSendKeyboardCallback(context, context->m_useRawKeyCodes ? key : id, id, mod, true, true);
 	}
 	else if (!strcmp(pkt_id, "DKUP"))
 	{
@@ -521,7 +521,7 @@ static void sProcessMessage(uSynergyContext *context, struct sspBuf *msg)
 		if (!(sspNetU16(msg, &id) && sspNetU16(msg, &mod) && sspNetU16(msg, &key))) {
 			PARSE_ERROR();
 		}
-		sSendKeyboardCallback(context, context->m_useRawKeyCodes ? key : id, mod, false, false);
+		sSendKeyboardCallback(context, context->m_useRawKeyCodes ? key : id, id, mod, false, false);
 	}
 	else if (!strcmp(pkt_id, "DGBT"))
 	{

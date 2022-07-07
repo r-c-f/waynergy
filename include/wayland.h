@@ -44,12 +44,18 @@ struct wlInput {
 	/* key state information*/
 	int *key_press_state;
 	size_t key_count;
+	int *id_press_state;
+	size_t id_count;
 	// keyboard layout handling
 	struct xkb_context *xkb_ctx;
 	struct xkb_keymap *xkb_map;
 	struct xkb_state *xkb_state;
 	/* raw keymap -- distinct from xkb */
 	int *raw_keymap;
+	/* id-based keymap -- uses synergy abstract keycodes */
+	int *id_keymap;
+	/* whether or not a given id entry should be used */
+	bool *id_keymap_valid;
 	/* wayland context */
 	struct wlContext *wl_ctx;
 	/* actual functions */
@@ -119,7 +125,8 @@ extern void wlMouseButtonUp(struct wlContext *context, int button);
 extern void wlMouseWheel(struct wlContext *context, signed short dx, signed short dy);
 
 /* keyboard-related functions */
-extern void wlKey(struct wlContext *context, int key, int state);
+extern void wlKeyRaw(struct wlContext *context, int key, int state);
+extern void wlKey(struct wlContext *context, int key, int id, int state);
 /* release all currently-pressed keys, usually on exiting the screen */
 extern void wlKeyReleaseAll(struct wlContext *context);
 

@@ -2,6 +2,7 @@
 
 
 static xkb_keycode_t idle_key;
+int idle_key_raw = -1;
 static void on_idle_mouse(void *data, struct org_kde_kwin_idle_timeout *timeout)
 {
 	logDbg("Got idle event, responding with zero mouse move");
@@ -13,8 +14,13 @@ static void on_idle_key(void *data, struct org_kde_kwin_idle_timeout *timeout)
 	logDbg("Got idle event, responding with keypress");
 	struct wlContext *ctx = data;
 	//Second try at this -- press a key we do not care about
-	wlKey(ctx, idle_key, true);
-	wlKey(ctx, idle_key, false);
+	if (idle_key_raw != -1) {
+		wlKeyRaw(ctx, idle_key_raw, true);
+		wlKeyRaw(ctx, idle_key_raw, false);
+	} else { 
+		wlKey(ctx, idle_key, 0, true);
+		wlKey(ctx, idle_key, 0, false);
+	}
 }
 static void on_resumed(void *data, struct org_kde_kwin_idle_timeout *timeout)
 {
@@ -48,6 +54,9 @@ void wlIdleInhibit(struct wlContext *ctx, bool on)
 			idle_timeout_listener.idle = on_idle_mouse;
 		} else if (!strcmp(idle_method, "key")) {
 			idle_timeout_listener.idle = on_idle_key;
+			/* first try a raw keycode for idle, because in case
+			 * of uinput xkb map might be rather useless */
+			idle_key_raw = configTryLong("idle-inhibit/keycode", -1);
 			idle_keyname = configTryString("idle-inhibit/keyname", "HYPR");
 			idle_key = xkb_keymap_key_by_name(ctx->input.xkb_map, idle_keyname);
 			free(idle_keyname);
