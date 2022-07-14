@@ -289,6 +289,13 @@ verification that it has not changed on subsequent connections.
 Client certificates are now supported as well; simply place the certificate at
 `tls/cert`.
 
+#### wlroots wheel issues
+
+The latest version of wlroots has an issue where discrete axis events are 
+accumulated rather than sent directly; to correct for this the discrete
+parameter is now a multiple of `120` rather than `1`. For older wlroots
+versions experiencing abnormally-large scroll steps, set `wlr/wheel_mult` to `1`. 
+
 ## Acknowledgements
 I would like to thank
 * [uSynergy](https://github.com/symless/synergy-micro-client) for the protocol library
