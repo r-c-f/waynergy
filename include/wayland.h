@@ -43,16 +43,16 @@ struct wlInput {
 	void *state;
 	/* key state information*/
 	int *key_press_state;
-	size_t key_count;
-	int *id_press_state;
-	size_t id_count;
+	size_t key_press_state_len;
 	// keyboard layout handling
 	struct xkb_context *xkb_ctx;
 	struct xkb_keymap *xkb_map;
 	struct xkb_state *xkb_state;
 	/* raw keymap -- distinct from xkb */
+	size_t key_count;
 	int *raw_keymap;
 	/* id-based keymap -- uses synergy abstract keycodes */
+	size_t id_count;
 	int *id_keymap;
 	/* whether or not a given id entry should be used */
 	bool *id_keymap_valid;
