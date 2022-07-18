@@ -2,12 +2,10 @@
 #include <stdbool.h>
 #include "log.h"
 #include "fdio_full.h"
-#include "config.h"
 #include <xkbcommon/xkbcommon.h>
 
 struct state_wlr {
 	struct zwlr_virtual_pointer_v1 *pointer;
-	int wheel_mult;
 	struct zwp_virtual_keyboard_v1 *keyboard;
 };
 
@@ -77,14 +75,14 @@ static void mouse_wheel(struct wlInput *input, signed short dx, signed short dy)
 	//we are a wheel, after all
 	zwlr_virtual_pointer_v1_axis_source(wlr->pointer, 0);
 	if (dx < 0) {
-		zwlr_virtual_pointer_v1_axis_discrete(wlr->pointer, wlTS(input->wl_ctx), 1, wl_fixed_from_int(15), wlr->wheel_mult);
+		zwlr_virtual_pointer_v1_axis_discrete(wlr->pointer, wlTS(input->wl_ctx), 1, wl_fixed_from_int(15), 1);
 	}else if (dx > 0) {
-		zwlr_virtual_pointer_v1_axis_discrete(wlr->pointer, wlTS(input->wl_ctx), 1, wl_fixed_from_int(-15), -1 * wlr->wheel_mult);
+		zwlr_virtual_pointer_v1_axis_discrete(wlr->pointer, wlTS(input->wl_ctx), 1, wl_fixed_from_int(-15), -1);
 	}
 	if (dy < 0) {
-		zwlr_virtual_pointer_v1_axis_discrete(wlr->pointer, wlTS(input->wl_ctx), 0, wl_fixed_from_int(15), wlr->wheel_mult);
+		zwlr_virtual_pointer_v1_axis_discrete(wlr->pointer, wlTS(input->wl_ctx), 0, wl_fixed_from_int(15),1);
 	} else if (dy > 0) {
-		zwlr_virtual_pointer_v1_axis_discrete(wlr->pointer, wlTS(input->wl_ctx), 0, wl_fixed_from_int(-15), -1 * wlr->wheel_mult);
+		zwlr_virtual_pointer_v1_axis_discrete(wlr->pointer, wlTS(input->wl_ctx), 0, wl_fixed_from_int(-15), -1);
 	}
 	zwlr_virtual_pointer_v1_frame(wlr->pointer);
 	wl_display_flush(input->wl_ctx->display);
@@ -99,9 +97,7 @@ bool wlInputInitWlr(struct wlContext *ctx)
 	}
 	wlr = xmalloc(sizeof(*wlr));
 	wlr->pointer = zwlr_virtual_pointer_manager_v1_create_virtual_pointer(ctx->pointer_manager, ctx->seat);
-
 	wlr->keyboard = zwp_virtual_keyboard_manager_v1_create_virtual_keyboard(ctx->keyboard_manager, ctx->seat);
-	wlr->wheel_mult = configTryLong("wlr/wheel_mult", 120);
 	ctx->input = (struct wlInput) {
 		.state = wlr,
 		.wl_ctx = ctx,
