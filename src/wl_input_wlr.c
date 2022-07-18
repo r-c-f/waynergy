@@ -102,6 +102,7 @@ bool wlInputInitWlr(struct wlContext *ctx)
 
 	wlr->keyboard = zwp_virtual_keyboard_manager_v1_create_virtual_keyboard(ctx->keyboard_manager, ctx->seat);
 	wlr->wheel_mult = configTryLong("wlr/wheel_mult", 120);
+	logDbg("Using wheel_mult value of %d", wlr->wheel_mult);
 	ctx->input = (struct wlInput) {
 		.state = wlr,
 		.wl_ctx = ctx,
