@@ -53,11 +53,11 @@ static void syn_mouse_wheel_cb(uSynergyCookie cookie, int16_t x, int16_t y)
 
 static void syn_mouse_button_down_cb(uSynergyCookie cookie, enum uSynergyMouseButton button)
 {
-	wlMouseButtonDown(&wlContext, button);
+	wlMouseButton(&wlContext, button, 1);
 }
 static void syn_mouse_button_up_cb(uSynergyCookie cookie, enum uSynergyMouseButton button)
 {
-	wlMouseButtonUp(&wlContext, button);
+	wlMouseButton(&wlContext, button, 0);
 }
 static void syn_mouse_move_cb(uSynergyCookie cookie, bool rel, int16_t x, int16_t y)
 {

@@ -120,12 +120,13 @@ extern void wlPollProc(struct wlContext *context, short revents);
 /* mouse-related functions */
 extern void wlMouseRelativeMotion(struct wlContext *context, int dx, int dy);
 extern void wlMouseMotion(struct wlContext *context, int x, int y);
-extern void wlMouseButtonDown(struct wlContext *context, int button);
-extern void wlMouseButtonUp(struct wlContext *context, int button);
+extern void wlMouseButton(struct wlContext *context, int button, int state);
 extern void wlMouseWheel(struct wlContext *context, signed short dx, signed short dy);
 
 /* keyboard-related functions */
+/* send a raw keycode, no mapping is performed */
 extern void wlKeyRaw(struct wlContext *context, int key, int state);
+/* send a keycode or id, mapping as needed. Prefers the id value. */
 extern void wlKey(struct wlContext *context, int key, int id, int state);
 /* release all currently-pressed keys, usually on exiting the screen */
 extern void wlKeyReleaseAll(struct wlContext *context);

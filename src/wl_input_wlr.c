@@ -101,6 +101,10 @@ bool wlInputInitWlr(struct wlContext *ctx)
 	wlr->pointer = zwlr_virtual_pointer_manager_v1_create_virtual_pointer(ctx->pointer_manager, ctx->seat);
 
 	wlr->keyboard = zwp_virtual_keyboard_manager_v1_create_virtual_keyboard(ctx->keyboard_manager, ctx->seat);
+	/* recent wlroots versions behave weirdly with discrete inputs,
+	 * accumulating them and only issuing a client event when they've reached
+	 * 120. As such, we default to sending 120 discrete to support this, but
+	 * make it configurable so that older versions can be made to work*/
 	wlr->wheel_mult = configTryLong("wlr/wheel_mult", 120);
 	logDbg("Using wheel_mult value of %d", wlr->wheel_mult);
 	ctx->input = (struct wlInput) {

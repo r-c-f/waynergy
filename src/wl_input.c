@@ -238,13 +238,9 @@ void wlMouseMotion(struct wlContext *ctx, int x, int y)
 {
 	ctx->input.mouse_motion(&ctx->input, x, y);
 }
-void wlMouseButtonDown(struct wlContext *ctx, int button)
+void wlMouseButton(struct wlContext *ctx, int button, int state)
 {
-	ctx->input.mouse_button(&ctx->input, button, 1);
-}
-void wlMouseButtonUp(struct wlContext *ctx, int button)
-{
-	ctx->input.mouse_button(&ctx->input, button, 0);
+	ctx->input.mouse_button(&ctx->input, button, state);
 }
 void wlMouseWheel(struct wlContext *ctx, signed short dx, signed short dy)
 {
