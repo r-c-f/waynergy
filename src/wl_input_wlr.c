@@ -4,6 +4,8 @@
 #include "fdio_full.h"
 #include "config.h"
 #include <xkbcommon/xkbcommon.h>
+#include <spawn.h>
+#include <ctype.h>
 
 struct state_wlr {
 	struct zwlr_virtual_pointer_v1 *pointer;
@@ -90,9 +92,103 @@ static void mouse_wheel(struct wlInput *input, signed short dx, signed short dy)
 	wl_display_flush(input->wl_ctx->display);
 }
 
+static bool sway_version(long *major, long *minor)
+{
+	char *argv[] = {
+		"sway",
+		"--version",
+		NULL
+	};
+	size_t buf_len = 0;
+	char *buf = NULL;
+	char *next = NULL;
+	size_t pos = 0;
+	pid_t pid;
+	int fd[2];
+	FILE *sway_out;
+	posix_spawn_file_actions_t fa;
+
+	errno = 0;
+
+	if (pipe(fd) == -1) {
+		logPDbg("Could not create pipe for sway version");
+		return false;
+	}
+
+	posix_spawn_file_actions_init(&fa);
+	posix_spawn_file_actions_adddup2(&fa, fd[1], STDOUT_FILENO);
+	posix_spawn_file_actions_addclose(&fa, fd[0]);
+	errno = 0;
+	if (posix_spawnp(&pid, "sway", &fa, NULL, argv, environ)) {
+		logPErr("sway version spawn");
+		close(fd[0]);
+		close(fd[1]);
+		return false;
+	}
+	close(fd[1]);
+
+	if (!(sway_out = fdopen(fd[0], "r"))) {
+		logPErr("fdopen for sway stdout");
+		close(fd[0]);
+		return false;
+	}
+	if (getline(&buf, &buf_len, sway_out) == -1) {
+		logPErr("sway getline");
+		fclose(sway_out);
+		return false;
+	}
+	fclose(sway_out);
+
+	logDbg("Got sway version string %s", buf);
+
+	*major = 0;
+	*minor = 0;
+
+
+
+	/* get to an actual number */
+	while (buf[pos] && !isdigit(buf[pos])) {
+		++pos;
+	}
+	if (!isdigit(buf[pos])) {
+		logErr("Could not get numeric result from sway --version");
+		return false;
+	}
+
+	errno = 0;
+	*major = strtol(buf + pos, &next, 0);
+	if (errno) {
+		logPErr("could not convert major sway version");
+		free(buf);
+		return false;
+	}
+
+	pos = 0;
+	while (next[pos] && !isdigit(next[pos])) {
+		++pos;
+	}
+	if (!isalnum(next[pos])) {
+		logErr("Could not get numeric result from sway --version");
+		free(next);
+		return false;
+	}
+
+	errno = 0;
+	*minor = strtol(next + pos, NULL, 0);
+	if (errno) {
+		logPErr("could not convert minor sway version");
+		free(next);
+		return false;
+	}
+
+	free(buf);
+	return true;
+}
 
 bool wlInputInitWlr(struct wlContext *ctx)
 {
+	long sway_major, sway_minor;
+	int wheel_mult_default;
 	struct state_wlr *wlr;
 	if (!(ctx->pointer_manager && ctx->keyboard_manager)) {
 		return false;
@@ -103,9 +199,18 @@ bool wlInputInitWlr(struct wlContext *ctx)
 	wlr->keyboard = zwp_virtual_keyboard_manager_v1_create_virtual_keyboard(ctx->keyboard_manager, ctx->seat);
 	/* recent wlroots versions behave weirdly with discrete inputs,
 	 * accumulating them and only issuing a client event when they've reached
-	 * 120. As such, we default to sending 120 discrete to support this, but
-	 * make it configurable so that older versions can be made to work*/
-	wlr->wheel_mult = configTryLong("wlr/wheel_mult", 120);
+	 * 120. Try to detect sway versions that will be susceptible this, with
+	 * a user configuration to override */
+	wheel_mult_default = 120;
+	if (configTryBool("wlr/wheel_mult_sway", true)) {\
+		if (sway_version(&sway_major, &sway_minor)) {
+			logDbg("Using sway version %ld.%ld to set default wlr/wheel_mult", sway_major, sway_minor);
+			if ((sway_major == 1) && sway_minor < 8) {
+				wheel_mult_default = 1;
+			}
+		}
+	}
+	wlr->wheel_mult = configTryLong("wlr/wheel_mult", wheel_mult_default);
 	logDbg("Using wheel_mult value of %d", wlr->wheel_mult);
 	ctx->input = (struct wlInput) {
 		.state = wlr,

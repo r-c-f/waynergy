@@ -293,8 +293,10 @@ Client certificates are now supported as well; simply place the certificate at
 
 The latest version of wlroots has an issue where discrete axis events are 
 accumulated rather than sent directly; to correct for this the discrete
-parameter is now a multiple of `120` rather than `1`. For older wlroots
-versions experiencing abnormally-large scroll steps, set `wlr/wheel_mult` to `1`. 
+parameter is now a multiple of `120` rather than `1`. For sway users, 
+`wlr/wheel_mult_sway` is enabled by default and should set the proper default
+based on the version of sway detected; otherwise, `wlr/wheel_mult` may be used 
+for manual configuration.
 
 ## Acknowledgements
 I would like to thank
