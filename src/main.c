@@ -146,7 +146,7 @@ int main(int argc, char **argv)
 {
 	int ret = EXIT_SUCCESS;
 	int opt;
-	union sopt_arg soptarg;
+	union sopt_arg soptarg = {0};
 	char *port = NULL;
 	char *name = NULL;
 	char *host = NULL;
