@@ -22,7 +22,6 @@ static struct sopt optspec[] = {
 	SOPT_INITL('h', "help", "Help text"),
 	SOPT_INITL('v', "version", "Version information"),
 	SOPT_INIT_ARGL('b', "backend", SOPT_ARGTYPE_STR, "backend", "Input backend -- one of wlr, kde, uinput"),
-	SOPT_INIT_ARGL('C', "config", SOPT_ARGTYPE_STR, "path", "Configuration directory"),
 	SOPT_INIT_ARGL('c', "host", SOPT_ARGTYPE_STR, "host", "Server to connect to"),
 	SOPT_INIT_ARGL('p', "port", SOPT_ARGTYPE_STR, "port", "Port"),
 	SOPT_INIT_ARGL('W', "width", SOPT_ARGTYPE_SHORT, "width", "Width of screen in pixels (manual override, must be given with height)"),
@@ -171,6 +170,8 @@ int main(int argc, char **argv)
 	}
 
 	uSynergyInit(&synContext);
+	/* figure out whether we need to override the configuration path */
+	osConfigPathOverride = getenv("WAYNERGY_CONF_PATH");
 	/*Intialize INI configuration*/
 	configInitINI();
 	/* Load defaults for everything */
@@ -195,9 +196,6 @@ int main(int argc, char **argv)
 				goto done;
 			case 'b':
 				backend = xstrdup(soptarg.str);
-				break;
-			case 'C':
-				osConfigPathOverride = xstrdup(soptarg.str);
 				break;
 			case 'c':
 				free(host);

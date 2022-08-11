@@ -114,8 +114,6 @@ USAGE: ./waynergy [-h|--help] [-b|--backend backend] [-C|--config path] [-c|--ho
 		Help text
 	-b|--backend backend:
 		Input backend -- one of wlr, kde, uinput
-	-C|--config path:
-		Configuration directory
 	-c|--host host:
 		Server to connect to
 	-p|--port port:
@@ -152,9 +150,10 @@ USAGE: ./waynergy [-h|--help] [-b|--backend backend] [-C|--config path] [-c|--ho
 Also note that `SIGUSR1` triggers re-execution. Useful until proper reconnect
 procedures exist. 
 ### Configuration
-The configuration files are stored in `$XDG_CONFIG_HOME/waynergy`, which is
-probably at `~/.config/waynergy` in most cases. Aside from keymaps and hashes,
-most things should go in `config.ini`; the old approach of
+By default, the configuration files are stored in `$XDG_CONFIG_HOME/waynergy`, 
+which is probably at `~/.config/waynergy` in most cases. This can be
+overridden with the environment variable `WAYNERGY_CONF_PATH`. Aside from keymaps 
+and hashes, most things should go in `config.ini`; the old approach of
 single-value-per-file is retained strictly for compatibility, and because 
 ripping it out would be annoying for cases where that approach is really
 genuinely useful (i.e. xkb keymaps which have their file format). The basic 
