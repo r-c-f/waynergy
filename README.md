@@ -181,8 +181,12 @@ I'll leave that for anyone who wants to have a go at doing it.
 
 ##### XKB
 
-If the default is not sufficient; it should be placed in `xkb_keymap`. 
-The easiest way to obtain this is to use the output of
+By default, the existing compositor keymap is tried, falling back on a baked-in
+default. This has changed from prior versions which always used the baked-in 
+default; to get the old behavior, set `wl_keyboard_map` to false.
+
+If neither default is sufficient, an xkb-formatted map should be placed in 
+`xkb_keymap`.  The easiest way to obtain this is to use the output of
 ```
 setxkbmap -print
 ```

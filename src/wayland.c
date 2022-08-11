@@ -261,6 +261,75 @@ static struct wl_output_listener output_listener = {
 	.done = output_done,
 	.scale = output_scale
 };
+
+static void keyboard_keymap(void *data, struct wl_keyboard *wl_kb, uint32_t format, int32_t fd, uint32_t size)
+{
+	struct wlContext *ctx = data;
+	char *buf;
+	if (!configTryBool("wl_keyboard_map", true)) {
+		return;
+	}
+
+	buf= xcalloc(size + 1, 1);
+	if (!read_full(fd, buf, size, 0)) {
+		logDbg("Could not read current keymap from fd");
+		free(buf);
+		return;
+	}
+	free(ctx->kb_map);
+	ctx->kb_map = buf;
+	logDbg("Current keymap updated");
+}
+
+static void keyboard_enter(void *data, struct wl_keyboard *wl_kb, uint32_t serial, struct wl_surface *surface, struct wl_array *keys)
+{
+}
+static void keyboard_leave(void *data, struct wl_keyboard *wl_kb, uint32_t serial, struct wl_surface *surface)
+{
+}
+static void keyboard_key(void *data, struct wl_keyboard *wl_kb, uint32_t serial, uint32_t time, uint32_t key, uint32_t state)
+{
+}
+static void keyboard_mod(void *data, struct wl_keyboard *wl_kb, uint32_t serial, uint32_t mods_depressed, uint32_t mods_latched, uint32_t mods_locked, uint32_t group)
+{
+}
+static void keyboard_rep(void *data, struct wl_keyboard *wl_kb, int32_t rate, int32_t delay)
+{
+}
+
+static struct wl_keyboard_listener keyboard_listener = {
+	.keymap = keyboard_keymap,
+	.enter = keyboard_enter,
+	.leave = keyboard_leave,
+	.key = keyboard_key,
+	.modifiers = keyboard_mod,
+	.repeat_info = keyboard_rep,
+};
+
+static void seat_capabilities(void *data, struct wl_seat *wl_seat, uint32_t caps)
+{
+	struct wlContext *ctx = data;
+	ctx->seat_caps = caps;
+	if (caps & WL_SEAT_CAPABILITY_POINTER) {
+		logDbg("Seat has pointer");
+	}
+	if (caps & WL_SEAT_CAPABILITY_KEYBOARD) {
+		logDbg("Seat has keyboard");
+		ctx->kb = wl_seat_get_keyboard(wl_seat);
+		wl_keyboard_add_listener(ctx->kb, &keyboard_listener, ctx);
+	}
+}
+
+static void seat_name(void *data, struct wl_seat *seat, const char *name)
+{
+	logDbg("Seat name is %s", name);
+}
+
+static struct wl_seat_listener seat_listener = {
+	.capabilities = seat_capabilities,
+	.name = seat_name,
+};
+
 static void handle_global(void *data, struct wl_registry *registry, uint32_t name, const char *interface, uint32_t version)
 {
 	struct wlContext *ctx = data;
@@ -268,6 +337,7 @@ static void handle_global(void *data, struct wl_registry *registry, uint32_t nam
 	struct zxdg_output_v1 *xdg_output;
 	if (strcmp(interface, wl_seat_interface.name) == 0) {
 		ctx->seat = wl_registry_bind(registry, name, &wl_seat_interface, version);
+		wl_seat_add_listener(ctx->seat, &seat_listener, ctx);
 	} else if (strcmp(interface, zwlr_virtual_pointer_manager_v1_interface.name) == 0) {
 		ctx->pointer_manager = wl_registry_bind(registry, name, &zwlr_virtual_pointer_manager_v1_interface, 1);
 	} else if (strcmp(interface, zwp_virtual_keyboard_manager_v1_interface.name) == 0) {
