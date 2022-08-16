@@ -104,9 +104,10 @@ static bool sway_version(long *major, long *minor)
 	char *next = NULL;
 	size_t pos = 0;
 	pid_t pid;
-	int fd[2];
-	FILE *sway_out;
+	int fd[2] = {-1, -1};
+	FILE *sway_out = NULL;
 	posix_spawn_file_actions_t fa;
+	bool ret = true;
 
 	errno = 0;
 
@@ -121,23 +122,25 @@ static bool sway_version(long *major, long *minor)
 	errno = 0;
 	if (posix_spawnp(&pid, "sway", &fa, NULL, argv, environ)) {
 		logPErr("sway version spawn");
-		close(fd[0]);
-		close(fd[1]);
-		return false;
+		ret = false;
+		goto done;
 	}
 	close(fd[1]);
+	fd[1] = -1;
 
 	if (!(sway_out = fdopen(fd[0], "r"))) {
 		logPErr("fdopen for sway stdout");
-		close(fd[0]);
-		return false;
+		ret = false;
+		goto done;
 	}
+	fd[0] = -1;
 	if (getline(&buf, &buf_len, sway_out) == -1) {
 		logPErr("sway getline");
-		fclose(sway_out);
-		return false;
+		ret = false;
+		goto done;
 	}
 	fclose(sway_out);
+	sway_out = NULL;
 
 	logDbg("Got sway version string %s", buf);
 
@@ -152,37 +155,41 @@ static bool sway_version(long *major, long *minor)
 	}
 	if (!isdigit(buf[pos])) {
 		logErr("Could not get numeric result from sway --version");
-		return false;
+		ret = false;
 	}
 
 	errno = 0;
 	*major = strtol(buf + pos, &next, 0);
 	if (errno) {
 		logPErr("could not convert major sway version");
-		free(buf);
-		return false;
+		ret = false;
 	}
 
 	pos = 0;
 	while (next[pos] && !isdigit(next[pos])) {
 		++pos;
 	}
-	if (!isalnum(next[pos])) {
+	if (!isdigit(next[pos])) {
 		logErr("Could not get numeric result from sway --version");
-		free(next);
-		return false;
+		ret = false;
 	}
 
 	errno = 0;
 	*minor = strtol(next + pos, NULL, 0);
 	if (errno) {
 		logPErr("could not convert minor sway version");
-		free(next);
-		return false;
+		ret = false;
 	}
 
+done:
+	if (fd[0] != -1)
+		close(fd[0]);
+	if (fd[1] != -1)
+		close(fd[1]);
+	if (sway_out)
+		fclose(sway_out);
 	free(buf);
-	return true;
+	return ret;
 }
 
 bool wlInputInitWlr(struct wlContext *ctx)
