@@ -205,7 +205,7 @@ static bool sway_version(long ver[static 2])
 	free(buf);
 	if (valid != 2)
 		return false;
-	logInfo("Sway version is %ld.%ld");
+	logInfo("Sway version is %ld.%ld", ver[0], ver[1]);
 	return true;
 }
 
