@@ -151,13 +151,16 @@ static void load_id_keymap(struct wlContext *ctx)
 int wlKeySetConfigLayout(struct wlContext *ctx)
 {
 	int ret = 0;
-	char *keymap_str = configTryStringFull("xkb_keymap", "xkb_keymap { \
+	char *default_map = ctx->kb_map ? ctx->kb_map :
+		"xkb_keymap { \
 		xkb_keycodes  { include \"xfree86+aliases(qwerty)\"     }; \
 		xkb_types     { include \"complete\"    }; \
 		xkb_compat    { include \"complete\"    }; \
 		xkb_symbols   { include \"pc+us+inet(evdev)\"   }; \
 		xkb_geometry  { include \"pc(pc105)\"   }; \
-};");
+		};";
+	logDbg("Will default to map %s", default_map);
+	char *keymap_str = configTryStringFull("xkb_keymap", default_map);
 	local_mod_init(ctx, keymap_str);
 	ret = !ctx->input.key_map(&ctx->input, keymap_str);
 	ctx->input.key_press_state_len = 0;
