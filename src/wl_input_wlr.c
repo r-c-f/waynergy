@@ -92,109 +92,150 @@ static void mouse_wheel(struct wlInput *input, signed short dx, signed short dy)
 	wl_display_flush(input->wl_ctx->display);
 }
 
-static bool sway_version(long *major, long *minor)
+size_t get_nums(size_t count, long *dst, char *buf)
 {
-	char *argv[] = {
-		"sway",
-		"--version",
-		NULL
-	};
+	size_t i;
+	char *next;
+
+	for (i = 0; i < count; ++i) {
+		for (; *buf && !isdigit(*buf); ++buf);
+		if (!isdigit(*buf)) {
+			break;
+		}
+		errno = 0;
+		dst[i] = strtol(buf, &next, 0);
+		if (errno) {
+			break;
+		}
+		buf = next;
+	}
+	return i;
+}
+
+static char *get_version_string(char **argv)
+{
 	size_t buf_len = 0;
 	char *buf = NULL;
-	char *next = NULL;
-	size_t pos = 0;
 	pid_t pid;
 	int fd[2] = {-1, -1};
-	FILE *sway_out = NULL;
+	FILE *out = NULL;
 	posix_spawn_file_actions_t fa;
 	bool ret = true;
 
 	errno = 0;
 
 	if (pipe(fd) == -1) {
-		logPDbg("Could not create pipe for sway version");
-		return false;
+		logPDbg("Could not create pipe for version");
+		return NULL;
 	}
 
 	posix_spawn_file_actions_init(&fa);
 	posix_spawn_file_actions_adddup2(&fa, fd[1], STDOUT_FILENO);
 	posix_spawn_file_actions_addclose(&fa, fd[0]);
 	errno = 0;
-	if (posix_spawnp(&pid, "sway", &fa, NULL, argv, environ)) {
-		logPErr("sway version spawn");
+	if (posix_spawnp(&pid, argv[0], &fa, NULL, argv, environ)) {
+		logPErr("version spawn");
 		ret = false;
 		goto done;
 	}
 	close(fd[1]);
 	fd[1] = -1;
 
-	if (!(sway_out = fdopen(fd[0], "r"))) {
-		logPErr("fdopen for sway stdout");
+	if (!(out = fdopen(fd[0], "r"))) {
+		logPErr("fdopen for stdout");
 		ret = false;
 		goto done;
 	}
 	fd[0] = -1;
-	if (getline(&buf, &buf_len, sway_out) == -1) {
-		logPErr("sway getline");
+	if (getline(&buf, &buf_len, out) == -1) {
+		logPErr("getline");
 		ret = false;
 		goto done;
 	}
-	fclose(sway_out);
-	sway_out = NULL;
+	fclose(out);
+	out = NULL;
 
-	logDbg("Got sway version string %s", buf);
-
-	*major = 0;
-	*minor = 0;
-
-
-
-	/* get to an actual number */
-	while (buf[pos] && !isdigit(buf[pos])) {
-		++pos;
-	}
-	if (!isdigit(buf[pos])) {
-		logErr("Could not get numeric result from sway --version");
-		ret = false;
-	}
-
-	errno = 0;
-	*major = strtol(buf + pos, &next, 0);
-	if (errno) {
-		logPErr("could not convert major sway version");
-		ret = false;
-	}
-
-	pos = 0;
-	while (next[pos] && !isdigit(next[pos])) {
-		++pos;
-	}
-	if (!isdigit(next[pos])) {
-		logErr("Could not get numeric result from sway --version");
-		ret = false;
-	}
-
-	errno = 0;
-	*minor = strtol(next + pos, NULL, 0);
-	if (errno) {
-		logPErr("could not convert minor sway version");
-		ret = false;
-	}
-
+	logDbg("Got version string %s", buf);
 done:
 	if (fd[0] != -1)
 		close(fd[0]);
 	if (fd[1] != -1)
 		close(fd[1]);
-	if (sway_out)
-		fclose(sway_out);
+	if (out)
+		fclose(out);
+	if (!ret) {
+		free(buf);
+		buf = NULL;
+	}
+	return buf;
+}
+
+static bool wayfire_version(long ver[static 3])
+{
+	char *argv[] = {
+		"wayfire",
+		"--version",
+		NULL
+	};
+	char *buf;
+	size_t valid;
+	if (!(buf = get_version_string(argv))) {
+		return false;
+	}
+	valid = get_nums(3, ver, buf);
 	free(buf);
-	return ret;
+	if (valid != 3)
+		return false;
+	logInfo("Wayfire version is %ld.%ld.%ld", ver[0], ver[1], ver[2]);
+	return true;
+}
+static bool sway_version(long ver[static 2])
+{
+	char *argv[] = {
+		"sway",
+		"--version",
+		NULL
+	};
+	char *buf;
+	size_t valid;
+	if (!(buf = get_version_string(argv))) {
+		return false;
+	}
+	valid = get_nums(2, ver, buf);
+	free(buf);
+	if (valid != 2)
+		return false;
+	logInfo("Sway version is %ld.%ld");
+	return true;
+}
+
+static bool wheel_mult_detect(struct wlContext *ctx, int *wheel_mult)
+{
+	long wayfire_ver[3];
+	long sway_ver[2];
+	if (!strcmp(ctx->comp_name, "sway")) {
+		if (sway_version(sway_ver)) {
+			if ((sway_ver[0] <= 1) && (sway_ver[1] <= 7)) {
+				*wheel_mult = 1;
+				return true;
+			}
+		}
+	} else if (!strcmp(ctx->comp_name, "wayfire")) {
+		if (wayfire_version(wayfire_ver)) {
+			if ((wayfire_ver[0] == 0) &&
+			    (wayfire_ver[1] <= 7) &&
+			    (wayfire_ver[2] <= 4)) {
+				*wheel_mult = 1;
+				return true;
+			}
+		}
+	}
+
+	return false;
 }
 
 bool wlInputInitWlr(struct wlContext *ctx)
 {
-	long sway_major, sway_minor;
 	int wheel_mult_default;
 	struct state_wlr *wlr;
 	if (!(ctx->pointer_manager && ctx->keyboard_manager)) {
@@ -209,12 +250,9 @@ bool wlInputInitWlr(struct wlContext *ctx)
 	 * 120. Try to detect sway versions that will be susceptible this, with
 	 * a user configuration to override */
 	wheel_mult_default = 120;
-	if (configTryBool("wlr/wheel_mult_sway", true)) {\
-		if (sway_version(&sway_major, &sway_minor)) {
-			logDbg("Using sway version %ld.%ld to set default wlr/wheel_mult", sway_major, sway_minor);
-			if ((sway_major == 1) && sway_minor < 8) {
-				wheel_mult_default = 1;
-			}
+	if (configTryBool("wlr/auto_wheel_mult", true)) {
+		if (wheel_mult_detect(ctx, &wheel_mult_default)) {
+			logInfo("Set wheel mult based on compositor version");
 		}
 	}
 	wlr->wheel_mult = configTryLong("wlr/wheel_mult", wheel_mult_default);

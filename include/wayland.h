@@ -75,6 +75,7 @@ extern bool wlInputInitKde(struct wlContext *ctx);
 extern bool wlInputInitUinput(struct wlContext *ctx);
 
 struct wlContext {
+	char *comp_name;
 	struct wl_registry *registry;
 	struct wl_display *display;
 	struct wl_seat *seat;

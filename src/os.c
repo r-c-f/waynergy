@@ -8,7 +8,10 @@
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/socket.h>
+#include <sys/un.h>
 #include "xmem.h"
+#include "log.h"
 
 bool osFileExists(const char *path)
 {
@@ -114,5 +117,54 @@ void osDropPriv(void)
 			abort();
 		}
 	}
+}
+
+
+#ifdef __linux__
+static char *linux_peer_proc_name(int fd)
+{
+	struct ucred uc;
+	socklen_t len = sizeof(uc);
+	size_t buf_len = 0;
+	char *lf = NULL;
+	char *buf = NULL;
+	char *path = NULL;
+	FILE *f = NULL;
+
+	if (getsockopt(fd, SOL_SOCKET, SO_PEERCRED, &uc, &len) == -1) {
+		logPErr("GetPeerProcName: getsockopt() failure");
+		return NULL;
+	}
+
+	xasprintf(&path, "/proc/%d/comm", uc.pid);
+	if (!(f = fopen(path, "r"))) {
+		logPErr("Could not open file");
+		goto done;
+	}
+	if (getline(&buf, &buf_len, f) == -1) {
+		logPErr("Could not read process name");
+		free(buf);
+		buf = NULL;
+		goto done;
+	}
+	/* strip the new line */
+	lf = strchr(buf, '\n');
+	*lf = '\0';
+done:
+	free(path);
+	if (f) {
+		fclose(f);
+	}
+	return buf;
+}
+#endif
+
+char *osGetPeerProcName(int fd)
+{
+#ifdef __linux__
+	return linux_peer_proc_name(fd);
+#endif
+	logErr("osGetPeerProcName not implemented for this platform");
+	return NULL;
 }
 

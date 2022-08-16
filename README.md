@@ -292,10 +292,9 @@ Client certificates are now supported as well; simply place the certificate at
 
 The latest version of wlroots has an issue where discrete axis events are 
 accumulated rather than sent directly; to correct for this the discrete
-parameter is now a multiple of `120` rather than `1`. For sway users, 
-`wlr/wheel_mult_sway` is enabled by default and should set the proper default
-based on the version of sway detected; otherwise, `wlr/wheel_mult` may be used 
-for manual configuration.
+parameter is now a multiple of `120` rather than `1`. For sway or wayfire
+users on Linux this is automatically detected and worked around; otherwise,
+the `wlr/wheel_mult` configuration option may be used. 
 
 ## Acknowledgements
 I would like to thank

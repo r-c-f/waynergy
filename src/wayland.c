@@ -341,6 +341,7 @@ void wlClose(struct wlContext *ctx)
 
 bool wlSetup(struct wlContext *ctx, int width, int height, char *backend)
 {
+	int fd;
 	bool input_init = false;
 	ctx->width = width;
 	ctx->height = height;
@@ -353,6 +354,12 @@ bool wlSetup(struct wlContext *ctx, int width, int height, char *backend)
 	wl_registry_add_listener(ctx->registry, &registry_listener, ctx);
 	wl_display_dispatch(ctx->display);
 	wl_display_roundtrip(ctx->display);
+
+	/* figure out which compositor we are using */
+	fd = wl_display_get_fd(ctx->display);
+	ctx->comp_name = osGetPeerProcName(fd);
+	logInfo("Compositor seems to be %s", ctx->comp_name);
+
 	if (backend) {
 		if (!strcmp(backend, "wlr")) {
 			input_init = wlInputInitWlr(ctx);
@@ -389,7 +396,6 @@ bool wlSetup(struct wlContext *ctx, int width, int height, char *backend)
 		return false;
 	}
 	/* set FD_CLOEXEC */
-	int fd = wl_display_get_fd(ctx->display);
 	int flags = fcntl(fd, F_GETFD);
 	flags |= FD_CLOEXEC;
 	fcntl(fd, F_SETFD, flags);
