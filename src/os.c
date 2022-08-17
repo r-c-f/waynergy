@@ -177,6 +177,7 @@ char *osGetPeerProcName(int fd)
 		logPErr("GetPeerProcName: getsockopt() failure");
 		goto done;
 	}
+	logDbg("Got peer pid of %d", cred.cr_pid);
 
 	mib[3] = cred.cr_pid;
 	if (sysctl(mib, nitems(mib), NULL, &len, NULL, 0) == -1) {
