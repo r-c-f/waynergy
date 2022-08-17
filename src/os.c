@@ -172,7 +172,7 @@ char *osGetPeerProcName(int fd)
 	struct kinfo_proc *kip = NULL;
 	int mib[4] = {CTL_KERN, KERN_PROC, KERN_PROC_PID};
 
-	if (getsockopt(fd, SOL_SOCKET, LOCAL_PEERCRED, &uc, &len) == -1) {
+	if (getsockopt(fd, SOL_SOCKET, LOCAL_PEERCRED, &cred, &len) == -1) {
 		logPErr("GetPeerProcName: getsockopt() failure");
 		goto done;
 	}
@@ -189,7 +189,7 @@ char *osGetPeerProcName(int fd)
 		goto done;
 	}
 	if ((len != sizeof(*kip)) ||
-	    (kip->ki_structsize != sizeof(*kipp)) ||
+	    (kip->ki_structsize != sizeof(*kip)) ||
 	    (kip->ki_pid != cred.cr_pid)) {
 		logErr("returned procinfo is unusable");
 		goto done;
