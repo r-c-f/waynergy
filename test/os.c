@@ -56,6 +56,7 @@ bool get_peer_proc_name(char *orig_name)
 	} else {
 		/* child side */
 		close(sock[0]);
+		logDbg("Child pid %d, host pid %d", child, host);
 		if (!(name = osGetPeerProcName(sock[1]))) {
 			exit(1);
 		}
