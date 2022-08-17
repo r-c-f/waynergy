@@ -1,5 +1,7 @@
 #pragma once
 #include <stdbool.h>
+#include <sys/mman.h>
+#include <sys/types.h>
 
 extern char *osConfigPathOverride;
 extern int osGetAnonFd(void);

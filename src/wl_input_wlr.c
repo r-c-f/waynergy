@@ -7,6 +7,8 @@
 #include <spawn.h>
 #include <ctype.h>
 
+extern char **environ;
+
 struct state_wlr {
 	struct zwlr_virtual_pointer_v1 *pointer;
 	int wheel_mult;

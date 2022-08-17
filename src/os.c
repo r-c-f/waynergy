@@ -1,3 +1,4 @@
+#define _GNU_SOURCE
 #include <sys/mman.h>
 #include <stdbool.h>
 #include <stdlib.h>
@@ -12,6 +13,10 @@
 #include <sys/un.h>
 #include "xmem.h"
 #include "log.h"
+
+#ifdef __FreeBSD__
+#include <sys/param.h>
+#endif
 
 bool osFileExists(const char *path)
 {
@@ -46,11 +51,8 @@ bool osMakeParentDir(const char *path, mode_t mode)
 
 int osGetAnonFd(void)
 {
-	#ifdef __linux__
+	#if defined(__linux__) || ((defined(__FreeBSD__) && (__FreeBSD_version >= 1300048)))
 	return memfd_create("waynergy-anon-fd", MFD_CLOEXEC);
-	#endif
-	#ifdef __FreeBSD__
-	return shm_open(SHM_ANON, O_RDWR | O_CREAT, 0600);
 	#endif
 	return fileno(tmpfile());
 }
@@ -121,7 +123,7 @@ void osDropPriv(void)
 
 
 #ifdef __linux__
-static char *linux_peer_proc_name(int fd)
+char *osGetPeerProcName(int fd)
 {
 	struct ucred uc;
 	socklen_t len = sizeof(uc);
@@ -157,14 +159,56 @@ done:
 	}
 	return buf;
 }
-#endif
-
+#elif defined(__FreeBSD__)
+#include <sys/param.h>
+#include <sys/user.h>
+#include <sys/ucred.h>
+#include <sys/sysctl.h>
 char *osGetPeerProcName(int fd)
 {
-#ifdef __linux__
-	return linux_peer_proc_name(fd);
-#endif
+	char *name = NULL;
+
+	struct xucred cred = {0};
+	socklen_t slen = sizeof(cred);
+	size_t len = sizeof(cred);
+
+	struct kinfo_proc *kip = NULL;
+	int mib[4] = {CTL_KERN, KERN_PROC, KERN_PROC_PID};
+
+	if (getsockopt(fd, SOL_SOCKET, LOCAL_PEERCRED, &cred, &slen) == -1) {
+		logPErr("GetPeerProcName: getsockopt() failure");
+		goto done;
+	}
+	logDbg("Got peer pid of %d", cred.cr_pid);
+
+	mib[3] = cred.cr_pid;
+	if (sysctl(mib, nitems(mib), NULL, &len, NULL, 0) == -1) {
+		logPErr("sysctl failed to get size");
+		goto done;
+	}
+	kip = xmalloc(len);
+
+	if (sysctl(mib, nitems(mib), kip, &len, NULL, 0) == -1) {
+		logPErr("sysctl failed to get proc info");
+		goto done;
+	}
+	if ((len != sizeof(*kip)) ||
+	    (kip->ki_structsize != sizeof(*kip)) ||
+	    (kip->ki_pid != cred.cr_pid)) {
+		logErr("returned procinfo is unusable");
+		goto done;
+	}
+	name = xstrdup(kip->ki_comm);
+
+done:
+	free(kip);
+	return name;
+}
+#else
+char *osGetPeerProcName(int fd)
+{
 	logErr("osGetPeerProcName not implemented for this platform");
 	return NULL;
 }
+#endif
 
