@@ -167,7 +167,7 @@ char *osGetPeerProcName(int fd)
 {
 	char *name = NULL;
 
-	struct xucred cred;
+	struct xucred cred = {0};
 	socklen_t slen = sizeof(cred);
 	size_t len = sizeof(cred);
 
