@@ -122,7 +122,7 @@ void osDropPriv(void)
 
 
 #ifdef __linux__
-static char *linux_peer_proc_name(int fd)
+char *osGetPeerProcName(int fd)
 {
 	struct ucred uc;
 	socklen_t len = sizeof(uc);
@@ -158,14 +158,53 @@ done:
 	}
 	return buf;
 }
-#endif
-
+#elif defined(__FreeBSD__)
+#include <sys/param.h>
+#include <sys/user.h>
+#include <sys/ucred.h>
 char *osGetPeerProcName(int fd)
 {
-#ifdef __linux__
-	return linux_peer_proc_name(fd);
-#endif
+	char *name = NULL;
+
+	struct xucred cred;
+	socklen_t len = sizeof(cred);
+
+	struct kinfo_proc *kip = NULL;
+	int mib[4] = {CTL_KERN, KERN_PROC, KERN_PROC_PID};
+
+	if (getsockopt(fd, SOL_SOCKET, LOCAL_PEERCRED, &uc, &len) == -1) {
+		logPErr("GetPeerProcName: getsockopt() failure");
+		goto done;
+	}
+
+	mib[3] = cred.cr_pid;
+	if (sysctl(mib, nitems(mib), NULL, &len, NULL, 0) == -1) {
+		logPErr("sysctl failed to get size");
+		goto done;
+	}
+	kip = xmalloc(len);
+
+	if (sysctl(mib, nitems(mib), kip, &len, NULL, 0) == -1) {
+		logPErr("sysctl failed to get proc info");
+		goto done;
+	}
+	if ((len != sizeof(*kip)) ||
+	    (kip->ki_structsize != sizeof(*kipp)) ||
+	    (kip->ki_pid != cred.cr_pid)) {
+		logErr("returned procinfo is unusable");
+		goto done;
+	}
+	name = xstrdup(kip->ki_comm);
+
+done:
+	free(kip);
+	return name;
+}
+#else
+char *osGetPeerProcName(int fd)
+{
 	logErr("osGetPeerProcName not implemented for this platform");
 	return NULL;
 }
+#endif
 

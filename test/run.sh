@@ -1,5 +1,8 @@
 #!/bin/sh
 
 cc -g -I../include os.c ../src/os.c _log.c 
-exit $?;
-
+if ./a.out; then 
+	echo "os.c: passed"
+else
+	echo "os.c: failed"
+fi
