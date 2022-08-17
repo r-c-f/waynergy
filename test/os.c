@@ -32,10 +32,6 @@ bool get_peer_proc_name(char *orig_name)
 	if (child) {
 		/* host side */
 		close(sock[1]);
-		if (!(name = osGetPeerProcName(sock[0]))) {
-			logPErr("Failed on host");
-			return false;
-		}
 		if (waitpid(child, &child_stat, 0) != child) {
 			logPErr("Could not wait on child");
 			return false;
