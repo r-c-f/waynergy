@@ -79,6 +79,9 @@ struct wlContext {
 	struct wl_registry *registry;
 	struct wl_display *display;
 	struct wl_seat *seat;
+	uint32_t seat_caps;
+	struct wl_keyboard *kb;
+	char *kb_map;
 	struct wlInput input;
 	/* /dev/uinput file descriptors, for mouse or keyboard
 	 * or -1 to disable */
