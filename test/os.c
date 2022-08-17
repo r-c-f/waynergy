@@ -21,7 +21,7 @@ bool get_peer_proc_name(char *orig_name)
 		logPErr("socketpair");
 		return false;
 	}
-	
+
 	host = getpid();
 	child = fork();
 	if (child == -1) {
@@ -85,6 +85,6 @@ int main(int argc, char **argv)
 	bool stat = true;
 	stat = stat && get_anon_fd();
        	stat = stat && get_peer_proc_name(orig_name);
-	return !stat;	
+	return !stat;
 }
 
