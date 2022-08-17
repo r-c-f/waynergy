@@ -168,7 +168,7 @@ char *osGetPeerProcName(int fd)
 	char *name = NULL;
 
 	struct xucred cred;
-	socklen_t len = sizeof(cred);
+	size_t len = sizeof(cred);
 
 	struct kinfo_proc *kip = NULL;
 	int mib[4] = {CTL_KERN, KERN_PROC, KERN_PROC_PID};
