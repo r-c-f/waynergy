@@ -162,6 +162,7 @@ done:
 #include <sys/param.h>
 #include <sys/user.h>
 #include <sys/ucred.h>
+#include <sys/sysctl.h>
 char *osGetPeerProcName(int fd)
 {
 	char *name = NULL;
