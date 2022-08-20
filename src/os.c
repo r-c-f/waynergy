@@ -175,7 +175,7 @@ char *osGetPeerProcName(int fd)
 	struct kinfo_proc *kip = NULL;
 	int mib[4] = {CTL_KERN, KERN_PROC, KERN_PROC_PID};
 
-	if (getsockopt(fd, SOL_SOCKET, LOCAL_PEERCRED, &cred, &slen) == -1) {
+	if (getsockopt(fd, SOL_LOCAL, LOCAL_PEERCRED, &cred, &slen) == -1) {
 		logPErr("GetPeerProcName: getsockopt() failure");
 		goto done;
 	}
