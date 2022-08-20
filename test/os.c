@@ -2,6 +2,7 @@
 #include "../include/log.h"
 #include <sys/socket.h>
 #include <sys/un.h>
+#include <sys/wait.h>
 #include <unistd.h>
 #include <string.h>
 
@@ -41,16 +42,14 @@ bool get_anon_fd(void)
 bool get_peer_proc_name(char *orig_name)
 {
 	pid_t host, child;
-	int sock, lsock;
+	int sock[2];
 	int child_stat;
 	char *name;
 
-	struct sockaddr_un addr = {
-		.sun_family = AF_UNIX,
-		.sun_path = "peer_sock_test",
-	};
-
-	unlink("peer_sock_test");
+	if (socketpair(AF_UNIX, SOCK_STREAM, 0, sock) == -1) { 
+		logPErr("socketpair");
+		return false;
+	}
 
 	host = getpid();
 	child = fork();
@@ -61,22 +60,8 @@ bool get_peer_proc_name(char *orig_name)
 
 	if (child) {
 		/* host side */
-		if ((lsock = socket(AF_UNIX, SOCK_STREAM, 0)) == -1) {
-			logPErr("socket");
-			return false;
-		}
-		if ((bind(lsock, (struct sockaddr *)&addr, SUN_LEN(&addr))) == -1) {
-			logPErr("bind");
-			return false;
-		}
-		if ((listen(lsock, 2)) == -1) {
-			logPErr("listen");
-			return false;
-		}
-		if ((sock = accept(lsock, NULL, NULL)) == -1) {
-			logPErr("accept");
-			return false;
-		}
+		logDbg("Child pid %d, host pid %d", child, host);
+		close(sock[0]);
 		if (waitpid(child, &child_stat, 0) != child) {
 			logPErr("Could not wait on child");
 			return false;
@@ -96,19 +81,8 @@ bool get_peer_proc_name(char *orig_name)
 		}
 	} else {
 		/* child side */
-		sleep(5);
-
-		if ((sock = socket(AF_UNIX, SOCK_STREAM, 0)) == -1) {
-			logPErr("child: socket");
-			exit(1);
-		}
-		if (connect(sock, (struct sockaddr *)&addr, SUN_LEN(&addr)) == -1) {
-			logPErr("child: connect");
-			exit(2);
-		}
-
-		logDbg("Child pid %d, host pid %d", child, host);
-		if (!(name = osGetPeerProcName(sock))) {
+		close(sock[1]);
+		if (!(name = osGetPeerProcName(sock[0]))) {
 			exit(3);
 		}
 		logDbg("Got peer name: %s\n", name);
