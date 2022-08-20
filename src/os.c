@@ -133,7 +133,7 @@ char *osGetPeerProcName(int fd)
 	char *path = NULL;
 	FILE *f = NULL;
 
-	if (getsockopt(fd, SOL_LOCAL, SO_PEERCRED, &uc, &len) == -1) {
+	if (getsockopt(fd, SOL_SOCKET, SO_PEERCRED, &uc, &len) == -1) {
 		logPErr("GetPeerProcName: getsockopt() failure");
 		return NULL;
 	}
