@@ -83,11 +83,11 @@ bool get_peer_proc_name(char *orig_name)
 		/* child side */
 		close(sock[1]);
 		if (!(name = osGetPeerProcName(sock[0]))) {
-			exit(3);
+			exit(1);
 		}
 		logDbg("Got peer name: %s\n", name);
 		if (strcmp(name, orig_name)) {
-			exit(4);
+			exit(2);
 		}
 		exit(0);
 	}
