@@ -125,11 +125,10 @@ void logDbg(const char *fmt, ...)
 }
 bool logInit(enum logLevel level, char *path)
 {
-	char *mode;
-
-	mode = configTryString("log/mode", "w");
 	log_level = level;
 	clock_gettime(CLOCK_MONOTONIC, &log_start);
+#if !defined(WAYNERGY_TEST)
+	char *mode = configTryString("log/mode", "w");
 	if (path) {
 		if (!(log_file = fopen(path, mode))) {
 			logErr("Could not open extra logfile at path %s", path);
@@ -138,8 +137,9 @@ bool logInit(enum logLevel level, char *path)
 		}
 		log_file_fd = fileno(log_file);
 	}
-	logInfo("Log initialized at level %d", level);
 	free(mode);
+#endif
+	logInfo("Log initialized at level %d", level);
 	return true;
 }
 void logClose(void)
