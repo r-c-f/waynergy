@@ -1,9 +1,32 @@
 #include "wayland.h"
+#include <assert.h>
 #include <stdbool.h>
 #include "log.h"
 #include "fdio_full.h"
 #include <xkbcommon/xkbcommon.h>
 
+
+/* handle button maps */
+
+static void load_button_map(struct wlContext *ctx)
+{
+	int i;
+	char *key;
+	int default_map[] = {
+		0,
+		0x110,
+		0x112,
+		0x111,
+		0x114,
+		0x113,
+	};
+	static_assert(sizeof(default_map)/sizeof(*default_map) == WL_INPUT_BUTTON_COUNT, "button map size mismatch");
+	for (i = 0; i < WL_INPUT_BUTTON_COUNT; ++i) {
+		xasprintf(&key, "button_map/%d", i);
+		ctx->input.button_map[i] = configTryLong(key, default_map[i]);
+		logDbg("Set button mapping: %d -> %d", i, ctx->input.button_map[i]);
+	}
+};
 
 
 /* Code to track keyboard state for modifier masks
@@ -168,6 +191,9 @@ int wlKeySetConfigLayout(struct wlContext *ctx)
 	load_id_keymap(ctx);
 	ctx->input.key_press_state = xcalloc(ctx->input.key_press_state_len, sizeof(*ctx->input.key_press_state));
 	free(keymap_str);
+	/* XXX: as this must be called at least once, it is fine to do this here
+	 * even if it seems a bit odd */
+	load_button_map(ctx);
 	return ret;
 }
 
@@ -243,8 +269,8 @@ void wlMouseMotion(struct wlContext *ctx, int x, int y)
 }
 void wlMouseButton(struct wlContext *ctx, int button, int state)
 {
-	logDbg("Mouse button: %d, state: %d", button, state);
-	ctx->input.mouse_button(&ctx->input, button, state);
+	logDbg("Mouse button: %d (mapped to %d), state: %d", button, ctx->input.button_map[button], state);
+	ctx->input.mouse_button(&ctx->input, ctx->input.button_map[button], state);
 }
 void wlMouseWheel(struct wlContext *ctx, signed short dx, signed short dy)
 {

@@ -38,6 +38,8 @@ struct wlOutput
 	struct wlOutput *next;
 };
 
+#define WL_INPUT_BUTTON_COUNT 6
+
 struct wlInput {
 	/* module-specific state */
 	void *state;
@@ -56,6 +58,8 @@ struct wlInput {
 	int *id_keymap;
 	/* whether or not a given id entry should be used */
 	bool *id_keymap_valid;
+	/* mouse button map */
+	int button_map[WL_INPUT_BUTTON_COUNT];
 	/* wayland context */
 	struct wlContext *wl_ctx;
 	/* actual functions */

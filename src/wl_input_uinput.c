@@ -27,15 +27,6 @@ struct state_uinput {
 
 #define UINPUT_KEY_MAX 256
 
-static int button_map[] = {
-	0,
-	0x110,
-	0x112,
-	0x111,
-	0x150,
-	0x151,
-};
-
 static void emit(int fd, int type, int code, int val)
 {
 	struct input_event ie = {
@@ -69,7 +60,7 @@ static void mouse_button(struct wlInput *input, int button, int state)
 {
 	struct state_uinput *ui = input->state;
 
-	emit(ui->mouse_fd, EV_KEY, button_map[button], state);
+	emit(ui->mouse_fd, EV_KEY, button, state);
 	emit(ui->mouse_fd, EV_SYN, SYN_REPORT, 0);
 }
 
@@ -147,7 +138,7 @@ static bool init_key(struct state_uinput *ui)
 	return true;
 }
 
-static bool init_mouse(struct state_uinput *ui, int max_x, int max_y)
+static bool init_mouse(struct wlContext *ctx, struct state_uinput *ui, int max_x, int max_y)
 {
 	int i;
 
@@ -172,8 +163,8 @@ static bool init_mouse(struct state_uinput *ui, int max_x, int max_y)
 
 	TRY_IOCTL(ui->mouse_fd, UI_SET_EVBIT, EV_SYN);
 	TRY_IOCTL(ui->mouse_fd, UI_SET_EVBIT, EV_KEY);
-	for (i = 0; i < (sizeof(button_map)/sizeof(*button_map)); ++i) {
-		TRY_IOCTL(ui->mouse_fd, UI_SET_KEYBIT, button_map[i]);
+	for (i = 0; i < WL_INPUT_BUTTON_COUNT; ++i) {
+		TRY_IOCTL(ui->mouse_fd, UI_SET_KEYBIT, ctx->input.button_map[i]);
 	}
 
 	TRY_IOCTL(ui->mouse_fd, UI_SET_EVBIT, EV_REL);
@@ -213,7 +204,7 @@ bool wlInputInitUinput(struct wlContext *ctx)
 
 	if (!init_key(ui))
 		goto error;
-	if (!init_mouse(ui, ctx->width, ctx->height))
+	if (!init_mouse(ctx, ui, ctx->width, ctx->height))
 		goto error;
 
 	ctx->input = (struct wlInput) {
