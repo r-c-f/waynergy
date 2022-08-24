@@ -243,6 +243,7 @@ void wlMouseMotion(struct wlContext *ctx, int x, int y)
 }
 void wlMouseButton(struct wlContext *ctx, int button, int state)
 {
+	logDbg("Mouse button: %d, state: %d", button, state);
 	ctx->input.mouse_button(&ctx->input, button, state);
 }
 void wlMouseWheel(struct wlContext *ctx, signed short dx, signed short dy)
