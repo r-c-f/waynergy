@@ -264,8 +264,8 @@ button map in use:
 1 = 0x110 # BTN_LEFT
 2 = 0x112 # BTN_MIDDLE
 3 = 0x111 # BTN_RIGHT
-4 = 0x114 # BTN_EXTRA
-5 = 0x113 # BTN_SIDE
+4 = 0x113 # BTN_SIDE
+5 = 0x114 # BTN_EXTRA
 ```
 Given here is the default; each of 6 protocol possibilities is mapped to a
 value based on `/usr/include/linux/input-event-keycodes.h`. 
