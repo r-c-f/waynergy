@@ -14,15 +14,15 @@ static void load_button_map(struct wlContext *ctx)
 	char *key;
 	int default_map[] = {
 		0,
-		0x110,
-		0x112,
-		0x111,
-		0x114,
-		0x113,
+		0x110, /*BTN_LEFT*/
+		0x112, /*BTN_MIDDLE*/
+		0x111, /*BTN_RIGHT*/
+		0x114, /*BTN_EXTRA*/
+		0x113, /*BTN_SIDE*/
 	};
 	static_assert(sizeof(default_map)/sizeof(*default_map) == WL_INPUT_BUTTON_COUNT, "button map size mismatch");
 	for (i = 0; i < WL_INPUT_BUTTON_COUNT; ++i) {
-		xasprintf(&key, "button_map/%d", i);
+		xasprintf(&key, "button-map/%d", i);
 		ctx->input.button_map[i] = configTryLong(key, default_map[i]);
 		logDbg("Set button mapping: %d -> %d", i, ctx->input.button_map[i]);
 	}

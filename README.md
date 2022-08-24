@@ -253,6 +253,23 @@ using the synergy key IDs might make sense in an `id-keymap` section:
 with actual values based on the above process, using the `id` parameter in the
 server log instead of `button`.
 
+#### Button map
+
+This should not be necessary in 99.9% of situations, but if you want to change 
+the  default mouse button behavior you can include a section redefining the 
+button map in use:
+```
+[button-map]
+0 = 0 # No button
+1 = 0x110 # BTN_LEFT
+2 = 0x112 # BTN_MIDDLE
+3 = 0x111 # BTN_RIGHT
+4 = 0x114 # BTN_EXTRA
+5 = 0x113 # BTN_SIDE
+```
+Given here is the default; each of 6 protocol possibilities is mapped to a
+value based on `/usr/include/linux/input-event-keycodes.h`. 
+
 #### Screensaver
 
 `screensaver/start` should contain a command to be run when the screensaver is
