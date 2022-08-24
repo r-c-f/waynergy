@@ -258,6 +258,7 @@ bool wlInputInitWlr(struct wlContext *ctx)
 		.key = key,
 		.key_map = key_map,
 	};
+	wlLoadButtonMap(ctx);
 	logInfo("Using wlroots virtual input protocols");
 	return true;
 }

@@ -111,6 +111,8 @@ struct wlContext {
 /* (re)set the keyboard layout according to the configuration
  * probably not useful outside wlSetup*/
 extern int wlKeySetConfigLayout(struct wlContext *ctx);
+/* load button map */
+extern void wlLoadButtonMap(struct wlContext *ctx);
 /* set up the wayland context */
 extern bool wlSetup(struct wlContext *context, int width, int height, char *backend);
 

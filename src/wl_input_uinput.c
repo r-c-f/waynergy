@@ -202,11 +202,8 @@ bool wlInputInitUinput(struct wlContext *ctx)
 	ctx->uinput_fd[0] = -1;
 	ctx->uinput_fd[1] = -1;
 
-	if (!init_key(ui))
-		goto error;
-	if (!init_mouse(ctx, ui, ctx->width, ctx->height))
-		goto error;
-
+	/* because we need to know the button map ahead of time, we need
+	 * to initialize this first */
 	ctx->input = (struct wlInput) {
 		.state = ui,
 		.wl_ctx = ctx,
@@ -217,6 +214,13 @@ bool wlInputInitUinput(struct wlContext *ctx)
 		.key = key,
 		.key_map = key_map,
 	};
+	wlLoadButtonMap(ctx);
+
+	if (!init_key(ui))
+		goto error;
+	if (!init_mouse(ctx, ui, ctx->width, ctx->height))
+		goto error;
+
 	logInfo("Using uinput");
 	return true;
 error:

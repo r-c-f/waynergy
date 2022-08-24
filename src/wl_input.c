@@ -8,7 +8,7 @@
 
 /* handle button maps */
 
-static void load_button_map(struct wlContext *ctx)
+void wlLoadButtonMap(struct wlContext *ctx)
 {
 	int i;
 	char *key;
@@ -191,9 +191,6 @@ int wlKeySetConfigLayout(struct wlContext *ctx)
 	load_id_keymap(ctx);
 	ctx->input.key_press_state = xcalloc(ctx->input.key_press_state_len, sizeof(*ctx->input.key_press_state));
 	free(keymap_str);
-	/* XXX: as this must be called at least once, it is fine to do this here
-	 * even if it seems a bit odd */
-	load_button_map(ctx);
 	return ret;
 }
 
