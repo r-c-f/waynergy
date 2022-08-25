@@ -43,16 +43,6 @@ static void key(struct wlInput *input, int key, int state)
 	wl_display_flush(input->wl_ctx->display);
 }
 
-static int button_map[] = {
-	0,
-	0x110,
-	0x112,
-	0x111,
-	0x150,
-	0x151,
-	-1
-};
-
 static void mouse_rel_motion(struct wlInput *input, int dx, int dy)
 {
 	struct state_wlr *wlr = input->state;
@@ -70,8 +60,7 @@ static void mouse_motion(struct wlInput *input, int x, int y)
 static void mouse_button(struct wlInput *input, int button, int state)
 {
 	struct state_wlr *wlr = input->state;
-	logDbg("mouse: button %d (mapped to %x) %s", button, button_map[button], state ? "down": "up");
-	zwlr_virtual_pointer_v1_button(wlr->pointer, wlTS(input->wl_ctx), button_map[button], state);
+	zwlr_virtual_pointer_v1_button(wlr->pointer, wlTS(input->wl_ctx), button, state);
 	zwlr_virtual_pointer_v1_frame(wlr->pointer);
 	wl_display_flush(input->wl_ctx->display);
 }
@@ -269,6 +258,7 @@ bool wlInputInitWlr(struct wlContext *ctx)
 		.key = key,
 		.key_map = key_map,
 	};
+	wlLoadButtonMap(ctx);
 	logInfo("Using wlroots virtual input protocols");
 	return true;
 }

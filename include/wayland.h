@@ -38,6 +38,8 @@ struct wlOutput
 	struct wlOutput *next;
 };
 
+#define WL_INPUT_BUTTON_COUNT 6
+
 struct wlInput {
 	/* module-specific state */
 	void *state;
@@ -56,6 +58,8 @@ struct wlInput {
 	int *id_keymap;
 	/* whether or not a given id entry should be used */
 	bool *id_keymap_valid;
+	/* mouse button map */
+	int button_map[WL_INPUT_BUTTON_COUNT];
 	/* wayland context */
 	struct wlContext *wl_ctx;
 	/* actual functions */
@@ -107,6 +111,8 @@ struct wlContext {
 /* (re)set the keyboard layout according to the configuration
  * probably not useful outside wlSetup*/
 extern int wlKeySetConfigLayout(struct wlContext *ctx);
+/* load button map */
+extern void wlLoadButtonMap(struct wlContext *ctx);
 /* set up the wayland context */
 extern bool wlSetup(struct wlContext *context, int width, int height, char *backend);
 
