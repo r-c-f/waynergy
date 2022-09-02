@@ -265,20 +265,23 @@ static struct wl_output_listener output_listener = {
 static void keyboard_keymap(void *data, struct wl_keyboard *wl_kb, uint32_t format, int32_t fd, uint32_t size)
 {
 	struct wlContext *ctx = data;
-	char *buf;
+	char *buf = NULL;
 	if (!configTryBool("wl_keyboard_map", true)) {
-		return;
+		goto cleanup;
 	}
 
 	buf= xcalloc(size + 1, 1);
 	if (!read_full(fd, buf, size, 0)) {
 		logDbg("Could not read current keymap from fd");
-		free(buf);
-		return;
+		goto cleanup;
 	}
 	free(ctx->kb_map);
 	ctx->kb_map = buf;
+	buf = NULL;
 	logDbg("Current keymap updated");
+cleanup:
+	free(buf);
+	close(fd);
 }
 
 static void keyboard_enter(void *data, struct wl_keyboard *wl_kb, uint32_t serial, struct wl_surface *surface, struct wl_array *keys)
