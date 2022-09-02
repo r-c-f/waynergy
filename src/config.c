@@ -125,6 +125,8 @@ static int read_full_section_dir(char *name, char ***key, char ***val)
 	ret = count;
 	goto done;
 done:
+	if (dir)
+		closedir(dir);
 	free(dir_path);
 	return ret;
 }
