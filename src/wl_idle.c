@@ -37,7 +37,7 @@ void wlIdleInhibit(struct wlContext *ctx, bool on)
 	long idle_time;
 	char *idle_method;
 	char *idle_keyname;
-	logDbg("got idle inhibit request");
+	logDbg("got idle inhibit request, state: %s", on ? "on" : "off");
 	if (!ctx->idle_manager) {
 		logWarn("Idle inhibit request, but no idle manager support");
 		return;
