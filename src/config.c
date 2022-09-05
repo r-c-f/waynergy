@@ -186,12 +186,20 @@ char *configReadFile(char *name)
 
 char **configReadLines(char *name)
 {
-	char *path;
+	char *path, *buf = NULL;
 	size_t len = 24; //allocated;
 	size_t pos = 0;
 	size_t n; //line length -- probably don't need it
 	char **line;
 	FILE *f;
+
+	/* try INI first */
+	if ((buf = try_read_ini(name))) {
+		logDbg("Using INI single-line value for %s: %s", name, buf);
+		line = xcalloc(sizeof(*line), 2);
+		line[0] = buf;
+		return line;
+	}
 
 	if (!(path = osGetHomeConfigPath(name)))
 		return NULL;
