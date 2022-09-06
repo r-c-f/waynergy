@@ -288,6 +288,10 @@ move of 0,0 is sent (this is the default).
 The mouse approach prevents any clashes with keys, but will prevent cursor
 hiding.
 
+Synergy upstream seems to no longer support this; if your screenlocker never
+triggers set `idle-inhibit/enable` to `false`. Barrier and input-leap seem
+to still work. 
+
 #### TLS
 
 Enabled or disabled with `tls/enable`. Certificate hashes (for any given host) 
