@@ -17,7 +17,7 @@ static void on_idle_key(void *data, struct org_kde_kwin_idle_timeout *timeout)
 	if (idle_key_raw != -1) {
 		wlKeyRaw(ctx, idle_key_raw, true);
 		wlKeyRaw(ctx, idle_key_raw, false);
-	} else { 
+	} else {
 		wlKey(ctx, idle_key, 0, true);
 		wlKey(ctx, idle_key, 0, false);
 	}
@@ -37,7 +37,13 @@ void wlIdleInhibit(struct wlContext *ctx, bool on)
 	long idle_time;
 	char *idle_method;
 	char *idle_keyname;
+
 	logDbg("got idle inhibit request, state: %s", on ? "on" : "off");
+	if (!configTryBool("idle-inhibit/enable", true)) {
+		logDbg("idle inhibition disabled, ignoring request");
+		return;
+	}
+
 	if (!ctx->idle_manager) {
 		logWarn("Idle inhibit request, but no idle manager support");
 		return;
