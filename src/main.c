@@ -163,6 +163,15 @@ int main(int argc, char **argv)
 	/* and drop said privileges */
 	osDropPriv();
 
+	/* we want to be the leader of a single process group, to make
+	 * cleanup easier */
+	if (getpgid(getpid()) != getpid()) {
+		if (setsid() != getpid()) {
+			fprintf(stderr, "could not create session\n");
+			return 1;
+		}
+	}
+
 	/* we default to name being hostname, so get it*/
 	if (gethostname(hostname, _POSIX_HOST_NAME_MAX - 1) == -1) {
 		perror("gethostname");
