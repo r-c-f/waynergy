@@ -2,7 +2,7 @@
 #include <signal.h>
 #include <spawn.h>
 
-pid_t gnome_session_inhibit = -1;
+static pid_t gnome_session_inhibit = -1;
 
 static void gnome_inhibit_stop(void)
 {
@@ -37,7 +37,7 @@ static bool gnome_inhibit_start(void)
 }
 
 static xkb_keycode_t idle_key;
-int idle_key_raw = -1;
+static int idle_key_raw = -1;
 static void on_idle_mouse(void *data, struct org_kde_kwin_idle_timeout *timeout)
 {
 	logDbg("Got idle event, responding with zero mouse move");
