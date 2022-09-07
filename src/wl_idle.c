@@ -1,5 +1,40 @@
 #include "wayland.h"
+#include <signal.h>
+#include <spawn.h>
 
+pid_t gnome_session_inhibit = -1;
+
+static void gnome_inhibit_stop(void)
+{
+	if (gnome_session_inhibit == -1) {
+		logDbg("gnome-session-inhibit not running");
+		return;
+	}
+	logDbg("Stopping gnome-session-inhibit");
+	kill(gnome_session_inhibit, SIGTERM);
+}
+static bool gnome_inhibit_start(void)
+{
+	char *argv[] = {
+		"gnome-session-inhibit",
+		"--inhibit",
+		"idle",
+		"--inhibit-only",
+		NULL,
+	};
+
+	if (gnome_session_inhibit != -1) {
+		gnome_inhibit_stop();
+	}
+
+	logDbg("Starting gnome-session-inhibit");
+	if (posix_spawnp(&gnome_session_inhibit, argv[0], NULL, NULL, argv, environ)) {
+		gnome_session_inhibit = -1;
+		return false;
+	}
+
+	return true;
+}
 
 static xkb_keycode_t idle_key;
 int idle_key_raw = -1;
@@ -37,6 +72,7 @@ void wlIdleInhibit(struct wlContext *ctx, bool on)
 	long idle_time;
 	char *idle_method;
 	char *idle_keyname;
+	char *method_default;
 
 	logDbg("got idle inhibit request, state: %s", on ? "on" : "off");
 	if (!configTryBool("idle-inhibit/enable", true)) {
@@ -44,18 +80,37 @@ void wlIdleInhibit(struct wlContext *ctx, bool on)
 		return;
 	}
 
-	if (!ctx->idle_manager) {
-		logWarn("Idle inhibit request, but no idle manager support");
-		return;
+	/* set default based on compositor in use */
+	if (!strcmp(ctx->comp_name, "gnome-shell")) {
+		method_default = "gnome";
+	} else { /* most things should support the idle manager */
+		method_default = "mouse";
 	}
+	logDbg("Defaulting to idle-inhibit/method %s for compositor %s",
+		method_default,
+		ctx->comp_name
+	);
+
 	if (on) {
 		if (ctx->idle_timeout) {
 			logDbg("Idle already inhibited");
 			return;
 		}
 		idle_time = configTryLong("idle-inhibit/interval", 30);
-		idle_method = configTryString("idle-inhibit/method", "mouse");
+		idle_method = configTryString("idle-inhibit/method", method_default);
 
+		/* use GNOME's session inhibitor */
+		if (!strcmp(idle_method, "gnome")) {
+			gnome_inhibit_start();
+			free(idle_method);
+			return;
+		}
+		/* use the idle manager hack */
+		if (!ctx->idle_manager) {
+			logWarn("Idle inhibit request, but no idle manager support");
+			free(idle_method);
+			return;
+		}
 		if (!strcmp(idle_method, "mouse")) {
 			idle_timeout_listener.idle = on_idle_mouse;
 		} else if (!strcmp(idle_method, "key")) {
@@ -81,6 +136,10 @@ void wlIdleInhibit(struct wlContext *ctx, bool on)
 		org_kde_kwin_idle_timeout_add_listener(ctx->idle_timeout, &idle_timeout_listener, ctx);
 		wl_display_flush(ctx->display);
 	} else {
+		if (gnome_session_inhibit != -1) {
+			gnome_inhibit_stop();
+			return;
+		}
 		if (!ctx->idle_timeout) {
 			logDbg("Idle already not inhibited");
 			return;
