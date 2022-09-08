@@ -285,10 +285,8 @@ falling back on the xkb-style key name in `idle-inhibit/keyname`, which will
 default to `HYPR`. If `idle-inhbibit/method` is `mouse`, then a relative 
 move of 0,0 is sent (this is the default). 
 
-The mouse approach prevents any clashes with keys, but will prevent cursor
-hiding.
-
-For GNOME, the `gnome` method will use `gnome-session-inhibit`, and is required for inhibition to work. This should be automatically detected if no method is set, based on compositor name. 
+For GNOME, `gnome-session-inhibit` is used instead. This should be automatically
+detected. 
 
 Synergy upstream seems to no longer support this; if your screenlocker never
 triggers set `idle-inhibit/enable` to `false`. Barrier and input-leap seem
