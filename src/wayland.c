@@ -468,6 +468,16 @@ bool wlSetup(struct wlContext *ctx, int width, int height, char *backend)
 		logErr("Could not configure virtual keyboard");
 		return false;
 	}
+
+	/* initiailize idle inhibition */
+	if (wlIdleInitKde(ctx)) {
+		logInfo("Using KDE idle inhibition protocol");
+	} else if (wlIdleInitGnome(ctx)) {
+		logInfo("Using GNOME idle inhibition through gnome-session-inhibit");
+	} else {
+		logInfo("No idle inhibition support");
+	}
+
 	/* set FD_CLOEXEC */
 	int flags = fcntl(fd, F_GETFD);
 	flags |= FD_CLOEXEC;

@@ -38,6 +38,20 @@ struct wlOutput
 	struct wlOutput *next;
 };
 
+struct wlIdle
+{
+	/*module specific state */
+	void *state;
+	/*wayland context */
+	struct wlContext *wl_ctx;
+	/* actual functions */
+	void (*inhibit_start)(struct wlIdle *);
+	void (*inhibit_stop)(struct wlIdle *);
+};
+
+extern bool wlIdleInitKde(struct wlContext *ctx);
+extern bool wlIdleInitGnome(struct wlContext *ctx);
+
 #define WL_INPUT_BUTTON_COUNT 6
 
 struct wlInput {
@@ -99,7 +113,7 @@ struct wlContext {
 	struct wlOutput *outputs;
 	/* idle stuff */
 	struct org_kde_kwin_idle *idle_manager;
-	struct org_kde_kwin_idle_timeout *idle_timeout;
+	struct wlIdle idle;
 	//state
 	int width;
 	int height;
