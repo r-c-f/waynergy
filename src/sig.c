@@ -27,10 +27,7 @@ static void cleanup(void)
 	synNetDisconnect(&synNetContext);
 	logClose();
 	wlClose(&wlContext);
-	/* kill all related processes that remain alive */
-	kill(-1 * getpgid(getpid()), SIGTERM);
 	/*unmask any caught signals*/
-
 }
 
 void Exit(int status)
