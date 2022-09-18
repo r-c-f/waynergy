@@ -25,7 +25,7 @@ bool osFileExists(const char *path)
 		return false;
 	}
 	if (!S_ISREG(buf.st_mode)) {
-		logDbg("%s is not a regular file");
+		logWarn("%s is not a regular file as expected", path);
 		return false;
 	}
 	return true;
