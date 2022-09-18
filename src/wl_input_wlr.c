@@ -158,6 +158,7 @@ done:
 		free(buf);
 		buf = NULL;
 	}
+	posix_spawn_file_actions_destroy(&fa);
 	return buf;
 }
 

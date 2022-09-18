@@ -52,7 +52,11 @@ done:
 /* set up sockets */
 bool clipSetupSockets()
 {
+	char *path;
+
+	path = osGetRuntimePath("waynergy-clip-sock");
 	strncpy(clipMonitorAddr.sun_path, osGetRuntimePath("waynergy-clip-sock"), sizeof(clipMonitorAddr.sun_path) - 1);
+	free(path);
 	unlink(clipMonitorAddr.sun_path);
 	clipMonitorAddr.sun_family = AF_UNIX;
 	if ((clipMonitorFd = socket(AF_UNIX, SOCK_STREAM, 0)) == -1) {
