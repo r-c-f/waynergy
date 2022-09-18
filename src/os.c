@@ -24,6 +24,10 @@ bool osFileExists(const char *path)
 	if (stat(path, &buf)) {
 		return false;
 	}
+	if (!S_ISREG(buf.st_mode)) {
+		logDbg("%s is not a regular file");
+		return false;
+	}
 	return true;
 }
 bool osMakeParentDir(const char *path, mode_t mode)
