@@ -103,6 +103,7 @@ bool clipSpawnMonitors(void)
 	if ((killret = system(killcmd))) {
 		logWarn("Could not kill lingering wlpaste instances: %d\n", killret);
 	}
+	free(killcmd);
 	for (int i = 0; i < 2; ++i) {
 		if (posix_spawnp(clipMonitorPid + i,"wl-paste",NULL,NULL,argv[i],environ)) {
 			logPErr("spawn");

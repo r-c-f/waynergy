@@ -25,6 +25,7 @@ void wlLoadButtonMap(struct wlContext *ctx)
 		xasprintf(&key, "button-map/%d", i);
 		ctx->input.button_map[i] = configTryLong(key, default_map[i]);
 		logDbg("Set button mapping: %d -> %d", i, ctx->input.button_map[i]);
+		free(key);
 	}
 };
 
