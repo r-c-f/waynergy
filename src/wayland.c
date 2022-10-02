@@ -470,12 +470,16 @@ bool wlSetup(struct wlContext *ctx, int width, int height, char *backend)
 	}
 
 	/* initiailize idle inhibition */
-	if (wlIdleInitKde(ctx)) {
-		logInfo("Using KDE idle inhibition protocol");
-	} else if (wlIdleInitGnome(ctx)) {
-		logInfo("Using GNOME idle inhibition through gnome-session-inhibit");
+	if (configTryBool("idle-inhibit/enable", true)) {
+		if (wlIdleInitKde(ctx)) {
+			logInfo("Using KDE idle inhibition protocol");
+		} else if (wlIdleInitGnome(ctx)) {
+			logInfo("Using GNOME idle inhibition through gnome-session-inhibit");
+		} else {
+			logInfo("No idle inhibition support");
+		}
 	} else {
-		logInfo("No idle inhibition support");
+		logInfo("Idle inhibition explicitly disabled");
 	}
 
 	/* set FD_CLOEXEC */
