@@ -8,6 +8,8 @@
 #include <sys/stat.h>
 
 #define INI_IMPLEMENTATION
+#define INI_MALLOC(ctx, size) xcalloc(1, size)
+#define INI_FREE(ctx, ptr) free(ptr)
 #include "ini.h"
 static ini_t *config_ini = NULL;
 

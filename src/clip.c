@@ -55,7 +55,7 @@ bool clipSetupSockets()
 	char *path;
 
 	path = osGetRuntimePath("waynergy-clip-sock");
-	strncpy(clipMonitorAddr.sun_path, osGetRuntimePath("waynergy-clip-sock"), sizeof(clipMonitorAddr.sun_path) - 1);
+	strncpy(clipMonitorAddr.sun_path, path, sizeof(clipMonitorAddr.sun_path) - 1);
 	free(path);
 	unlink(clipMonitorAddr.sun_path);
 	clipMonitorAddr.sun_family = AF_UNIX;
@@ -215,8 +215,10 @@ bool clipWlCopy(enum uSynergyClipboardId id, const unsigned char *data, size_t l
 		logPErr("wl-copy spawn");
 		close(fd[0]);
 		close(fd[1]);
+		posix_spawn_file_actions_destroy(&fa);
 		return false;
 	}
+	posix_spawn_file_actions_destroy(&fa);
 	close(fd[0]);
 	/* write to child process */
 	write_full(fd[1], data, len, 0);
