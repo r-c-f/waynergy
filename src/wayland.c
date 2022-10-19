@@ -17,6 +17,31 @@
 #include "sig.h"
 
 
+static char *display_strerror(int error)
+{
+	switch (error) {
+		case WL_DISPLAY_ERROR_INVALID_OBJECT:
+			return "server couldn't find object";
+		case WL_DISPLAY_ERROR_INVALID_METHOD:
+			return "method doesn't exist on specified interface or malformed request";
+		case WL_DISPLAY_ERROR_NO_MEMORY:
+			return "server is out of memory";
+		case WL_DISPLAY_ERROR_IMPLEMENTATION:
+			return "compositor implementation error";
+	}
+	return "unkown error";
+}
+
+void wlDisplayFlush(struct wlContext *ctx)
+{
+	int error;
+
+	if ((error = wl_display_get_error(ctx->display))) {
+		logErr("Wayland display error %d: %s", error, display_strerror(error));
+		Exit(2);
+	}
+	wl_display_flush(ctx->display);
+}
 
 void wlOutputAppend(struct wlOutput **outputs, struct wl_output *output, struct zxdg_output_v1 *xdg_output, uint32_t wl_name)
 {

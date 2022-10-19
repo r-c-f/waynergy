@@ -41,7 +41,7 @@ static void key(struct wlInput *input, int key, int state)
 	xkb_layout_index_t group = xkb_state_serialize_layout(input->xkb_state, XKB_STATE_LAYOUT_EFFECTIVE);
 	zwp_virtual_keyboard_v1_key(wlr->keyboard, wlTS(input->wl_ctx), key - 8, state);
 	zwp_virtual_keyboard_v1_modifiers(wlr->keyboard, depressed, latched, locked, group);
-	wl_display_flush(input->wl_ctx->display);
+	wlDisplayFlush(input->wl_ctx);
 }
 
 static void mouse_rel_motion(struct wlInput *input, int dx, int dy)
@@ -49,21 +49,21 @@ static void mouse_rel_motion(struct wlInput *input, int dx, int dy)
 	struct state_wlr *wlr = input->state;
 	zwlr_virtual_pointer_v1_motion(wlr->pointer, wlTS(input->wl_ctx), wl_fixed_from_int(dx), wl_fixed_from_int(dy));
 	zwlr_virtual_pointer_v1_frame(wlr->pointer);
-	wl_display_flush(input->wl_ctx->display);
+	wlDisplayFlush(input->wl_ctx);
 }
 static void mouse_motion(struct wlInput *input, int x, int y)
 {
 	struct state_wlr *wlr = input->state;
 	zwlr_virtual_pointer_v1_motion_absolute(wlr->pointer, wlTS(input->wl_ctx), x, y, input->wl_ctx->width, input->wl_ctx->height);
 	zwlr_virtual_pointer_v1_frame(wlr->pointer);
-	wl_display_flush(input->wl_ctx->display);
+	wlDisplayFlush(input->wl_ctx);
 }
 static void mouse_button(struct wlInput *input, int button, int state)
 {
 	struct state_wlr *wlr = input->state;
 	zwlr_virtual_pointer_v1_button(wlr->pointer, wlTS(input->wl_ctx), button, state);
 	zwlr_virtual_pointer_v1_frame(wlr->pointer);
-	wl_display_flush(input->wl_ctx->display);
+	wlDisplayFlush(input->wl_ctx);
 }
 static void mouse_wheel(struct wlInput *input, signed short dx, signed short dy)
 {
@@ -81,7 +81,7 @@ static void mouse_wheel(struct wlInput *input, signed short dx, signed short dy)
 		zwlr_virtual_pointer_v1_axis_discrete(wlr->pointer, wlTS(input->wl_ctx), 0, wl_fixed_from_int(-15), -1 * wlr->wheel_mult);
 	}
 	zwlr_virtual_pointer_v1_frame(wlr->pointer);
-	wl_display_flush(input->wl_ctx->display);
+	wlDisplayFlush(input->wl_ctx);
 }
 
 size_t get_nums(size_t count, long *dst, char *buf)

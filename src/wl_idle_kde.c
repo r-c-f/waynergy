@@ -44,7 +44,7 @@ static void inhibit_start(struct wlIdle *idle)
 		return;
 	}
 	org_kde_kwin_idle_timeout_add_listener(kde->timeout, &kde->listener, idle);
-	wl_display_flush(idle->wl_ctx->display);
+	wlDisplayFlush(idle->wl_ctx);
 }
 
 static void inhibit_stop(struct wlIdle *idle)
@@ -56,7 +56,7 @@ static void inhibit_stop(struct wlIdle *idle)
 		return;
 	}
 	org_kde_kwin_idle_timeout_release(kde->timeout);
-	wl_display_flush(idle->wl_ctx->display);
+	wlDisplayFlush(idle->wl_ctx);
 	kde->timeout = NULL;
 }
 
