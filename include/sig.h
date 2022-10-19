@@ -11,6 +11,10 @@ extern volatile sig_atomic_t sigDoExit;
 extern volatile sig_atomic_t sigDoRestart;
 void Exit(int status);
 void Restart(void);
+/* exit or restart, for situations like wayland protocol errors beyond our
+ * control that don't necessarily mean the compositor no longer exists or the
+ * session actually ended */
+void ExitOrRestart(int status);
 void sigHandleInit(char **argv);
 void sigWaitSIGCHLD(bool state);
 

@@ -44,6 +44,15 @@ void Restart(void)
 	exit(EXIT_FAILURE);
 }
 
+void ExitOrRestart(int status)
+{
+	if (configTryBool("restart_on_fatal", false)) {
+		logErr("Restarting on status %d", status);
+		Restart();
+	}
+	Exit(status);
+}
+
 static void sig_handle(int sig, siginfo_t *si, void *context)
 {
 	int level;

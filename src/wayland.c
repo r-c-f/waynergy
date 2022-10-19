@@ -38,7 +38,7 @@ void wlDisplayFlush(struct wlContext *ctx)
 
 	if ((error = wl_display_get_error(ctx->display))) {
 		logErr("Wayland display error %d: %s", error, display_strerror(error));
-		Exit(2);
+		ExitOrRestart(2);
 	}
 	wl_display_flush(ctx->display);
 }
