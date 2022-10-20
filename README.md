@@ -206,6 +206,12 @@ on my own systems) in `doc/xkb/keycodes/win`.
 The same issue of keycodes applies here; see `doc/xkb/keycodes/mac` for
 a usable configuration.
 
+###### Generating custom keycode sections
+
+If everything is still broken, using `waynergy-mapper -x $NAME` will generate
+an `xkb_keycodes` section with the given name by iterating through every 
+possible keycode in the current keymap to find out what the server is sending.
+
 ##### Raw keymapping
 
 Because the fake input protocol used by KDE doesn't support custom keymaps, 
@@ -226,19 +232,14 @@ general-purpose mappings is more difficult, but if anyone wants to
 contribute some under `doc` with clearly-defined server and client 
 targets they would be appreciated by somebody probably. 
 
-The process of generating them can probably best be seen in
-[issue 27](https://github.com/r-c-f/waynergy/issues/27) toward the 
-end of the thread, the gist of it is: 
-- increase log level in Barrier/Synergy on the server to display the button being 
-sent,
-- compare to the keycode displayed in xev/wev on the client system when
-using a hardware keyboard,
-- add them to the `[raw-keymap]` section as `server = client` pair,
-- repeat for any keys that don't work right. 
-
 The offset functionality is enabled through `raw-keymap/offset`, though it
 can also be disabled for explicit mappings by setting `raw-keymap/offset_on_explicit`
 to `false`. 
+
+Generating a raw keymapping from scratch is now much more straightforward: run
+`waynergy-mapper -r`, which will iterate through every keycode in the local 
+xkb map and accept input from the remote, a bit like using xev/wev but with 
+immediately usable output.
 
 ###### Synergy ID keymapping
 

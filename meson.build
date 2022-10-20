@@ -58,6 +58,17 @@ executable(
   install: true,
   include_directories: [include_directories('include')],
 )
+executable(
+  'waynergy-mapper',
+  'src/mapper.c',
+  install: true,
+  dependencies : [
+    client_protos,
+    wayland_client,
+    xkbcommon,
+  ],
+  include_directories: [include_directories('include')],
+)
 install_data(
   'waynergy.desktop',
   install_dir: get_option('datadir') / 'applications',

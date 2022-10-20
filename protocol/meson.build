@@ -21,6 +21,7 @@ client_protocols = [
     ['virtual-keyboard-unstable-v1.xml'],
     ['wlr-virtual-pointer-unstable-v1.xml'],
     ['xdg-output-unstable-v1.xml'],
+    ['xdg-shell.xml'],
 ]
 client_protos_src = []
 client_protos_headers = []
