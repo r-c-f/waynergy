@@ -19,6 +19,7 @@
 static struct sopt optspec[] = {
 	SOPT_INITL('h', "help", "Help text"),
 	SOPT_INITL('r', "raw", "Use raw keymap section output (default)"),
+	SOPT_INITL('s', "skipped", "Include skipped keys in XKB output"),
 	SOPT_INIT_ARGL('x', "xkb", SOPT_ARGTYPE_STR, "name", "Use xkb keycode format for output, with given name"),
 	SOPT_INIT_ARGL('o', "out", SOPT_ARGTYPE_STR, "path", "Output to given file (defaults to stdout)"),
 	SOPT_INIT_ARGL('l', "keylim", SOPT_ARGTYPE_LONG, "limit", "Maximum local key limit"),
@@ -34,7 +35,7 @@ static struct sopt optspec[] = {
 static FILE *out_file = NULL;
 static char *xkb_out_name = NULL; /* if NULL, we can assume they want raw */
 static uint32_t raw_keymap_max_limit = 0xFFFFFFFF;
-
+static bool xkb_skipped = false;
 
 /* Keyboard handling */
 
@@ -42,6 +43,7 @@ static struct xkb_context *xkb_ctx;
 static struct xkb_keymap *xkb_keymap;
 
 static uint32_t *raw_keymap;
+static bool *raw_keymap_set;
 static uint32_t raw_keymap_min;
 static uint32_t raw_keymap_max;
 static uint32_t raw_keymap_pos;
@@ -96,17 +98,26 @@ static void raw_keymap_print(void)
 static void xkb_keycodes_print(char *sec_name)
 {
 	uint32_t i;
-	uint32_t mapped_min = raw_keymap[raw_keymap_min];
-	uint32_t mapped_max = raw_keymap[raw_keymap_min];
+	uint32_t mapped_min = 0xFFFFFFFF;
+	uint32_t mapped_max = 0;
+	uint32_t count = 0;
 	const char *name;
 
 	for (i = raw_keymap_min; i < raw_keymap_max; ++i) {
-		if (raw_keymap[i] < mapped_min) {
-			mapped_min = raw_keymap[i];
+		if (raw_keymap_set[i] || xkb_skipped) {
+			++count;
+			if (raw_keymap[i] < mapped_min) {
+				mapped_min = raw_keymap[i];
+			}
+			if (raw_keymap[i] > mapped_max) {
+				mapped_max = raw_keymap[i];
+			}
 		}
-		if (raw_keymap[i] > mapped_max) {
-			mapped_max = raw_keymap[i];
-		}
+	}
+
+	if (!count) {
+		fprintf(stderr, "No keycodes defined!\n");
+		exit(1);
 	}
 
 	fprintf(out_file, "xkb_keycodes \"%s\" {\n", sec_name);
@@ -115,8 +126,10 @@ static void xkb_keycodes_print(char *sec_name)
 
 
 	for (i = raw_keymap_min; i < raw_keymap_max; ++i) {
-		if ((name = xkb_keymap_key_get_name(xkb_keymap, i))) {
-			fprintf(out_file, "\t<%s> = %u;\n", name, raw_keymap[i]);
+		if (raw_keymap_set[i] || xkb_skipped) {
+			if ((name = xkb_keymap_key_get_name(xkb_keymap, i))) {
+				fprintf(out_file, "\t<%s> = %u;\n", name, raw_keymap[i]);
+			}
 		}
 	}
 
@@ -146,6 +159,7 @@ static void raw_keymap_next(void)
 static void raw_keymap_prev(void)
 {
 	if (raw_keymap_pos > raw_keymap_min) {
+		raw_keymap_set[raw_keymap_pos] = false;
 		--raw_keymap_pos;
 	}
 }
@@ -154,6 +168,7 @@ static void raw_keymap_store(uint32_t val)
 {
 	fprintf(stderr, " keycode %u\n", val);
 	raw_keymap[raw_keymap_pos] = val;
+	raw_keymap_set[raw_keymap_pos] = true;
 
 	raw_keymap_next();
 }
@@ -162,6 +177,7 @@ static void raw_keymap_init(void)
 {
 	uint32_t i;
 	raw_keymap = xcalloc(raw_keymap_max + 1, sizeof(*raw_keymap));
+	raw_keymap_set = xcalloc(raw_keymap_max + 1, sizeof(*raw_keymap_set));
 	/* start by assuming that each key simply maps to itself */
 	for (i = 0; i < raw_keymap_max; ++i) {
 		raw_keymap[i] = i;
@@ -511,6 +527,9 @@ int main(int argc, char **argv)
 			case 'h':
 				sopt_usage_s();
 				return 0;
+			case 's':
+				xkb_skipped = true;
+				break;
 			case 'o':
 				out_file_path = xstrdup(soptarg.str);
 				break;
