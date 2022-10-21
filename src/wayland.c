@@ -266,21 +266,25 @@ static void keyboard_keymap(void *data, struct wl_keyboard *wl_kb, uint32_t form
 {
 	struct wlContext *ctx = data;
 	char *buf = NULL;
+	char *map = NULL;
 	if (!configTryBool("wl_keyboard_map", true)) {
 		goto cleanup;
 	}
 
-	buf= xcalloc(size + 1, 1);
-	if (!read_full(fd, buf, size, 0)) {
-		logDbg("Could not read current keymap from fd");
+	if ((map = mmap(NULL, size, PROT_READ, MAP_SHARED, fd, 0)) == MAP_FAILED) {
+		logPDbg("Could not map keymap from fd");
 		goto cleanup;
 	}
+
+	buf = xcalloc(size + 1, 1);
+	memcpy(buf, map, size);
 	free(ctx->kb_map);
 	ctx->kb_map = buf;
 	buf = NULL;
 	logDbg("Current keymap updated");
-cleanup:
 	free(buf);
+	munmap(map, size);
+cleanup:
 	close(fd);
 }
 
