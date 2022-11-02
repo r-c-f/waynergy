@@ -149,9 +149,13 @@ static bool syn_connect(uSynergyCookie cookie)
 	}
 	synNetDisconnect(snet_ctx);
 	for (h = hostinfo; h; h = h->ai_next) {
-		if (syn_connect_setup(snet_ctx, h)) {
+		/* catch connection timeouts */
+		alarm(USYNERGY_IDLE_TIMEOUT/1000);
+		ret = syn_connect_setup(snet_ctx, h);
+		alarm(0);
+
+		if (ret) {
 			syn_ctx->m_lastMessageTime = syn_ctx->m_getTimeFunc();
-			ret = true;
 			break;
 		} else {
 			/* it didn't work, so we aren't strictly connected...
