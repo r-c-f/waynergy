@@ -5,6 +5,7 @@ project('waynergy',
 
 src_c = files(
   'src/wl_idle.c',
+  'src/wl_idle_ext.c',
   'src/wl_idle_gnome.c',
   'src/wl_idle_kde.c',
   'src/wl_input.c',

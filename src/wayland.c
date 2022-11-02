@@ -375,6 +375,9 @@ static void handle_global(void *data, struct wl_registry *registry, uint32_t nam
 			xdg_output = NULL;
 		}
 		wlOutputAppend(&ctx->outputs, wl_output, xdg_output, name);
+	} else if (strcmp(interface, ext_idle_notification_v1_interface.name) == 0) {
+	       	logDbg("Got idle notifier");
+		ctx->idle_notifier = wl_registry_bind(registry, name, &ext_idle_notification_v1_interface, 1);
 	} else if (strcmp(interface, org_kde_kwin_idle_interface.name) == 0) {
 		logDbg("Got idle manager");
 		ctx->idle_manager = wl_registry_bind(registry, name, &org_kde_kwin_idle_interface, version);
@@ -475,7 +478,9 @@ bool wlSetup(struct wlContext *ctx, int width, int height, char *backend)
 
 	/* initiailize idle inhibition */
 	if (configTryBool("idle-inhibit/enable", true)) {
-		if (wlIdleInitKde(ctx)) {
+		if (wlIdleInitExt(ctx)) {
+			logInfo("Using ext-idle-notify protocol");
+		} else if (wlIdleInitKde(ctx)) {
 			logInfo("Using KDE idle inhibition protocol");
 		} else if (wlIdleInitGnome(ctx)) {
 			logInfo("Using GNOME idle inhibition through gnome-session-inhibit");

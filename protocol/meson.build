@@ -17,6 +17,7 @@ wayland_scanner_client = generator(
 
 client_protocols = [
 	['idle.xml'],
+    ['ext-idle-notify-v1.xml'],
     ['fake-input.xml'],
     ['virtual-keyboard-unstable-v1.xml'],
     ['wlr-virtual-pointer-unstable-v1.xml'],
