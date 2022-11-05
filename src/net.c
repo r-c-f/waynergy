@@ -226,6 +226,11 @@ void netPoll(struct synNetContext *snet_ctx, struct wlContext *wl_ctx)
 		/* ignore everything else until synergy is ready */
 		if (syn_ctx->m_connected) {
 			wlPollProc(wl_ctx, netPollFd[POLLFD_WL].revents);
+			if (wl_ctx->flush_pending) {
+				netPollFd[POLLFD_WL].events |= POLLOUT;
+			} else {
+				netPollFd[POLLFD_WL].events &= ~POLLOUT;
+			}
 			sigHandleRun();
 			clipMonitorPollProc(&netPollFd[POLLFD_CLIP_MON]);
 			sigHandleRun();

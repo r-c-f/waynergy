@@ -33,18 +33,41 @@ static char *display_strerror(int error)
 		case WL_DISPLAY_ERROR_IMPLEMENTATION:
 			return "compositor implementation error";
 	}
-	return "unkown error";
+	return strerror(error);
 }
 
-void wlDisplayFlush(struct wlContext *ctx)
+static bool wl_display_flush_base(struct wlContext *ctx)
 {
 	int error;
 
+//	logDbg("Trying display flush");
 	if ((error = wl_display_get_error(ctx->display))) {
 		logErr("Wayland display error %d: %s", error, display_strerror(error));
 		ExitOrRestart(2);
 	}
-	wl_display_flush(ctx->display);
+
+	if (wl_display_flush(ctx->display) == -1) {
+		if (errno == EAGAIN) {
+			return false;
+		} else {
+			if ((error = wl_display_get_error(ctx->display))) {
+				logErr("Wayland display error %d: %s", error, display_strerror(error));
+			} else {
+				logPErr("No wayland display error, but flush failed");
+			}
+			ExitOrRestart(2);
+		}
+	}
+	return true;
+}
+void wlDisplayFlush(struct wlContext *ctx)
+{
+	if (ctx->flush_pending) {
+		logWarn("Attempted to flush before pending flush completed");
+	} else if (!wl_display_flush_base(ctx)) {
+		logDbg("Flush completion now pending");
+		ctx->flush_pending = true;
+	}
 }
 
 void wlOutputAppend(struct wlOutput **outputs, struct wl_output *output, struct zxdg_output_v1 *xdg_output, uint32_t wl_name)
@@ -546,6 +569,13 @@ int wlPrepareFd(struct wlContext *ctx)
 
 void wlPollProc(struct wlContext *ctx, short revents)
 {
+	if (ctx->flush_pending && (revents & POLLOUT)) {
+		if (wl_display_flush_base(ctx)) {
+			ctx->flush_pending = false;
+		} else {
+			logDbg("Pending display flush still incomplete");
+		}
+	}
 	if (revents & POLLIN) {
 //		wl_display_cancel_read(display);
 		wl_display_dispatch(ctx->display);
