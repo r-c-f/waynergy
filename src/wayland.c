@@ -16,6 +16,10 @@
 #include "log.h"
 #include "sig.h"
 
+static void wl_log_handler(const char *fmt, va_list ap)
+{
+	logOutV(LOG_ERR, fmt, ap);
+}
 
 static char *display_strerror(int error)
 {
@@ -447,6 +451,9 @@ bool wlSetup(struct wlContext *ctx, int width, int height, char *backend)
 {
 	int fd;
 	bool input_init = false;
+
+	wl_log_set_handler_client(&wl_log_handler);
+
 	ctx->width = width;
 	ctx->height = height;
 	ctx->display = wl_display_connect(NULL);

@@ -80,7 +80,7 @@ static void log_out_v_(FILE *f, enum logLevel level, const char *fmt, va_list ap
 	fflush(f);
 	va_end(aq);
 }
-static void log_out_v(enum logLevel level, const char *fmt, va_list ap)
+void logOutV(enum logLevel level, const char *fmt, va_list ap)
 {
 	log_out_v_(stderr, level, fmt, ap);
 	if (log_file)
@@ -91,7 +91,7 @@ void logOut(enum logLevel level, const char *fmt, ...)
 {
 	va_list ap;
 	va_start(ap, fmt);
-	log_out_v(level, fmt, ap);
+	logOutV(level, fmt, ap);
 	va_end(ap);
 }
 
@@ -99,28 +99,28 @@ void logErr(const char *fmt, ...)
 {
 	va_list ap;
 	va_start(ap, fmt);
-	log_out_v(LOG_ERR, fmt, ap);
+	logOutV(LOG_ERR, fmt, ap);
 	va_end(ap);
 }
 void logWarn(const char *fmt, ...)
 {
 	va_list ap;
 	va_start(ap, fmt);
-	log_out_v(LOG_WARN, fmt, ap);
+	logOutV(LOG_WARN, fmt, ap);
 	va_end(ap);
 }
 void logInfo(const char *fmt, ...)
 {
 	va_list ap;
 	va_start(ap, fmt);
-	log_out_v(LOG_INFO, fmt, ap);
+	logOutV(LOG_INFO, fmt, ap);
 	va_end(ap);
 }
 void logDbg(const char *fmt, ...)
 {
 	va_list ap;
 	va_start(ap, fmt);
-	log_out_v(LOG_DBG, fmt, ap);
+	logOutV(LOG_DBG, fmt, ap);
 	va_end(ap);
 }
 bool logInit(enum logLevel level, char *path)

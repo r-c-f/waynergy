@@ -20,6 +20,7 @@ enum logLevel {
 enum logLevel logLevelFromString(const char *s);
 
 bool logInit(enum logLevel level, char *path);
+void logOutV(enum logLevel level, const char *fmt, va_list ap);
 void logOut(enum logLevel level, const char *fmt, ...);
 /* standard log functions */
 void logErr(const char *fmt, ...);
