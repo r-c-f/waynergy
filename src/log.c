@@ -148,7 +148,7 @@ void logClose(void)
 		fclose(log_file);
 }
 
-/* signal-safe logging */ 
+/* signal-safe logging */
 
 #define INT32_BUFLEN 12
 static char *uint32_to_str(uint32_t in, char *out)
@@ -192,13 +192,17 @@ static void log_out_ss(enum logLevel level, const char *str)
 		write_full(log_file_fd, str, strlen(str), 0);
 	}
 }
-static void log_print_ts_ss(int out_fd)
+static void log_print_ts_ss(enum logLevel level, int out_fd)
 {
 	char buf[INT32_BUFLEN];
 	char zero = '0';
 	char dot = '.';
 	struct timespec ts;
 	int i, numlen;
+
+	if (level > log_level)
+		return;
+
 	clock_gettime(CLOCK_MONOTONIC, &ts);
 	ts.tv_sec -= log_start.tv_sec;
 	ts.tv_nsec -= log_start.tv_nsec;
@@ -218,9 +222,9 @@ static void log_print_ts_ss(int out_fd)
 }
 void logOutSigStart(enum logLevel level)
 {
-	log_print_ts_ss(STDERR_FILENO);
+	log_print_ts_ss(level, STDERR_FILENO);
 	if (log_file) {
-		log_print_ts_ss(log_file_fd);
+		log_print_ts_ss(level, log_file_fd);
 	}
 	log_out_ss(level, ": [");
 	log_out_ss(level, log_level_get_str(level));
