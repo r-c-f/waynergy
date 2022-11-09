@@ -35,8 +35,9 @@ static char *display_strerror(int error)
 static void wl_log_handler(const char *fmt, va_list ap)
 {
 	logOutV(LOG_ERR, fmt, ap);
-	if (configTryBool("wayland_error_fatal", true)) {
-		ExitOrRestart(3);
+	if (configTryBool("wayland/log_fatal", false)) {
+		logErr("Logged wayland errors set to fatal");
+		ExitOrRestart(2);
 	}
 }
 
@@ -44,7 +45,6 @@ static bool wl_display_flush_base(struct wlContext *ctx)
 {
 	int error;
 
-//	logDbg("Trying display flush");
 	if ((error = wl_display_get_error(ctx->display))) {
 		logErr("Wayland display error %d: %s", error, display_strerror(error));
 		ExitOrRestart(2);
@@ -64,10 +64,48 @@ static bool wl_display_flush_base(struct wlContext *ctx)
 	}
 	return true;
 }
+
+static bool wl_display_flush_block(struct wlContext *ctx, long timeout)
+{
+	struct pollfd pfd = {0};
+	int pret;
+
+	pfd.fd = wlPrepareFd(ctx);
+	pfd.events = POLLOUT;
+
+	pret = poll(&pfd, 1, timeout);
+
+	if (pret == 1) {
+		if (pfd.revents & POLLOUT) {
+			if (wl_display_flush_base(ctx)) {
+				return true;
+			}
+			logErr("blocking display flush failed");
+		} else {
+			logErr("blocking display flush socket unwritable");
+		}
+	} else if (pret == 0) {
+		logErr("blocking display flush timed out");
+	} else if (pret == -1)  {
+		logPErr("blocking display poll failed");
+	}
+
+	return false;
+}
+
 void wlDisplayFlush(struct wlContext *ctx)
 {
+	long timeout;
+
 	if (ctx->flush_pending) {
 		logWarn("Attempted to flush before pending flush completed");
+		if ((timeout = configTryLong("wayland/flush_timeout", 0))) {
+			if (wl_display_flush_block(ctx, timeout)) {
+				ctx->flush_pending = false;
+			} else {
+				ExitOrRestart(2);
+			}
+		}
 	} else if (!wl_display_flush_base(ctx)) {
 		logDbg("Flush completion now pending");
 		ctx->flush_pending = true;
