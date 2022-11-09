@@ -118,7 +118,7 @@ struct wlContext {
 	int width;
 	int height;
 	time_t epoch;
-	bool flush_pending;
+	long timeout;
 	//callbacks
 	void (*on_output_update)(struct wlContext *ctx);
 };

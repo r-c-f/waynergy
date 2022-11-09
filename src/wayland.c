@@ -35,7 +35,7 @@ static char *display_strerror(int error)
 static void wl_log_handler(const char *fmt, va_list ap)
 {
 	logOutV(LOG_ERR, fmt, ap);
-	if (configTryBool("wayland/log_fatal", false)) {
+	if (configTryBool("wayland/log_fatal", true)) {
 		logErr("Logged wayland errors set to fatal");
 		ExitOrRestart(2);
 	}
@@ -65,7 +65,7 @@ static bool wl_display_flush_base(struct wlContext *ctx)
 	return true;
 }
 
-static bool wl_display_flush_block(struct wlContext *ctx, long timeout)
+static bool wl_display_flush_block(struct wlContext *ctx)
 {
 	struct pollfd pfd = {0};
 	int pret;
@@ -73,7 +73,7 @@ static bool wl_display_flush_block(struct wlContext *ctx, long timeout)
 	pfd.fd = wlPrepareFd(ctx);
 	pfd.events = POLLOUT;
 
-	pret = poll(&pfd, 1, timeout);
+	pret = poll(&pfd, 1, ctx->timeout);
 
 	if (pret == 1) {
 		if (pfd.revents & POLLOUT) {
@@ -95,20 +95,10 @@ static bool wl_display_flush_block(struct wlContext *ctx, long timeout)
 
 void wlDisplayFlush(struct wlContext *ctx)
 {
-	long timeout;
-
-	if (ctx->flush_pending) {
-		logWarn("Attempted to flush before pending flush completed");
-		if ((timeout = configTryLong("wayland/flush_timeout", 0))) {
-			if (wl_display_flush_block(ctx, timeout)) {
-				ctx->flush_pending = false;
-			} else {
-				ExitOrRestart(2);
-			}
+	if (!wl_display_flush_base(ctx)) {
+		if (!wl_display_flush_block(ctx)) {
+			ExitOrRestart(2);
 		}
-	} else if (!wl_display_flush_base(ctx)) {
-		logDbg("Flush completion now pending");
-		ctx->flush_pending = true;
 	}
 }
 
@@ -518,6 +508,7 @@ bool wlSetup(struct wlContext *ctx, int width, int height, char *backend)
 	bool input_init = false;
 
 	wl_log_set_handler_client(&wl_log_handler);
+	ctx->timeout = configTryLong("wayland/flush_timeout", 5000);
 
 	ctx->width = width;
 	ctx->height = height;
@@ -611,13 +602,6 @@ int wlPrepareFd(struct wlContext *ctx)
 
 void wlPollProc(struct wlContext *ctx, short revents)
 {
-	if (ctx->flush_pending && (revents & POLLOUT)) {
-		if (wl_display_flush_base(ctx)) {
-			ctx->flush_pending = false;
-		} else {
-			logDbg("Pending display flush still incomplete");
-		}
-	}
 	if (revents & POLLIN) {
 //		wl_display_cancel_read(display);
 		wl_display_dispatch(ctx->display);
