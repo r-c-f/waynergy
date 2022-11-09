@@ -16,10 +16,6 @@
 #include "log.h"
 #include "sig.h"
 
-static void wl_log_handler(const char *fmt, va_list ap)
-{
-	logOutV(LOG_ERR, fmt, ap);
-}
 
 static char *display_strerror(int error)
 {
@@ -34,6 +30,14 @@ static char *display_strerror(int error)
 			return "compositor implementation error";
 	}
 	return strerror(error);
+}
+
+static void wl_log_handler(const char *fmt, va_list ap)
+{
+	logOutV(LOG_ERR, fmt, ap);
+	if (configTryBool("wayland_error_fatal", true)) {
+		ExitOrRestart(3);
+	}
 }
 
 static bool wl_display_flush_base(struct wlContext *ctx)
