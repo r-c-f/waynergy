@@ -18,6 +18,7 @@ struct state_wlr {
 /* create a layout file descriptor */
 static bool key_map(struct wlInput *input, char *keymap_str)
 {
+	logDbg("Setting virtual keymap");
 	struct state_wlr *wlr = input->state;
 	int fd;
 	if ((fd = osGetAnonFd()) == -1) {

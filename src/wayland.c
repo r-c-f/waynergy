@@ -324,6 +324,8 @@ static void seat_capabilities(void *data, struct wl_seat *wl_seat, uint32_t caps
 		logDbg("Seat has keyboard");
 		ctx->kb = wl_seat_get_keyboard(wl_seat);
 		wl_keyboard_add_listener(ctx->kb, &keyboard_listener, ctx);
+		wl_display_dispatch(ctx->display);
+		wl_display_roundtrip(ctx->display);
 	}
 }
 
