@@ -175,6 +175,12 @@ static void load_id_keymap(struct wlContext *ctx)
 int wlKeySetConfigLayout(struct wlContext *ctx)
 {
 	int ret = 0;
+
+	/* ensure that we've given everything a chance to give us a proper 
+	   default */
+	wl_display_dispatch(ctx->display);
+	wl_display_roundtrip(ctx->display);
+
 	char *default_map = ctx->kb_map ? ctx->kb_map :
 		"xkb_keymap { \
 		xkb_keycodes  { include \"xfree86+aliases(qwerty)\"     }; \
