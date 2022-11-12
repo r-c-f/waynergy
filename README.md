@@ -33,7 +33,10 @@ ninja
 ninja install
 ```
 
-Note that KDE users may need to adjust the absolute path in `waynergy.desktop`
+- Some distributions may not provide the required headers in the main 
+packages of the listed prerequisites. Be sure to check for `-dev` or 
+`-devel` variants if this is the case. 
+- KDE users may need to adjust the absolute path in `waynergy.desktop`
 to satisfy kwin's trust checks; a mismatch will prevent the server from 
 offering the required interface. 
 
