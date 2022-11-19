@@ -134,6 +134,7 @@ static void sSetDisconnected(uSynergyContext *context, enum uSynergyError err)
 	context->m_connected		= false;
 	context->m_hasReceivedHello = false;
 	context->m_isCaptured		= false;
+	context->m_receiveOfs = 0;
 	context->m_replyCur			= context->m_replyBuffer + 4;
 	context->m_sequenceNumber	= 0;
 	context->m_lastError = err;
