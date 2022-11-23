@@ -271,7 +271,7 @@ static void keyboard_keymap(void *data, struct wl_keyboard *wl_kb, uint32_t form
 		goto cleanup;
 	}
 
-	if ((map = mmap(NULL, size, PROT_READ, MAP_SHARED, fd, 0)) == MAP_FAILED) {
+	if ((map = mmap(NULL, size, PROT_READ, MAP_PRIVATE, fd, 0)) == MAP_FAILED) {
 		logPDbg("Could not map keymap from fd");
 		goto cleanup;
 	}
