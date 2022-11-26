@@ -12,27 +12,27 @@ static void key(struct wlInput *input, int key, int state)
 {
 	struct org_kde_kwin_fake_input *fake = input->state;
 	org_kde_kwin_fake_input_keyboard_key(fake, key - 8, state);
-	wl_display_flush(input->wl_ctx->display);
+	wlDisplayFlush(input->wl_ctx);
 }
 static void mouse_rel_motion(struct wlInput *input, int dx, int dy)
 {
 	struct org_kde_kwin_fake_input *fake = input->state;
 	org_kde_kwin_fake_input_pointer_motion(fake, wl_fixed_from_int(dx), wl_fixed_from_int(dy));
-	wl_display_flush(input->wl_ctx->display);
+	wlDisplayFlush(input->wl_ctx);
 }
 
 static void mouse_motion(struct wlInput *input, int x, int y)
 {
 	struct org_kde_kwin_fake_input *fake = input->state;
 	org_kde_kwin_fake_input_pointer_motion_absolute(fake, wl_fixed_from_int(x), wl_fixed_from_int(y));
-	wl_display_flush(input->wl_ctx->display);
+	wlDisplayFlush(input->wl_ctx);
 }
 
 static void mouse_button(struct wlInput *input, int button, int state)
 {
 	struct org_kde_kwin_fake_input *fake = input->state;
 	org_kde_kwin_fake_input_button(fake, button, state);
-	wl_display_flush(input->wl_ctx->display);
+	wlDisplayFlush(input->wl_ctx);
 }
 
 static void mouse_wheel(struct wlInput *input, signed short dx, signed short dy)
@@ -48,7 +48,7 @@ static void mouse_wheel(struct wlInput *input, signed short dx, signed short dy)
 	} else if (dy > 0) {
 		org_kde_kwin_fake_input_axis(fake, 0, wl_fixed_from_int(-15));
 	}
-	wl_display_flush(input->wl_ctx->display);
+	wlDisplayFlush(input->wl_ctx);
 }
 
 bool wlInputInitKde(struct wlContext *ctx)

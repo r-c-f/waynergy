@@ -118,9 +118,13 @@ struct wlContext {
 	int width;
 	int height;
 	time_t epoch;
+	long timeout;
 	//callbacks
 	void (*on_output_update)(struct wlContext *ctx);
 };
+
+/* flush the display with proper error checking */
+extern void wlDisplayFlush(struct wlContext *ctx);
 
 /* (re)set the keyboard layout according to the configuration
  * probably not useful outside wlSetup*/

@@ -17,6 +17,90 @@
 #include "sig.h"
 
 
+static char *display_strerror(int error)
+{
+	switch (error) {
+		case WL_DISPLAY_ERROR_INVALID_OBJECT:
+			return "server couldn't find object";
+		case WL_DISPLAY_ERROR_INVALID_METHOD:
+			return "method doesn't exist on specified interface or malformed request";
+		case WL_DISPLAY_ERROR_NO_MEMORY:
+			return "server is out of memory";
+		case WL_DISPLAY_ERROR_IMPLEMENTATION:
+			return "compositor implementation error";
+	}
+	return strerror(error);
+}
+
+static void wl_log_handler(const char *fmt, va_list ap)
+{
+	logOutV(LOG_ERR, fmt, ap);
+	if (configTryBool("wayland/log_fatal", true)) {
+		logErr("Logged wayland errors set to fatal");
+		ExitOrRestart(2);
+	}
+}
+
+static bool wl_display_flush_base(struct wlContext *ctx)
+{
+	int error;
+
+	if ((error = wl_display_get_error(ctx->display))) {
+		logErr("Wayland display error %d: %s", error, display_strerror(error));
+		ExitOrRestart(2);
+	}
+
+	if (wl_display_flush(ctx->display) == -1) {
+		if (errno == EAGAIN) {
+			return false;
+		} else {
+			if ((error = wl_display_get_error(ctx->display))) {
+				logErr("Wayland display error %d: %s", error, display_strerror(error));
+			} else {
+				logPErr("No wayland display error, but flush failed");
+			}
+			ExitOrRestart(2);
+		}
+	}
+	return true;
+}
+
+static bool wl_display_flush_block(struct wlContext *ctx)
+{
+	struct pollfd pfd = {0};
+	int pret;
+
+	pfd.fd = wlPrepareFd(ctx);
+	pfd.events = POLLOUT;
+
+	pret = poll(&pfd, 1, ctx->timeout);
+
+	if (pret == 1) {
+		if (pfd.revents & POLLOUT) {
+			if (wl_display_flush_base(ctx)) {
+				return true;
+			}
+			logErr("blocking display flush failed");
+		} else {
+			logErr("blocking display flush socket unwritable");
+		}
+	} else if (pret == 0) {
+		logErr("blocking display flush timed out");
+	} else if (pret == -1)  {
+		logPErr("blocking display poll failed");
+	}
+
+	return false;
+}
+
+void wlDisplayFlush(struct wlContext *ctx)
+{
+	if (!wl_display_flush_base(ctx)) {
+		if (!wl_display_flush_block(ctx)) {
+			ExitOrRestart(2);
+		}
+	}
+}
 
 void wlOutputAppend(struct wlOutput **outputs, struct wl_output *output, struct zxdg_output_v1 *xdg_output, uint32_t wl_name)
 {
@@ -422,6 +506,10 @@ bool wlSetup(struct wlContext *ctx, int width, int height, char *backend)
 {
 	int fd;
 	bool input_init = false;
+
+	wl_log_set_handler_client(&wl_log_handler);
+	ctx->timeout = configTryLong("wayland/flush_timeout", 5000);
+
 	ctx->width = width;
 	ctx->height = height;
 	ctx->display = wl_display_connect(NULL);
