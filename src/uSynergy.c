@@ -764,6 +764,11 @@ static void sUpdateContext(uSynergyContext *context)
 		};
 		sProcessMessage(context, &msg);
 
+		/* if we've lost the connection, don't bother with further
+		 * processing */
+		if (!context->m_connected)
+			return;
+
 		/* Move packet to front of buffer */
 		memmove(context->m_receiveBuffer, context->m_receiveBuffer+packlen+4, context->m_receiveOfs-packlen-4);
 		context->m_receiveOfs -= packlen+4;
