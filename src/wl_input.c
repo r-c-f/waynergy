@@ -178,17 +178,12 @@ int wlKeySetConfigLayout(struct wlContext *ctx)
 
 	/* ensure that we've given everything a chance to give us a proper 
 	   default */
-	wl_display_dispatch(ctx->display);
-	wl_display_roundtrip(ctx->display);
+	if (!ctx->kb_map) {
+		wl_display_dispatch(ctx->display);
+		wl_display_roundtrip(ctx->display);
+	}
 
-	char *default_map = ctx->kb_map ? ctx->kb_map :
-		"xkb_keymap { \
-		xkb_keycodes  { include \"xfree86+aliases(qwerty)\"     }; \
-		xkb_types     { include \"complete\"    }; \
-		xkb_compat    { include \"complete\"    }; \
-		xkb_symbols   { include \"pc+us+inet(evdev)\"   }; \
-		xkb_geometry  { include \"pc(pc105)\"   }; \
-		};";
+	char *default_map = ctx->kb_map;
 	logDbg("Will default to map %s", default_map);
 	char *keymap_str = configTryStringFull("xkb_keymap", default_map);
 	local_mod_init(ctx, keymap_str);
