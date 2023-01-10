@@ -84,149 +84,6 @@ static void mouse_wheel(struct wlInput *input, signed short dx, signed short dy)
 	wlDisplayFlush(input->wl_ctx);
 }
 
-size_t get_nums(size_t count, long *dst, char *buf)
-{
-	size_t i;
-	char *next;
-
-	for (i = 0; i < count; ++i) {
-		for (; *buf && !isdigit(*buf); ++buf);
-		if (!isdigit(*buf)) {
-			break;
-		}
-		errno = 0;
-		dst[i] = strtol(buf, &next, 0);
-		if (errno) {
-			break;
-		}
-		buf = next;
-	}
-	return i;
-}
-
-static char *get_version_string(char **argv)
-{
-	size_t buf_len = 0;
-	char *buf = NULL;
-	pid_t pid;
-	int fd[2] = {-1, -1};
-	FILE *out = NULL;
-	posix_spawn_file_actions_t fa;
-	bool ret = true;
-
-	errno = 0;
-
-	if (pipe(fd) == -1) {
-		logPDbg("Could not create pipe for version");
-		return NULL;
-	}
-
-	posix_spawn_file_actions_init(&fa);
-	posix_spawn_file_actions_adddup2(&fa, fd[1], STDOUT_FILENO);
-	posix_spawn_file_actions_addclose(&fa, fd[0]);
-	errno = 0;
-	if (posix_spawnp(&pid, argv[0], &fa, NULL, argv, environ)) {
-		logPErr("version spawn");
-		ret = false;
-		goto done;
-	}
-	close(fd[1]);
-	fd[1] = -1;
-
-	if (!(out = fdopen(fd[0], "r"))) {
-		logPErr("fdopen for stdout");
-		ret = false;
-		goto done;
-	}
-	fd[0] = -1;
-	if (getline(&buf, &buf_len, out) == -1) {
-		logPErr("getline");
-		ret = false;
-		goto done;
-	}
-	fclose(out);
-	out = NULL;
-
-	logDbg("Got version string %s", buf);
-done:
-	if (fd[0] != -1)
-		close(fd[0]);
-	if (fd[1] != -1)
-		close(fd[1]);
-	if (out)
-		fclose(out);
-	if (!ret) {
-		free(buf);
-		buf = NULL;
-	}
-	posix_spawn_file_actions_destroy(&fa);
-	return buf;
-}
-
-static bool wayfire_version(long ver[static 3])
-{
-	char *argv[] = {
-		"wayfire",
-		"--version",
-		NULL
-	};
-	char *buf;
-	size_t valid;
-	if (!(buf = get_version_string(argv))) {
-		return false;
-	}
-	valid = get_nums(3, ver, buf);
-	free(buf);
-	if (valid != 3)
-		return false;
-	logInfo("Wayfire version is %ld.%ld.%ld", ver[0], ver[1], ver[2]);
-	return true;
-}
-static bool sway_version(long ver[static 2])
-{
-	char *argv[] = {
-		"sway",
-		"--version",
-		NULL
-	};
-	char *buf;
-	size_t valid;
-	if (!(buf = get_version_string(argv))) {
-		return false;
-	}
-	valid = get_nums(2, ver, buf);
-	free(buf);
-	if (valid != 2)
-		return false;
-	logInfo("Sway version is %ld.%ld", ver[0], ver[1]);
-	return true;
-}
-
-static bool wheel_mult_detect(struct wlContext *ctx, int *wheel_mult)
-{
-	long wayfire_ver[3];
-	long sway_ver[2];
-	if (!strcmp(ctx->comp_name, "sway")) {
-		if (sway_version(sway_ver)) {
-			if ((sway_ver[0] <= 1) && (sway_ver[1] <= 7)) {
-				*wheel_mult = 1;
-				return true;
-			}
-		}
-	} else if (!strcmp(ctx->comp_name, "wayfire")) {
-		if (wayfire_version(wayfire_ver)) {
-			if ((wayfire_ver[0] == 0) &&
-			    (wayfire_ver[1] <= 7) &&
-			    (wayfire_ver[2] <= 4)) {
-				*wheel_mult = 1;
-				return true;
-			}
-		}
-	}
-
-	return false;
-}
-
 bool wlInputInitWlr(struct wlContext *ctx)
 {
 	int wheel_mult_default;
@@ -238,16 +95,12 @@ bool wlInputInitWlr(struct wlContext *ctx)
 	wlr->pointer = zwlr_virtual_pointer_manager_v1_create_virtual_pointer(ctx->pointer_manager, ctx->seat);
 
 	wlr->keyboard = zwp_virtual_keyboard_manager_v1_create_virtual_keyboard(ctx->keyboard_manager, ctx->seat);
-	/* recent wlroots versions behave weirdly with discrete inputs,
+	/* some wlroots versions behaved weirdly with discrete inputs,
 	 * accumulating them and only issuing a client event when they've reached
-	 * 120. Try to detect sway versions that will be susceptible this, with
-	 * a user configuration to override */
-	wheel_mult_default = 120;
-	if (configTryBool("wlr/auto_wheel_mult", true)) {
-		if (wheel_mult_detect(ctx, &wheel_mult_default)) {
-			logInfo("Set wheel mult based on compositor version");
-		}
-	}
+	 * 120. This seems to have been fixed in v0.16.0, so the detection
+	 * logic shouldn't be needed anymore, but we'll leave it configurable
+	 * just in case */
+	wheel_mult_default = 1;
 	wlr->wheel_mult = configTryLong("wlr/wheel_mult", wheel_mult_default);
 	logDbg("Using wheel_mult value of %d", wlr->wheel_mult);
 	ctx->input = (struct wlInput) {
