@@ -1,6 +1,6 @@
 /* sopt -- simple option parsing
  *
- * Version 1.5
+ * Version 1.6
  *
  * Copyright 2021 Ryan Farley <ryan.farley@gmx.com>
  *
@@ -25,6 +25,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
+#include <float.h>
 #include <limits.h>
 #include <inttypes.h>
 #include <errno.h> 
@@ -37,6 +38,8 @@ enum sopt_argtype {
 	SOPT_ARGTYPE_LONG,
 	SOPT_ARGTYPE_LONGLONG,
 	SOPT_ARGTYPE_FLOAT,
+	SOPT_ARGTYPE_DBL,
+	SOPT_ARGTYPE_LONGDBL,
 };
 
 /* By setting SOPT_INVAL to '?', and terminating with it, we ensure that --
@@ -77,7 +80,9 @@ union sopt_arg {
 	int i;
 	long l;
 	long long ll;
-	double f;
+	float f;
+	double d;
+	long double ld;
 };
 
 
@@ -217,11 +222,11 @@ static bool sopt_argconv_int(char *s, intmax_t *out)
 	return true;
 }
 
-static bool sopt_argconv_dbl(char *s, double *out)
+static bool sopt_argconv_ldbl(char *s, long double *out)
 {
 	char *endptr;
 	errno = 0;
-	*out = strtod(s, &endptr);
+	*out = strtold(s, &endptr);
 	if (endptr == s)
 		return false;
 	if (errno)
@@ -270,7 +275,7 @@ static int sopt_getopt(int argc, char **argv, struct sopt *opt, int *cpos, int *
 	char *arg_str;
 	intmax_t arg_int;
 	bool arg_int_valid;
-	double arg_float;
+	long double arg_float;
 	bool arg_float_valid;
 
 	if (!(opt && cpos &&argv && optind && arg && argc))
@@ -324,7 +329,7 @@ shortopt:
 			return SOPT_INVAL;
 		}
 		arg_int_valid = sopt_argconv_int(arg_str, &arg_int);
-		arg_float_valid = sopt_argconv_dbl(arg_str, &arg_float);
+		arg_float_valid = sopt_argconv_ldbl(arg_str, &arg_float);
 
 		switch (opt->argtype) {
 			case SOPT_ARGTYPE_STR:
@@ -384,6 +389,20 @@ shortopt:
 					return SOPT_INVAL;
 				}
 				arg->f = arg_float;
+				break;
+			case SOPT_ARGTYPE_DBL:
+				if (!arg_float_valid) {
+					sopt_perror(opt, "Argument is not a valid floating-point number");
+					return SOPT_INVAL;
+				}
+				arg->d = arg_float;
+				break;
+			case SOPT_ARGTYPE_LONGDBL:
+				if (!arg_float_valid) {
+					sopt_perror(opt, "Argument is not a valid floating-point number");
+					return SOPT_INVAL;
+				}
+				arg->ld = arg_float;
 				break;
 			default:
 				return SOPT_INVAL;
