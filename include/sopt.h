@@ -1,6 +1,6 @@
 /* sopt -- simple option parsing
  *
- * Version 1.6
+ * Version 1.7
  *
  * Copyright 2021 Ryan Farley <ryan.farley@gmx.com>
  *
@@ -65,13 +65,13 @@ struct sopt {
 	 */
 	int val;
 	/* Long option name, if not null. i.e. --long-option would be "long-option" */
-	char *name;
+	const char *name;
 	/* type of parameter, if not null */
 	enum sopt_argtype argtype;
 	/* Parameter, if not null. Or name of unparsed argument, if SOPT_AFTER */
-	char *arg;
+	const char *arg;
 	/* Description for usage text */
-	char *desc;
+	const char *desc;
 };
 
 union sopt_arg {
@@ -140,7 +140,7 @@ static inline void sopt_usage_printopt(struct sopt *opt)
  * 	-o|--opt:
  * 		option description here
 */
-static void sopt_usage(struct sopt *optspec, char *name, char *desc)
+static void sopt_usage(struct sopt *optspec, const char *name, const char *desc)
 {
 	struct sopt *opt;
 	bool afteropt = false;
@@ -187,9 +187,9 @@ static void sopt_usage(struct sopt *optspec, char *name, char *desc)
  * If 'set' is true, other parameters are stored, and the function returns.
  * If 'set' is false, other parameters are ignored, and sopt_usage() is called
  * with stored values used */
-static void sopt_usage_static(struct sopt *opt, char *name, char *desc, bool set)
+static void sopt_usage_static(struct sopt *opt, const char *name, const char *desc, bool set)
 {
-	static char *name_s, *desc_s;
+	static const char *name_s, *desc_s;
 	static struct sopt *opt_s;
 	if (set) {
 		name_s = name;
@@ -200,7 +200,7 @@ static void sopt_usage_static(struct sopt *opt, char *name, char *desc, bool set
 	}
 }
 /* for convenience, set the static usage values for future use */
-static inline void sopt_usage_set(struct sopt *opt, char *name, char *desc)
+static inline void sopt_usage_set(struct sopt *opt, const char *name, const char *desc)
 {
 	sopt_usage_static(opt, name, desc, true);
 }
@@ -210,7 +210,7 @@ static inline void sopt_usage_s(void)
 	sopt_usage_static(NULL, NULL, NULL, false);
 }
 
-static bool sopt_argconv_int(char *s, intmax_t *out)
+static bool sopt_argconv_int(const char *s, intmax_t *out)
 {
 	char *endptr;
 	errno = 0;
@@ -222,7 +222,7 @@ static bool sopt_argconv_int(char *s, intmax_t *out)
 	return true;
 }
 
-static bool sopt_argconv_ldbl(char *s, long double *out)
+static bool sopt_argconv_ldbl(const char *s, long double *out)
 {
 	char *endptr;
 	errno = 0;
@@ -234,7 +234,7 @@ static bool sopt_argconv_ldbl(char *s, long double *out)
 	return true;
 }
 
-static void sopt_perror(struct sopt *opt, char *msg)
+static void sopt_perror(struct sopt *opt, const char *msg)
 {
 	fprintf(stderr, "Error parsing argument ");
 	if (isalnum(opt->val)) {
