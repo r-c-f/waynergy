@@ -1,6 +1,6 @@
 /* sopt -- simple option parsing
  *
- * Version 1.7
+ * Version 1.8
  *
  * Copyright 2021 Ryan Farley <ryan.farley@gmx.com>
  *
@@ -28,15 +28,22 @@
 #include <float.h>
 #include <limits.h>
 #include <inttypes.h>
-#include <errno.h> 
+#include <errno.h>
 
 enum sopt_argtype {
 	SOPT_ARGTYPE_NULL,
 	SOPT_ARGTYPE_STR,
+	SOPT_ARGTYPE_CHAR,
+	SOPT_ARGTYPE_SCHAR,
+	SOPT_ARGTYPE_UCHAR,
 	SOPT_ARGTYPE_SHORT,
+	SOPT_ARGTYPE_USHORT,
 	SOPT_ARGTYPE_INT,
+	SOPT_ARGTYPE_UINT,
 	SOPT_ARGTYPE_LONG,
+	SOPT_ARGTYPE_ULONG,
 	SOPT_ARGTYPE_LONGLONG,
+	SOPT_ARGTYPE_ULONGLONG,
 	SOPT_ARGTYPE_FLOAT,
 	SOPT_ARGTYPE_DBL,
 	SOPT_ARGTYPE_LONGDBL,
@@ -76,10 +83,17 @@ struct sopt {
 
 union sopt_arg {
 	char *str;
+	signed char sc;
+	unsigned char uc;
+	char c;
 	short s;
+	unsigned short us;
 	int i;
+	unsigned int ui;
 	long l;
+	unsigned long ul;
 	long long ll;
+	unsigned long long ull;
 	float f;
 	double d;
 	long double ld;
@@ -222,6 +236,26 @@ static bool sopt_argconv_int(const char *s, intmax_t *out)
 	return true;
 }
 
+static bool sopt_argconv_uint(const char *s, uintmax_t *out)
+{
+	char *endptr;
+
+	/* we do not want any negative values here */
+	for (;*s && isspace(*s); ++s);
+	if (!*s)
+		return false;
+	if (*s == '-')
+		return false;
+
+	errno = 0;
+	*out = strtoumax(s, &endptr, 0);
+	if (endptr == s)
+		return false;
+	if (errno)
+		return false;
+	return true;
+}
+
 static bool sopt_argconv_ldbl(const char *s, long double *out)
 {
 	char *endptr;
@@ -275,6 +309,8 @@ static int sopt_getopt(int argc, char **argv, struct sopt *opt, int *cpos, int *
 	char *arg_str;
 	intmax_t arg_int;
 	bool arg_int_valid;
+	uintmax_t arg_uint;
+	bool arg_uint_valid;
 	long double arg_float;
 	bool arg_float_valid;
 
@@ -329,11 +365,29 @@ shortopt:
 			return SOPT_INVAL;
 		}
 		arg_int_valid = sopt_argconv_int(arg_str, &arg_int);
+		arg_uint_valid = sopt_argconv_uint(arg_str, &arg_uint);
 		arg_float_valid = sopt_argconv_ldbl(arg_str, &arg_float);
 
 		switch (opt->argtype) {
 			case SOPT_ARGTYPE_STR:
 				arg->str = arg_str;
+				break;
+			/* Signed integers */
+#if CHAR_MIN
+			/* because character types are implementation-defined with regard to sign */
+			case SOPT_ARGTYPE_CHAR:
+#endif
+			case SOPT_ARGTYPE_SCHAR:
+				if (!arg_int_valid) {
+					sopt_perror(opt, "Argument is not an integer");
+					return SOPT_INVAL;
+				}
+				if (!(arg_int >= SCHAR_MIN &&
+				      arg_int <= SCHAR_MAX)) {
+					sopt_perror(opt, "Argument out of range");
+					return SOPT_INVAL;
+				}
+				arg->sc = arg_int;
 				break;
 			case SOPT_ARGTYPE_SHORT:
 				if (!arg_int_valid) {
@@ -383,6 +437,67 @@ shortopt:
 				}
 				arg->ll = arg_int;
 				break;
+			/* Unsigned integers */
+#if !CHAR_MIN
+			/* because implementation-defined char signedness */
+			case SOPT_ARGTYPE_CHAR:
+#endif
+			case SOPT_ARGTYPE_UCHAR:
+				if (!arg_uint_valid) {
+					sopt_perror(opt, "Argument is not an unsigned integer");
+					return SOPT_INVAL;
+				}
+				if (arg_uint > UCHAR_MAX) {
+					sopt_perror(opt, "Argument out of range");
+					return SOPT_INVAL;
+				}
+				arg->uc = arg_uint;
+				break;
+			case SOPT_ARGTYPE_USHORT:
+				if (!arg_uint_valid) {
+					sopt_perror(opt, "Argument is not an unsigned integer");
+					return SOPT_INVAL;
+				}
+				if (arg_uint > USHRT_MAX) {
+					sopt_perror(opt, "Argument out of range");
+					return SOPT_INVAL;
+				}
+				arg->us = arg_uint;
+				break;
+			case SOPT_ARGTYPE_UINT:
+				if (!arg_uint_valid) {
+					sopt_perror(opt, "Argument is not an unsigned integer");
+					return SOPT_INVAL;
+				}
+				if (arg_uint > UINT_MAX) {
+					sopt_perror(opt, "Argument out of range");
+					return SOPT_INVAL;
+				}
+				arg->ui = arg_uint;
+				break;
+			case SOPT_ARGTYPE_ULONG:
+				if (!arg_uint_valid) {
+					sopt_perror(opt, "Argument is not an unsigned integer");
+					return SOPT_INVAL;
+				}
+				if (arg_uint > ULONG_MAX) {
+					sopt_perror(opt, "Argument out of range");
+					return SOPT_INVAL;
+				}
+				arg->ul = arg_uint;
+				break;
+			case SOPT_ARGTYPE_ULONGLONG:
+				if (!arg_uint_valid) {
+					sopt_perror(opt, "Argument is not an unsigned integer");
+					return SOPT_INVAL;
+				}
+				if (arg_uint > ULLONG_MAX) {
+					sopt_perror(opt, "Argument out of range");
+					return SOPT_INVAL;
+				}
+				arg->ull = arg_uint;
+				break;
+			/* Floats */
 			case SOPT_ARGTYPE_FLOAT:
 				if (!arg_float_valid) {
 					sopt_perror(opt, "Argument is not a valid floating-point number");
