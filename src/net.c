@@ -76,6 +76,12 @@ static bool syn_connect_setup(struct synNetContext *snet_ctx, struct addrinfo *a
 		/* set client certificate */
 		cert_path = osGetHomeConfigPath("tls/cert");
 		if (osFileExists(cert_path)) {
+			if (tls_config_set_key_file(cfg, cert_path)) {
+				logErr("Could not load client key: %s", tls_error(snet_ctx->tls_ctx));
+				tls_config_free(cfg);
+				free(cert_path);
+				return false;
+			}
 			if (tls_config_set_cert_file(cfg, cert_path)) {
 				logErr("Could not load client certificate: %s", tls_error(snet_ctx->tls_ctx));
 				tls_config_free(cfg);
