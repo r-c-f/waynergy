@@ -446,6 +446,7 @@ static void sProcessMessage(uSynergyContext *context, struct sspBuf *msg)
 		if (!sspChar(msg, &btn)) {
 			PARSE_ERROR();
 		}
+		//logDbgSyn("DMDN: btn %hhd", btn);
 		sSendMouseButtonDownCallback(context, btn);
 	}
 	else if (!strcmp(pkt_id, "DMUP"))
@@ -456,6 +457,7 @@ static void sProcessMessage(uSynergyContext *context, struct sspBuf *msg)
 		if (!sspChar(msg, &btn)) {
 			PARSE_ERROR();
 		}
+		//logDbgSyn("DMUP: btn %hhd", btn);
 		sSendMouseButtonUpCallback(context, btn);
 	}
 	else if (!strcmp(pkt_id, "DMMV"))
@@ -466,6 +468,7 @@ static void sProcessMessage(uSynergyContext *context, struct sspBuf *msg)
 		if (!(sspNet16(msg, &x) && sspNet16(msg, &y))) {
 			PARSE_ERROR();
 		}
+		//logDbgSyn("DKMV: x %" PRId16 ", y %" PRId16, x, y);
 		sSendMouseMoveCallback(context, false, x, y);
 	}
 	else if (!strcmp(pkt_id, "DMRM"))
@@ -475,6 +478,7 @@ static void sProcessMessage(uSynergyContext *context, struct sspBuf *msg)
 		if (!(sspNet16(msg, &x) && sspNet16(msg, &y))) {
 			PARSE_ERROR();
 		}
+		//logDbgSyn("DKRM: x %" PRId16 ", y %" PRId16, x, y);
 		sSendMouseMoveCallback(context, true, x, y);
 	}
 	else if (!strcmp(pkt_id, "DMWM"))
@@ -486,6 +490,7 @@ static void sProcessMessage(uSynergyContext *context, struct sspBuf *msg)
 		if (!(sspNet16(msg, &x) && sspNet16(msg, &y))) {
 			PARSE_ERROR();
 		}
+		//logDbgSyn("DKWM: x %" PRId16 ", y %" PRId16, x, y);
 		sSendMouseWheelCallback(context, x, y);
 	}
 	else if (!strcmp(pkt_id, "DKDN"))
@@ -497,6 +502,7 @@ static void sProcessMessage(uSynergyContext *context, struct sspBuf *msg)
 		if (!(sspNetU16(msg, &id) && sspNetU16(msg, &mod) && sspNetU16(msg, &key))) {
 			PARSE_ERROR();
 		}
+		logDbgSyn("DKDN: id %" PRIu16 ", mod %" PRIx16 ", key %" PRIu16, id, mod, key);
 		sSendKeyboardCallback(context, context->m_useRawKeyCodes ? key : id, id, mod, true, false);
 	}
 	else if (!strcmp(pkt_id, "DKRP"))
@@ -511,6 +517,7 @@ static void sProcessMessage(uSynergyContext *context, struct sspBuf *msg)
 		      sspNetU16(msg, &key))) {
 			PARSE_ERROR();
 		}
+		logDbgSyn("DKRP: id %" PRIu16 ", mod %" PRIx16 ", count %" PRIu16 ", key %" PRIu16, id, mod, count, key);
 		sSendKeyboardCallback(context, context->m_useRawKeyCodes ? key : id, id, mod, true, true);
 	}
 	else if (!strcmp(pkt_id, "DKUP"))
@@ -522,6 +529,7 @@ static void sProcessMessage(uSynergyContext *context, struct sspBuf *msg)
 		if (!(sspNetU16(msg, &id) && sspNetU16(msg, &mod) && sspNetU16(msg, &key))) {
 			PARSE_ERROR();
 		}
+		logDbgSyn("DKUP: id %" PRIu16 ", mod %" PRIx16 ", key %" PRIu16, id, mod, key);
 		sSendKeyboardCallback(context, context->m_useRawKeyCodes ? key : id, id, mod, false, false);
 	}
 	else if (!strcmp(pkt_id, "DGBT"))
