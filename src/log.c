@@ -34,6 +34,7 @@ static char *log_level_str[] = {
 	"WARN",
 	"INFO",
 	"DEBUG",
+	"DEBUGSYN",
 	NULL,
 };
 enum logLevel logLevelFromString(const char *s)
@@ -121,6 +122,13 @@ void logDbg(const char *fmt, ...)
 	va_list ap;
 	va_start(ap, fmt);
 	logOutV(LOG_DBG, fmt, ap);
+	va_end(ap);
+}
+void logDbgSyn(const char *fmt, ...)
+{
+	va_list ap;
+	va_start(ap, fmt);
+	logOutV(LOG_DBGSYN, fmt, ap);
 	va_end(ap);
 }
 bool logInit(enum logLevel level, char *path)

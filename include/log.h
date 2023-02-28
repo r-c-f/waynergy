@@ -15,6 +15,7 @@ enum logLevel {
 	LOG_WARN,
 	LOG_INFO,
 	LOG_DBG,
+	LOG_DBGSYN,
 	LOG__INVALID, /* also serves as count */
 };
 enum logLevel logLevelFromString(const char *s);
@@ -27,6 +28,7 @@ void logErr(const char *fmt, ...);
 void logWarn(const char *fmt, ...);
 void logInfo(const char *fmt, ...);
 void logDbg(const char *fmt, ...);
+void logDbgSyn(const char *fmt, ...);
 #define logPErr(msg) do { \
 	logErr("%s: %s: %s", __func__, (msg), strerror(errno)); \
 } while (0)
@@ -38,6 +40,9 @@ void logDbg(const char *fmt, ...);
 } while (0)
 #define logPDbg(msg) do { \
 	logDbg("%s: %s: %s", __func__, (msg), strerror(errno)); \
+} while (0)
+#define logPDbgSyn(msg) do { \
+	logDbgSyn("%s: %s: %s", __func__, (msg), strerror(errno)); \
 } while (0)
 void logClose(void);
 
