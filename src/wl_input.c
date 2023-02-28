@@ -176,7 +176,7 @@ int wlKeySetConfigLayout(struct wlContext *ctx)
 {
 	int ret = 0;
 
-	/* ensure that we've given everything a chance to give us a proper 
+	/* ensure that we've given everything a chance to give us a proper
 	   default */
 	if (!ctx->kb_map) {
 		wl_display_dispatch(ctx->display);
@@ -234,14 +234,20 @@ void wlKeyRaw(struct wlContext *ctx, int key, int state)
 
 void wlKey(struct wlContext *ctx, int key, int id, int state)
 {
+	int oldkey = key;
+
 	if ((id < ctx->input.id_count) && ctx->input.id_keymap_valid[id]) {
 		key = ctx->input.id_keymap[id];
+		logDbg("Key %d remapped to %d by id %d", oldkey, key, id);
 	} else {
 		if (key >= ctx->input.key_count) {
 			logWarn("Key %d outside configured keymap, dropping", key);
 			return;
 		}
 		key = ctx->input.raw_keymap[key];
+		if (key != oldkey) {
+			logDbg("Key %d remapped to %d", oldkey, key);
+		}
 	}
 	wlKeyRaw(ctx, key, state);
 }
