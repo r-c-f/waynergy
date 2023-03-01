@@ -112,33 +112,35 @@ output:
 ```
 ./waynergy: Synergy client for wayland compositors
 
-USAGE: ./waynergy [-h|--help] [-b|--backend backend] [-C|--config path] [-c|--host host] [-p|--port port] [-W|--width width] [-H|--height height] [-N|--name name] [-l|--logfile file] [-L|--loglevel level] [-n|--no-clip] [-e|--enable-crypto] [-t|--enable-tofu] [--fatal-none] [--fatal-ebad] [--fatal-ebsy] [--fatal-timeout]
+USAGE: ./waynergy [-h|--help] [-v|--version] [-b|--backend backend] [-c|--host host] [-p|--port port] [-W|--width width] [-H|--height height] [-N|--name name] [-l|--logfile file] [-L|--loglevel level] [-n|--no-clip] [-e|--enable-crypto] [-E|--disable-crypto] [-t|--enable-tofu] [--fatal-none] [--fatal-ebad] [--fatal-ebsy] [--fatal-timeout]
 	-h|--help:
 		Help text
+	-v|--version:
+		Version information
 	-b|--backend backend:
-		Input backend -- one of wlr, kde, uinput
+		[backend] Input backend -- one of wlr, kde, uinput
 	-c|--host host:
-		Server to connect to
+		[host] Server to connect to
 	-p|--port port:
-		Port
+		[port] Port
 	-W|--width width:
-		Width of screen in pixels (manual override, must be given with height)
+		[width] Width of screen in pixels (manual override, must be given with height)
 	-H|--height height:
-		Height of screen in pixels (manual override, must be given with width)
+		[height] Height of screen in pixels (manual override, must be given with width)
 	-N|--name name:
-		Name of client screen
+		[name] Name of client screen
 	-l|--logfile file:
-		Name of logfile to use
+		[log/path] Name of logfile to use
 	-L|--loglevel level:
-		Log level -- number, increasing from 0 for more verbosity
+		[log/level] Log level -- number, increasing from 0 for more verbosity up to 6, or one of 'none', 'error', 'warn', 'info', 'debug', 'debugsyn'
 	-n|--no-clip:
 		Don't synchronize the clipboard
 	-e|--enable-crypto:
-		Enable TLS encryption
+		[tls/enable] Enable TLS encryption
 	-E|--disable-crypto:
-		Force disable TLS encryption
+		[tls/enable] Force disable TLS encryption
 	-t|--enable-tofu:
-		Enable trust-on-first-use for TLS certificate
+		[tls/tofu] Enable trust-on-first-use for TLS certificate
 	--fatal-none:
 		Consider *normal* disconnect (i.e. CBYE) to be fatal
 	--fatal-ebad:
@@ -147,8 +149,10 @@ USAGE: ./waynergy [-h|--help] [-b|--backend backend] [-C|--config path] [-c|--ho
 		EBSY (client already exists with our name) errors are fatal
 	--fatal-timeout:
 		timeouts are fatal
-	
 ```
+
+For each option that is also present in the configuration file, the applicable
+name is given in `[]`.
 
 Also note that `SIGUSR1` triggers re-execution. Useful until proper reconnect
 procedures exist. 
