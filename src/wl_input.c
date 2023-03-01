@@ -248,10 +248,10 @@ void wlKey(struct wlContext *ctx, int key, int id, int state)
 		if (key != oldkey) {
 			logDbg("Key %d remapped to %d", oldkey, key);
 		}
-		if (key == -1) {
-			logDbg("Dropping key");
-			return;
-		}
+	}
+	if (key == -1) {
+		logDbg("Dropping key mapped to -1");
+		return;
 	}
 	wlKeyRaw(ctx, key, state);
 }
