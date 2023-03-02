@@ -847,7 +847,7 @@ void uSynergyUpdate(uSynergyContext *context)
 		if (context->m_lastError > 0) {
 			if (context->m_errorIsFatal[context->m_lastError]) {
 				logErr("Last error received (code %d) is configured as fatal, exiting", context->m_lastError);
-				Exit(context->m_lastError);
+				Exit(SES_ERROR_SYN);
 			}
 		}
 		if (context->m_connectFunc(context->m_cookie)) {

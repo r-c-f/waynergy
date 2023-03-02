@@ -37,7 +37,7 @@ static void wl_log_handler(const char *fmt, va_list ap)
 	logOutV(LOG_ERR, fmt, ap);
 	if (configTryBool("wayland/log_fatal", true)) {
 		logErr("Logged wayland errors set to fatal");
-		ExitOrRestart(2);
+		ExitOrRestart(SES_ERROR_WL);
 	}
 }
 
@@ -47,7 +47,7 @@ static bool wl_display_flush_base(struct wlContext *ctx)
 
 	if ((error = wl_display_get_error(ctx->display))) {
 		logErr("Wayland display error %d: %s", error, display_strerror(error));
-		ExitOrRestart(2);
+		ExitOrRestart(SES_ERROR_WL);
 	}
 
 	if (wl_display_flush(ctx->display) == -1) {
@@ -59,7 +59,7 @@ static bool wl_display_flush_base(struct wlContext *ctx)
 			} else {
 				logPErr("No wayland display error, but flush failed");
 			}
-			ExitOrRestart(2);
+			ExitOrRestart(SES_ERROR_WL);
 		}
 	}
 	return true;
@@ -97,7 +97,7 @@ void wlDisplayFlush(struct wlContext *ctx)
 {
 	if (!wl_display_flush_base(ctx)) {
 		if (!wl_display_flush_block(ctx)) {
-			ExitOrRestart(2);
+			ExitOrRestart(SES_ERROR_WL);
 		}
 	}
 }
@@ -608,6 +608,6 @@ void wlPollProc(struct wlContext *ctx, short revents)
 	}
 	if (revents & POLLHUP) {
 		logErr("Lost wayland connection");
-		Exit(1);
+		Exit(SES_ERROR_WL);
 	}
 }

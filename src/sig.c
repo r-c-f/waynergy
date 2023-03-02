@@ -14,9 +14,8 @@ extern uSynergyContext synContext;
 extern struct synNetContext synNetContext;
 
 static char **argv_reexec;
-static void cleanup(void)
+static void cleanup(enum sigExitStatus status)
 {
-	wlIdleInhibit(&wlContext, false);
 	/* stop clipboard monitors */
 	for (int i = 0; i < 2; ++i) {
 		if (clipMonitorPid[i] != -1) {
@@ -25,30 +24,35 @@ static void cleanup(void)
 	}
 	/*close stuff*/
 	synNetDisconnect(&synNetContext);
+	if (status != SES_ERROR_WL) {
+		/* this stuff will crash and burn if we are exiting because of
+		 * a wayland error */
+		wlIdleInhibit(&wlContext, false);
+		wlClose(&wlContext);
+	}
 	logClose();
-	wlClose(&wlContext);
 	/*unmask any caught signals*/
 }
 
-void Exit(int status)
+void Exit(enum sigExitStatus status)
 {
-	cleanup();
+	cleanup(status);
 	exit(status);
 }
-void Restart(void)
+void Restart(enum sigExitStatus status)
 {
-	cleanup();
+	cleanup(status);
 	errno = 0;
 	execvp(argv_reexec[0], argv_reexec);
 	logPErr("reexec");
 	exit(EXIT_FAILURE);
 }
 
-void ExitOrRestart(int status)
+void ExitOrRestart(enum sigExitStatus status)
 {
 	if (configTryBool("restart_on_fatal", false)) {
 		logErr("Restarting on status %d", status);
-		Restart();
+		Restart(status);
 	}
 	Exit(status);
 }
