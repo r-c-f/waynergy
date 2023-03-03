@@ -13,6 +13,7 @@
 #include "xmem.h"
 #include "fdio_full.h"
 #include "xdg-shell-client-protocol.h"
+#include "keyboard-shortcuts-inhibit-unstable-v1-client-protocol.h"
 #include "sopt.h"
 
 
@@ -255,6 +256,26 @@ static struct xdg_wm_base *xdg_wm_base;
 static struct wl_surface *wl_surface;
 static struct xdg_surface *xdg_surface;
 static struct xdg_toplevel *xdg_toplevel;
+static struct zwp_keyboard_shortcuts_inhibit_manager_v1 *keyboard_shortcuts_inhibit_manager;
+static struct zwp_keyboard_shortcuts_inhibitor_v1 *keyboard_shortcuts_inhibitor;
+
+
+/*keyboard shortcut inhibitor listener */
+static void inhibitor_active(void *data, struct zwp_keyboard_shortcuts_inhibitor_v1 *inhibitor)
+{
+	fprintf(stderr, "Shortcuts inhibited\n");
+}
+
+static void inhibitor_inactive(void *data, struct zwp_keyboard_shortcuts_inhibitor_v1 *inhibitor)
+{
+	fprintf(stderr, "Shortcuts not inhibited\n");
+}
+
+static struct zwp_keyboard_shortcuts_inhibitor_v1_listener keyboard_shortcuts_inhibitor_listener = {
+	.active = inhibitor_active,
+	.inactive = inhibitor_inactive,
+};
+
 
 /* buffer listener */
 static void buffer_release(void *data, struct wl_buffer *buffer)
@@ -502,6 +523,8 @@ static void registry_global(void *data, struct wl_registry *registry, uint32_t n
 	} else if (strcmp(interface, xdg_wm_base_interface.name) == 0) {
 		xdg_wm_base = wl_registry_bind(registry, name, &xdg_wm_base_interface, version);
 		xdg_wm_base_add_listener(xdg_wm_base, &wm_base_listener, NULL);
+	} else if (strcmp(interface, zwp_keyboard_shortcuts_inhibit_manager_v1_interface.name) == 0) {
+		keyboard_shortcuts_inhibit_manager = wl_registry_bind(registry, name, &zwp_keyboard_shortcuts_inhibit_manager_v1_interface, version);
 	}
 }
 static void registry_global_remove(void *data, struct wl_registry *registry, uint32_t name)
@@ -580,6 +603,11 @@ int main(int argc, char **argv)
 	xdg_toplevel = xdg_surface_get_toplevel(xdg_surface);
 	xdg_toplevel_set_title(xdg_toplevel, argv[0]);
 	wl_surface_commit(wl_surface);
+
+	if (keyboard_shortcuts_inhibit_manager) {
+		keyboard_shortcuts_inhibitor = zwp_keyboard_shortcuts_inhibit_manager_v1_inhibit_shortcuts(keyboard_shortcuts_inhibit_manager, wl_surface, wl_seat);
+		zwp_keyboard_shortcuts_inhibitor_v1_add_listener(keyboard_shortcuts_inhibitor, &keyboard_shortcuts_inhibitor_listener, NULL);
+	}
 
 	while (wl_display_dispatch(wl_display) != -1);
 
