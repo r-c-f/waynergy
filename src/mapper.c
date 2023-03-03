@@ -607,6 +607,8 @@ int main(int argc, char **argv)
 	if (keyboard_shortcuts_inhibit_manager) {
 		keyboard_shortcuts_inhibitor = zwp_keyboard_shortcuts_inhibit_manager_v1_inhibit_shortcuts(keyboard_shortcuts_inhibit_manager, wl_surface, wl_seat);
 		zwp_keyboard_shortcuts_inhibitor_v1_add_listener(keyboard_shortcuts_inhibitor, &keyboard_shortcuts_inhibitor_listener, NULL);
+	} else {
+		fprintf(stderr, "WARNING: could not inhibit compositor keyboard shortcuts, keyboard input might trigger unexpected behavior\n");
 	}
 
 	while (wl_display_dispatch(wl_display) != -1);
