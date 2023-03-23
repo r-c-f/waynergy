@@ -1,6 +1,6 @@
 /* sopt -- simple option parsing
  *
- * Version 1.8
+ * Version 1.9
  *
  * Copyright 2021 Ryan Farley <ryan.farley@gmx.com>
  *
@@ -19,6 +19,12 @@
 
 #ifndef SOPTH_INCLUDE
 #define SOPTH_INCLUDE
+
+#if defined(__GNUC__)
+#define SHL_UNUSED __attribute__((unused))
+#else
+#define SHL_UNUSED
+#endif
 
 #include <stdio.h>
 #include <stdbool.h>
@@ -124,7 +130,7 @@ union sopt_arg {
 #define SOPT_VALID(opt) ((opt)->val != SOPT_INVAL)
 
 /*simple helper -- print out usage example*/
-static inline void sopt_usage_printopt(struct sopt *opt)
+SHL_UNUSED static inline void sopt_usage_printopt(struct sopt *opt)
 {
 	bool shortopt, longopt;
 
@@ -154,7 +160,7 @@ static inline void sopt_usage_printopt(struct sopt *opt)
  * 	-o|--opt:
  * 		option description here
 */
-static void sopt_usage(struct sopt *optspec, const char *name, const char *desc)
+SHL_UNUSED static void sopt_usage(struct sopt *optspec, const char *name, const char *desc)
 {
 	struct sopt *opt;
 	bool afteropt = false;
@@ -201,7 +207,7 @@ static void sopt_usage(struct sopt *optspec, const char *name, const char *desc)
  * If 'set' is true, other parameters are stored, and the function returns.
  * If 'set' is false, other parameters are ignored, and sopt_usage() is called
  * with stored values used */
-static void sopt_usage_static(struct sopt *opt, const char *name, const char *desc, bool set)
+SHL_UNUSED static void sopt_usage_static(struct sopt *opt, const char *name, const char *desc, bool set)
 {
 	static const char *name_s, *desc_s;
 	static struct sopt *opt_s;
@@ -214,17 +220,17 @@ static void sopt_usage_static(struct sopt *opt, const char *name, const char *de
 	}
 }
 /* for convenience, set the static usage values for future use */
-static inline void sopt_usage_set(struct sopt *opt, const char *name, const char *desc)
+SHL_UNUSED static inline void sopt_usage_set(struct sopt *opt, const char *name, const char *desc)
 {
 	sopt_usage_static(opt, name, desc, true);
 }
 /* for convenience, call sopt_usage_static with stored parameters */
-static inline void sopt_usage_s(void)
+SHL_UNUSED static inline void sopt_usage_s(void)
 {
 	sopt_usage_static(NULL, NULL, NULL, false);
 }
 
-static bool sopt_argconv_int(const char *s, intmax_t *out)
+SHL_UNUSED static bool sopt_argconv_int(const char *s, intmax_t *out)
 {
 	char *endptr;
 	errno = 0;
@@ -236,7 +242,7 @@ static bool sopt_argconv_int(const char *s, intmax_t *out)
 	return true;
 }
 
-static bool sopt_argconv_uint(const char *s, uintmax_t *out)
+SHL_UNUSED static bool sopt_argconv_uint(const char *s, uintmax_t *out)
 {
 	char *endptr;
 
@@ -256,7 +262,7 @@ static bool sopt_argconv_uint(const char *s, uintmax_t *out)
 	return true;
 }
 
-static bool sopt_argconv_ldbl(const char *s, long double *out)
+SHL_UNUSED static bool sopt_argconv_ldbl(const char *s, long double *out)
 {
 	char *endptr;
 	errno = 0;
@@ -268,7 +274,7 @@ static bool sopt_argconv_ldbl(const char *s, long double *out)
 	return true;
 }
 
-static void sopt_perror(struct sopt *opt, const char *msg)
+SHL_UNUSED static void sopt_perror(struct sopt *opt, const char *msg)
 {
 	fprintf(stderr, "Error parsing argument ");
 	if (isalnum(opt->val)) {
@@ -304,7 +310,7 @@ static void sopt_perror(struct sopt *opt, const char *msg)
  * 	'?' if unknown or invalid input given,
  * 	opt->val for the found option otherwise.
  */
-static int sopt_getopt(int argc, char **argv, struct sopt *opt, int *cpos, int *optind, union sopt_arg *arg)
+SHL_UNUSED static int sopt_getopt(int argc, char **argv, struct sopt *opt, int *cpos, int *optind, union sopt_arg *arg)
 {
 	char *arg_str;
 	intmax_t arg_int;
@@ -539,7 +545,7 @@ shortopt:
  * optind:
  * 	If NULL, a static allocation is used. Reset whenever opt changes.
 */
-static int sopt_getopt_s(int argc, char **argv, struct sopt *opt, int *cpos, int *optind, union sopt_arg *arg)
+SHL_UNUSED static int sopt_getopt_s(int argc, char **argv, struct sopt *opt, int *cpos, int *optind, union sopt_arg *arg)
 {
 	static struct sopt *opt_last = NULL;
 	static int cpos_s = 0;
@@ -561,4 +567,5 @@ static int sopt_getopt_s(int argc, char **argv, struct sopt *opt, int *cpos, int
 	return sopt_getopt(argc, argv, opt, cpos, optind, arg);
 }
 
+#undef SHL_UNUSED
 #endif

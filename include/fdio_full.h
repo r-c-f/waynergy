@@ -1,6 +1,6 @@
 /* fdio_full -- read/write without shortness
  *
- * Version 1.0
+ * Version 1.1
  *
  * Copyright 2021 Ryan Farley <ryan.farley@gmx.com>
  *
@@ -19,12 +19,17 @@
 #ifndef FDIO_FULL_H_INC
 #define FDIO_FULL_H_INC
 
+#if defined(__GNUC__)
+#define SHL_UNUSED __attribute__((unused))
+#else
+#define SHL_UNUSED
+#endif
+
 #include <unistd.h>
 #include <errno.h>
 #include <string.h>
 #include <stdbool.h>
 #include <limits.h>
-
 
 enum fdio_full_flag {
 	FDIO_FULL_FLAG_NONE = 0,
@@ -32,10 +37,7 @@ enum fdio_full_flag {
 	FDIO_FULL_FLAG_INTR = 2, //bail out on EINTR
 };
 
-#ifdef __GNUC__
-__attribute__((unused))
-#endif
-static bool read_full(int fd, void *buf, size_t count, enum fdio_full_flag flags)
+SHL_UNUSED static bool read_full(int fd, void *buf, size_t count, enum fdio_full_flag flags)
 {
 	ssize_t ret;
 	char *pos;
@@ -65,10 +67,8 @@ static bool read_full(int fd, void *buf, size_t count, enum fdio_full_flag flags
 	}
 	return true;
 }
-#ifdef __GNUC__
-__attribute__((unused))
-#endif
-static bool write_full(int fd, const void *buf, size_t count, enum fdio_full_flag flags)
+
+SHL_UNUSED static bool write_full(int fd, const void *buf, size_t count, enum fdio_full_flag flags)
 {
 	ssize_t ret;
 	const char *pos;
@@ -99,4 +99,5 @@ static bool write_full(int fd, const void *buf, size_t count, enum fdio_full_fla
 	return true;
 }
 
+#undef SHL_UNUSED
 #endif
