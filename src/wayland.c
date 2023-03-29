@@ -10,6 +10,7 @@
 #include <sys/mman.h>
 #include "config.h"
 #include "os.h"
+#include "ssb.h"
 #include "xmem.h"
 #include "wayland.h"
 #include <stdbool.h>

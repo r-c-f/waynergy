@@ -3,6 +3,7 @@
 #include "xmem.h"
 #include "fdio_full.h"
 #include "log.h"
+#include "ssb.h"
 #include <stdbool.h>
 #include <dirent.h>
 #include <sys/stat.h>
@@ -13,40 +14,23 @@
 #include "ini.h"
 static ini_t *config_ini = NULL;
 
-/* read file into a buffer, resizing as needed */
-static bool buf_append_file(char **buf, size_t *len, size_t *pos, char *path)
+static char *read_file_dumb(char *path)
 {
 	FILE *f;
-	size_t read_count;
+	struct ssb s = {0};
+
 	if (!path)
 		return false;
 	if (!(f = fopen(path, "r"))) {
 		return false;
 	}
-	while ((read_count = fread(*buf + *pos, 1, *len - *pos - 1, f))) {
-		*pos += read_count;
-		if (*len - *pos <= 2) {
-			*buf = xrealloc(*buf, *len *= 2);
-		}
+	if (!(ssb_readfile(&s, f) && ssb_truncate(&s, s.pos))) {
+		ssb_free(&s);
 	}
-	fclose(f);
-	return true;
-}
-static char *read_file_dumb(char *path)
-{
-	size_t len, pos;
-	char *buf;
 
-	len = 4096;
-	buf = xmalloc(len);
-	pos = 0;
-	if (!buf_append_file(&buf, &len, &pos, path)) {
-		free(buf);
-		return NULL;
-	}
-	buf[pos] = 0;
-	return xrealloc(buf, pos + 1);
+	return s.buf;
 }
+
 static char *try_read_ini(char *name)
 {
 	char *section_buf = NULL;

@@ -10,6 +10,7 @@
 #include <sys/stat.h>
 #include <sys/socket.h>
 #include <sys/un.h>
+#include "ssb.h"
 #include "xmem.h"
 #include "log.h"
 
@@ -130,11 +131,10 @@ char *osGetPeerProcName(int fd)
 {
 	struct ucred uc;
 	socklen_t len = sizeof(uc);
-	size_t buf_len = 0;
 	char *lf = NULL;
-	char *buf = NULL;
 	char *path = NULL;
 	FILE *f = NULL;
+	struct ssb s = {0};
 
 	if (getsockopt(fd, SOL_SOCKET, SO_PEERCRED, &uc, &len) == -1) {
 		logPErr("GetPeerProcName: getsockopt() failure");
@@ -146,21 +146,20 @@ char *osGetPeerProcName(int fd)
 		logPErr("Could not open file");
 		goto done;
 	}
-	if (getline(&buf, &buf_len, f) == -1) {
+	if (!ssb_readfile(&s, f)) {
 		logPErr("Could not read process name");
-		free(buf);
-		buf = NULL;
+		ssb_free(&s);
 		goto done;
 	}
 	/* strip the new line */
-	lf = strchr(buf, '\n');
-	*lf = '\0';
+	lf = strchr(s.buf, '\n');
+	ssb_xtruncate(&s, lf - s.buf);
 done:
 	free(path);
 	if (f) {
 		fclose(f);
 	}
-	return buf;
+	return s.buf;
 }
 #elif defined(__FreeBSD__)
 #include <sys/param.h>

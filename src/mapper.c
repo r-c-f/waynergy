@@ -15,7 +15,7 @@
 #include "xdg-shell-client-protocol.h"
 #include "keyboard-shortcuts-inhibit-unstable-v1-client-protocol.h"
 #include "sopt.h"
-
+#include "ssb.h"
 
 static struct sopt optspec[] = {
 	SOPT_INITL('h', "help", "Help text"),
@@ -53,17 +53,11 @@ static int started;
 
 static char *get_syms_str(void)
 {
-	char *buf = NULL;
 	char sym_name[64];
-	size_t buf_size = 0;
-	FILE *f;
+	struct ssb s = {0};
 	const xkb_keysym_t *syms_out;
 	int syms_count, i, levels, level, layouts, layout;
 
-	if (!(f = open_memstream(&buf, &buf_size))) {
-		perror("open_memstream");
-		exit(1);
-	}
 	layouts = xkb_keymap_num_layouts_for_key(xkb_keymap, raw_keymap_pos);
 	for (layout = 0; layout < layouts; ++layout) {
 		levels = xkb_keymap_num_levels_for_key(xkb_keymap, raw_keymap_pos, layout);
@@ -71,15 +65,12 @@ static char *get_syms_str(void)
 			if ((syms_count = xkb_keymap_key_get_syms_by_level(xkb_keymap, raw_keymap_pos, layout, level, &syms_out))) {
 				for (i = 0; i < syms_count; ++i) {
 					xkb_keysym_get_name(syms_out[i], sym_name, sizeof(sym_name));
-					fprintf(f, "%s ", sym_name);
+					ssb_xprintf(&s, "%s ", sym_name);
 				}
 			}
 		}
 	}
-	fseek(f, -1, SEEK_END);
-	fputc(0, f);
-	fclose(f);
-	return buf;
+	return s.buf;
 }
 
 static void raw_keymap_print(void)
