@@ -250,7 +250,7 @@ immediately usable output.
 
 ###### Synergy ID keymapping
 
-In some cases (see recent comments on #35) Windows servers are sending 
+In some cases (see recent comments on [#35](https://github.com/r-c-f/waynergy/issues/35)) Windows servers are sending 
 duplicate button values for keys which are clearly different. In these cases
 using the synergy key IDs might make sense in an `id-keymap` section:
 ```
