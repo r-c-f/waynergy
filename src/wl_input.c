@@ -278,6 +278,10 @@ void wlMouseMotion(struct wlContext *ctx, int x, int y)
 }
 void wlMouseButton(struct wlContext *ctx, int button, int state)
 {
+	if (button >= WL_INPUT_BUTTON_COUNT) {
+		logWarn("Mouse button %d exceeds maximum %d, dropping", button, WL_INPUT_BUTTON_COUNT);
+		return;
+	}
 	logDbg("Mouse button: %d (mapped to %d), state: %d", button, ctx->input.button_map[button], state);
 	ctx->input.mouse_button(&ctx->input, ctx->input.button_map[button], state);
 }
