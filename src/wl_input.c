@@ -19,6 +19,8 @@ void wlLoadButtonMap(struct wlContext *ctx)
 		0x111, /*BTN_RIGHT*/
 		0x113, /*BTN_SIDE*/
 		0x114, /*BTN_EXTRA*/
+		0x113, /*BTN_SIDE*/
+		0x114, /*BTN_EXTRA*/
 	};
 	static_assert(sizeof(default_map)/sizeof(*default_map) == WL_INPUT_BUTTON_COUNT, "button map size mismatch");
 	for (i = 0; i < WL_INPUT_BUTTON_COUNT; ++i) {
