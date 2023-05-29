@@ -52,7 +52,7 @@ struct wlIdle
 extern bool wlIdleInitKde(struct wlContext *ctx);
 extern bool wlIdleInitGnome(struct wlContext *ctx);
 
-#define WL_INPUT_BUTTON_COUNT 6
+#define WL_INPUT_BUTTON_COUNT 8
 
 struct wlInput {
 	/* module-specific state */
