@@ -285,6 +285,11 @@ value based on `/usr/include/linux/input-event-keycodes.h`.
 activated remotely, `screensaver/stop` should contain a command to terminate
 it when it is deactivated. 
 
+#### Enter/Exit events
+
+`screen/enter` and `screen/exit` should contain a command to be run when the 
+screen is entered or exited, respectively.
+
 #### Idle inhibition hack
 
 Due to issues with the idle inhibition protocol, idle is actually inhibited by
