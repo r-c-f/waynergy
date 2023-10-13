@@ -122,9 +122,25 @@ void wl_output_update_cb(struct wlContext *context)
 }
 static void syn_active_cb(uSynergyCookie cookie, bool active)
 {
+	size_t i;
+	int ret;
+	char **cmd;
+
 	if (!active) {
 		wlKeyReleaseAll(&wlContext);
 	}
+
+	cmd = configReadLines(active ? "screen/enter" : "screen/exit");
+	if (!cmd) {
+		return;
+	}
+	for (i = 0; cmd[i]; ++i) {
+		ret = system(cmd[i]);
+		if (ret) {
+			logWarn("Screen state %s command #%zd (%s) failed with code %d", active ? "enter" : "exit", i, cmd[i], ret);
+		}
+	}
+	strfreev(cmd);
 }
 
 static void uinput_fd_open(int res[static 2])
