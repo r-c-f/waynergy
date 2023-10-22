@@ -587,6 +587,11 @@ void wlResUpdate(struct wlContext *ctx, int width, int height)
 {
 	ctx->width = width;
 	ctx->height = height;
+	if (ctx->input.update_geom) {
+		ctx->input.update_geom(&ctx->input);
+	} else {
+		logDbg("Current output backend does not update input geometry");
+	}
 }
 
 int wlPrepareFd(struct wlContext *ctx)
