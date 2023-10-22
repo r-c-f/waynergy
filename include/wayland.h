@@ -83,6 +83,7 @@ struct wlInput {
 	void (*mouse_wheel)(struct wlInput *, signed short dx, signed short dy);
 	void (*key)(struct wlInput *, int, int);
 	bool (*key_map)(struct wlInput *, char *);
+	void (*update_geom)(struct wlInput *);
 };
 
 /* uinput must open device fds before privileges are dropped, so this is

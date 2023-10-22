@@ -186,6 +186,21 @@ static bool init_mouse(struct wlContext *ctx, struct state_uinput *ui, int max_x
 	return true;
 }
 
+static bool reinit_mouse(struct wlInput *input)
+{
+	struct state_uinput *ui = input->state;
+	TRY_IOCTL0(ui->mouse_fd, UI_DEV_DESTROY);
+	return init_mouse(input->wl_ctx, ui, input->wl_ctx->width, input->wl_ctx->height);
+}
+
+static void update_geom(struct wlInput *input)
+{
+	logDbg("uinput: updating geometry for mouse");
+	if (!reinit_mouse(input)) {
+		logErr("Could not reinitialize uinput for mouse");
+	}
+}
+
 bool wlInputInitUinput(struct wlContext *ctx)
 {
 	struct state_uinput *ui;
@@ -213,6 +228,7 @@ bool wlInputInitUinput(struct wlContext *ctx)
 		.mouse_wheel = mouse_wheel,
 		.key = key,
 		.key_map = key_map,
+		.update_geom = update_geom,
 	};
 	wlLoadButtonMap(ctx);
 
