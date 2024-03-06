@@ -16,6 +16,7 @@
 #include "virtual-keyboard-unstable-v1-client-protocol.h"
 #include "xdg-output-unstable-v1-client-protocol.h"
 #include "idle-client-protocol.h"
+#include "ext-idle-notify-v1-client-protocol.h"
 #include "uSynergy.h"
 
 
@@ -49,6 +50,7 @@ struct wlIdle
 	void (*inhibit_stop)(struct wlIdle *);
 };
 
+extern bool wlIdleInitExt(struct wlContext *ctx);
 extern bool wlIdleInitKde(struct wlContext *ctx);
 extern bool wlIdleInitGnome(struct wlContext *ctx);
 
@@ -113,7 +115,8 @@ struct wlContext {
 	struct zxdg_output_manager_v1 *output_manager;
 	struct wlOutput *outputs;
 	/* idle stuff */
-	struct org_kde_kwin_idle *idle_manager;
+	struct org_kde_kwin_idle *idle_manager; /* old KDE */
+	struct ext_idle_notifier_v1 *idle_notifier; /* new standard */
 	struct wlIdle idle;
 	//state
 	int width;
