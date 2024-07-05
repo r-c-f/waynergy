@@ -518,7 +518,7 @@ bool wlSetup(struct wlContext *ctx, int width, int height, char *backend)
 	ctx->height = height;
 	ctx->display = wl_display_connect(NULL);
 	if (!ctx->display) {
-		logErr("Could not connect to display");
+		logPErr("Could not connect to display");
 		return false;
 	}
 	ctx->registry = wl_display_get_registry(ctx->display);
