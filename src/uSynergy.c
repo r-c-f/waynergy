@@ -407,6 +407,20 @@ static void sProcessMessage(uSynergyContext *context, struct sspBuf *msg)
 		}
 		context->m_isCaptured = true;
 
+		/* announce any clipboard grab that was deferred for lack of a
+		 * sequence number */
+		for (int id = 0; id < 2; ++id) {
+			if (context->m_clipGrabPending[id]) {
+				context->m_clipGrabPending[id] = false;
+				if (!(sAddString(context, "CCLP") &&
+				      sAddUInt8(context, id) &&
+				      sAddUInt32(context, context->m_sequenceNumber))) {
+					PARSE_ERROR();
+				}
+				sSendReply(context);
+			}
+		}
+
 		// Call callback
 		if (context->m_screenActiveCallback != 0L)
 			context->m_screenActiveCallback(context->m_cookie, true);
@@ -924,6 +938,12 @@ void uSynergyUpdateClipBuf(uSynergyContext *context, enum uSynergyClipboardId id
 	buf = buf_add_int32(buf, USYNERGY_CLIPBOARD_FORMAT_TEXT); //type, text only for now
 	buf = buf_add_int32(buf, len); //length of actual data
 	memmove(buf, data, len);
+	/* Synergy 3 servers reply EBAD to a grab sent before the first screen
+	 * enter (sequence number still 0), so defer it until CINN arrives */
+	if (!context->m_sequenceNumber) {
+		context->m_clipGrabPending[id] = true;
+		return;
+	}
 	/* send CCLP  -- CCLP%1i%4i */
 	if (!(sAddString(context, "CCLP") &&
 	      sAddUInt8(context, id) &&
