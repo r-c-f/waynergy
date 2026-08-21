@@ -209,6 +209,23 @@ xkbcommon that will work with a Windows primary. To deal with this I've
 included one that mostly works (minus the keys I don't actually have to test
 on my own systems) in `doc/xkb/keycodes/win`. 
 
+**If your compositor has keybindings, prefer raw keymapping instead.** A
+custom `xkb_keymap` is only used for the keymap waynergy hands to the
+compositor; a compositor that resolves its own keybindings against its
+configured keymap (Hyprland does, for example) will interpret the injected
+keycodes with *that* map rather than yours. The result is text that types
+correctly while every keybinding is silently off by one position -- for
+example, `Super+K` firing whatever is bound to `Super+J`.
+
+To avoid this, keep the compositor keymap (`wl_keyboard_map = true`, the
+default), set `xkb_key_offset` to `8`, and map the E0-prefixed keys
+explicitly. A ready-made configuration is provided in
+`doc/raw-keymap/windows-to-linux-evdev.ini`.
+
+Note also that Windows reserves `Win`+*letter* combinations for the shell and
+never forwards them, so `Super`-based keybindings need a different key --
+mapping `Menu` to `Super_L` works well.
+
 ###### macOS primary
 
 The same issue of keycodes applies here; see `doc/xkb/keycodes/mac` for
@@ -239,6 +256,10 @@ Because these will vary on the source and target end, providing
 general-purpose mappings is more difficult, but if anyone wants to
 contribute some under `doc` with clearly-defined server and client 
 targets they would be appreciated by somebody probably. 
+
+Contributed mappings live in `doc/raw-keymap/`:
+- `windows-to-linux-evdev.ini` -- Deskflow/Synergy/Barrier on Windows to a
+  Linux client using a standard evdev keymap.
 
 The offset functionality is enabled through `raw-keymap/offset`, though it
 can also be disabled for explicit mappings by setting `raw-keymap/offset_on_explicit`
@@ -325,7 +346,23 @@ running with the `--enable-tofu` option on the command line, which will allow
 verification that it has not changed on subsequent connections. 
 
 Client certificates are now supported as well; simply place the certificate at
-`tls/cert`.
+`tls/cert`. The file must contain **both the private key and the
+certificate**, since it is passed to `tls_config_set_key_file` and
+`tls_config_set_cert_file` alike. A self-signed pair is sufficient:
+```
+openssl req -x509 -nodes -days 3650 -newkey rsa:2048 \
+	-keyout key.pem -out cert.pem -subj "/CN=$(hostname)"
+cat key.pem cert.pem > "${XDG_CONFIG_HOME:-$HOME/.config}/waynergy/tls/cert"
+```
+
+Deskflow servers *require* a client certificate. Without one the TCP
+connection and TLS handshake both succeed and the server then goes silent,
+which surfaces on the client as
+```
+[ERROR] Synergy receive timed out
+[ERROR] Receive failed (65535 bytes asked, -1 bytes received)
+```
+with `peer did not return a certificate` in the server's own log.
 
 #### wlroots wheel issues
 
