@@ -18,7 +18,7 @@ static void cleanup(enum sigExitStatus status)
 {
 	/* stop clipboard monitors */
 	for (int i = 0; i < 2; ++i) {
-		if (clipMonitorPid[i] != -1) {
+		if (clipMonitorPid[i] > 0) {
 			kill(clipMonitorPid[i], SIGTERM);
 		}
 	}
