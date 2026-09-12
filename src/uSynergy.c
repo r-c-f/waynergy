@@ -749,7 +749,7 @@ static void sUpdateContext(uSynergyContext *context)
 		if (num_received == 0)
 		{
 			/* Timeout after 2 secs of inactivity (we received no CALV) */
-			if ((cur_time - context->m_lastMessageTime) > USYNERGY_IDLE_TIMEOUT)
+			if ((int32_t)(cur_time - context->m_lastMessageTime) > USYNERGY_IDLE_TIMEOUT)
 				sSetDisconnected(context, USYNERGY_ERROR_TIMEOUT);
 		}
 		else

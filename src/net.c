@@ -223,7 +223,7 @@ void netPoll(struct synNetContext *snet_ctx, struct wlContext *wl_ctx)
 		if (netPollFd[POLLFD_SYN].revents & POLLIN) {
 			uSynergyUpdate(syn_ctx);
 		}
-		if ((syn_ctx->m_getTimeFunc() - syn_ctx->m_lastMessageTime) > USYNERGY_IDLE_TIMEOUT) {
+		if ((int32_t)(syn_ctx->m_getTimeFunc() - syn_ctx->m_lastMessageTime) > USYNERGY_IDLE_TIMEOUT) {
 			logErr("Synergy timeout encountered -- disconnecting");
 			synNetDisconnect(snet_ctx);
 			return;
@@ -322,4 +322,3 @@ bool synNetDisconnect(struct synNetContext *snet_ctx)
 	snet_ctx->syn_ctx->m_connected = false;
 	return true;
 }
-
