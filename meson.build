@@ -9,6 +9,7 @@ src_c = files(
   'src/wl_idle_kde.c',
   'src/wl_idle_ext.c',
   'src/wl_input.c',
+  'src/xkb_util.c',
   'src/wl_input_wlr.c',
   'src/wl_input_kde.c',
   'src/wl_input_uinput.c',

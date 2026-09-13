@@ -5,7 +5,6 @@
 #include "fdio_full.h"
 #include <xkbcommon/xkbcommon.h>
 
-
 /* handle button maps */
 
 void wlLoadButtonMap(struct wlContext *ctx)
@@ -32,29 +31,9 @@ void wlLoadButtonMap(struct wlContext *ctx)
 };
 
 
-/* Code to track keyboard state for modifier masks
- * because the synergy protocol is less than ideal at sending us modifiers
-*/
-
-
-static bool local_mod_init(struct wlContext *wl_ctx, char *keymap_str) {
-	wl_ctx->input.xkb_ctx = xkb_context_new(XKB_CONTEXT_NO_FLAGS);
-	if (!wl_ctx->input.xkb_ctx) {
-		return false;
-	}
-	wl_ctx->input.xkb_map = xkb_keymap_new_from_string(wl_ctx->input.xkb_ctx, keymap_str, XKB_KEYMAP_FORMAT_TEXT_V1, XKB_KEYMAP_COMPILE_NO_FLAGS);
-	if (!wl_ctx->input.xkb_map) {
-		xkb_context_unref(wl_ctx->input.xkb_ctx);
-		return false;
-	}
-	wl_ctx->input.xkb_state = xkb_state_new(wl_ctx->input.xkb_map);
-	if (!wl_ctx->input.xkb_state) {
-		xkb_map_unref(wl_ctx->input.xkb_map);
-		xkb_context_unref(wl_ctx->input.xkb_ctx);
-		return false;
-	}
-	return true;
-}
+/* Keyboard state tracking for modifier masks (the synergy protocol is
+ * less than ideal at sending us modifiers) starts with waynergyModInit(),
+ * in src/xkb_util.c, declared in wayland.h. */
 
 /* and code to handle raw mapping of keys */
 
@@ -178,17 +157,50 @@ int wlKeySetConfigLayout(struct wlContext *ctx)
 {
 	int ret = 0;
 
-	/* ensure that we've given everything a chance to give us a proper
-	   default */
+	/* Give the compositor's keymap event a chance to arrive if it
+	 * hasn't already (ctx->kb_map is only ever set by keyboard_keymap()
+	 * in wayland.c). A raw wl_display_dispatch() call has no place
+	 * here: it blocks until *some* event arrives, and ctx->kb_map can
+	 * legitimately stay unset for reasons that mean no such event is
+	 * ever coming -- wl_keyboard_map=false, a failed mmap() of the
+	 * keymap fd, or the seat never advertising keyboard capability at
+	 * all (in which case keyboard_keymap() is never even registered as
+	 * a listener) -- so dispatch() alone can hang indefinitely.
+	 * wl_display_roundtrip() doesn't have that problem: the Wayland
+	 * core protocol requires the server to respond to wl_display.sync
+	 * regardless of what else is or isn't pending, so it's bounded no
+	 * matter which of the above applies, and it already dispatches
+	 * anything that is pending (a keymap event included, if one's
+	 * genuinely queued) on its way to that guaranteed response. */
 	if (!ctx->kb_map) {
-		wl_display_dispatch(ctx->display);
 		wl_display_roundtrip(ctx->display);
 	}
 
-	char *default_map = ctx->kb_map;
+	/* ctx->kb_map can be unset for any of the reasons noted above, so
+	 * fall back to a real baked-in keymap rather than leaving
+	 * default_map (and, absent an explicit xkb_keymap config,
+	 * keymap_str below) NULL -- that reaches xkb_keymap_new_from_string()
+	 * as a NULL string, which is a crash. This also matches what the
+	 * README already claims happens here. */
+	char *default_map = ctx->kb_map ? ctx->kb_map : (char *)waynergyDefaultKeymap;
 	logDbg("Will default to map %s", default_map);
 	char *keymap_str = configTryStringFull("xkb_keymap", default_map);
-	local_mod_init(ctx, keymap_str);
+	/* default_map is never NULL (see above), and configTryStringFull()
+	 * only returns NULL when its default arg is -- so this genuinely
+	 * can't fail, not just "shouldn't". An assert documents that as an
+	 * enforced invariant instead of a dead runtime branch that can
+	 * never actually run. */
+	assert(keymap_str);
+	if (!waynergyModInit(&ctx->input.xkb_ctx, &ctx->input.xkb_map, &ctx->input.xkb_state, keymap_str)) {
+		/* xkb_state would otherwise stay NULL while setup carries on
+		 * as if nothing were wrong -- the first keypress then reaches
+		 * xkb_state_update_key()/xkb_state_serialize_mods() in
+		 * wlKeyRaw() with a NULL state and crashes there instead of
+		 * failing cleanly here at startup. */
+		logErr("Failed to parse keymap, cannot track modifier state");
+		free(keymap_str);
+		return 1;
+	}
 	ret = !ctx->input.key_map(&ctx->input, keymap_str);
 	ctx->input.key_press_state_len = 0;
 	load_raw_keymap(ctx);
