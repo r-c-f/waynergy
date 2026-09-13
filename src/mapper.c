@@ -43,6 +43,14 @@ static bool xkb_skipped = false;
 static struct xkb_context *xkb_ctx;
 static struct xkb_keymap *xkb_keymap;
 
+/* Raw bytes of the currently-compiled keymap, kept only so a later
+ * keyboard_keymap() call can tell "genuinely different keymap" apart
+ * from "compositor re-sent the same one" (some legitimately do, on
+ * events unrelated to which keyboard device is active) without having
+ * to guess from context. */
+static char *xkb_keymap_buf;
+static uint32_t xkb_keymap_buf_size;
+
 static uint32_t *raw_keymap;
 static bool *raw_keymap_set;
 static uint32_t raw_keymap_min;
@@ -168,6 +176,11 @@ static void raw_keymap_store(uint32_t val)
 static void raw_keymap_init(void)
 {
 	uint32_t i;
+	/* Safe to call more than once (see keyboard_keymap()): frees
+	 * whatever was allocated for a previous keymap first, rather than
+	 * leaking it. */
+	free(raw_keymap);
+	free(raw_keymap_set);
 	raw_keymap = xcalloc(raw_keymap_max + 1, sizeof(*raw_keymap));
 	raw_keymap_set = xcalloc(raw_keymap_max + 1, sizeof(*raw_keymap_set));
 	/* start by assuming that each key simply maps to itself */
@@ -345,17 +358,81 @@ static struct xdg_wm_base_listener wm_base_listener = {
 /* for debugging purposes.... */
 static void keymap_print(char *buf, size_t len)
 {
+	/* xcalloc(len + 1, 1) already leaves s[len] as a zero terminator;
+	 * copying len + 1 bytes (as this used to) reads one byte past the
+	 * len-byte buf region, which is only ever exactly len bytes (it's
+	 * an mmap() of exactly len bytes -- see the caller). */
 	char *s = xcalloc(len + 1, 1);
-	memcpy(s, buf, len + 1);
+	memcpy(s, buf, len);
 	fprintf(stderr, "\n***\n%s\n***\n", s);
 	free(s);
 }
+/* Print the name of the keymap's xkb_keycodes section (e.g. "mac",
+ * "evdev_aliases(qwerty)") if it can be found. This is genuinely useful
+ * to see whenever a keymap-changed restart happens below, not just a
+ * debugging aid: it's usually the quickest way to recognize *why* one
+ * happened -- most commonly because keypresses started arriving from a
+ * different keyboard device than before (e.g. local hardware vs. a
+ * remote connection's virtual keyboard, each independently keymapped),
+ * which this seat-level event doesn't otherwise identify at all. */
+/* Returns a newly-allocated copy of buf's xkb_keycodes section name (e.g.
+ * "mac", "evdev_aliases(qwerty)"), or NULL if none could be found/parsed
+ * -- caller frees. buf is assumed null-terminated XKB_KEYMAP_FORMAT_TEXT_V1
+ * text (see the xkb_keymap_new_from_buffer() calls below, which pass
+ * size - 1 on that same assumption), so plain string functions are
+ * enough here -- no need for buf's actual length or manual pointer-bound
+ * arithmetic to stay in-bounds. */
+static char *get_keycodes_section_name(const char *buf)
+{
+	const char *needle = "xkb_keycodes \"";
+	const char *p, *end;
+	char *ret = NULL;
+
+	if ((p = strstr(buf, needle)) && (end = strchr(p += strlen(needle), '"'))) {
+		xasprintf(&ret, "%.*s", (int)(end - p), p);
+	}
+	return ret;
+}
+
+/* Compile buf (size bytes, in the given wl_keyboard::keymap format) into
+ * a new xkb_keymap, or print the raw content and exit if it doesn't
+ * parse -- shared by both the first-keymap and keymap-changed paths in
+ * keyboard_keymap() below. */
+static struct xkb_keymap *compile_keymap_or_die(char *buf, uint32_t size, uint32_t format)
+{
+	struct xkb_keymap *km;
+
+	if (!(km = xkb_keymap_new_from_buffer(xkb_ctx, buf, size - 1, format, XKB_KEYMAP_COMPILE_NO_FLAGS))) {
+		fprintf(stderr, "could not compile keymap:\n");
+		keymap_print(buf, size);
+		exit(1);
+	}
+	return km;
+}
+
 static void keyboard_keymap(void *data, struct wl_keyboard *wl_kb, uint32_t format, int32_t fd, uint32_t size)
 {
 	char *buf;
 
-	if (xkb_keymap) {
-		fprintf(stderr, "keymap changed, exiting\n");
+	/* format is one of only two protocol-defined values:
+	 * WL_KEYBOARD_KEYMAP_FORMAT_XKB_V1 (a real, null-terminated XKB
+	 * keymap string -- the only thing this tool can do anything with)
+	 * or WL_KEYBOARD_KEYMAP_FORMAT_NO_KEYMAP ("client must understand
+	 * how to interpret the raw keycode", i.e. there is no keymap
+	 * behind fd/size at all). Attempting to mmap() and compile that as
+	 * if it were real keymap text would reintroduce exactly the crash
+	 * this whole restart-on-change design exists to avoid, just via a
+	 * different trigger -- the seat having one keymapped device and
+	 * one that isn't is a real possibility this tool should tolerate,
+	 * given it's specifically meant to handle multiple keyboard
+	 * devices sharing a seat in the first place. */
+	if (format != WL_KEYBOARD_KEYMAP_FORMAT_XKB_V1) {
+		close(fd);
+		if (xkb_keymap) {
+			fprintf(stderr, "keymap event with format=%u (not a real keymap) -- ignoring, keeping the current one\n", format);
+			return;
+		}
+		fprintf(stderr, "keymap event with format=%u (not a real keymap), and no usable keymap has been received yet -- nothing to capture against\n", format);
 		exit(1);
 	}
 
@@ -364,11 +441,60 @@ static void keyboard_keymap(void *data, struct wl_keyboard *wl_kb, uint32_t form
 		exit(1);
 	}
 
-	if (!(xkb_keymap = xkb_keymap_new_from_buffer(xkb_ctx, buf, size - 1, format, XKB_KEYMAP_COMPILE_NO_FLAGS))) {
-		fprintf(stderr, "could not compile keymap:\n");
-		keymap_print(buf, size);
-		exit(1);
+	/* Some compositors re-send wl_keyboard::keymap on events that
+	 * aren't actually a keymap change (e.g. surface refocus) -- when
+	 * the content is byte-for-byte identical to what's already
+	 * compiled, there's nothing to restart against, so don't. */
+	if (xkb_keymap_buf && size == xkb_keymap_buf_size && !memcmp(buf, xkb_keymap_buf, size)) {
+		fprintf(stderr, "keymap event received again with identical content -- ignoring, no restart needed\n");
+		munmap(buf, size);
+		close(fd);
+		return;
 	}
+
+	/* A second, actually-different keymap event isn't a problem to
+	 * treat as fatal either. It happens whenever the compositor
+	 * considers a different keyboard device "active" for the seat than
+	 * before -- and if you're mapping keys arriving over a remote
+	 * connection (the reason this tool exists in the first place),
+	 * that's expected to happen often: the remote connection's own
+	 * virtual keyboard and your local hardware each get keymapped
+	 * independently, and any incidental local input while capturing
+	 * switches which one the compositor treats as current. These are
+	 * two genuinely different, both individually valid keymaps, not a
+	 * duplicate notification. Whatever's been captured so far was
+	 * recorded against the old keymap's key numbering, which a new
+	 * keymap has no reason to preserve (its <NAME>=N assignments, and
+	 * even its overall key count, can differ completely), so there's
+	 * no way to carry it forward correctly -- restart the capture
+	 * against the new keymap instead of silently mixing numbering
+	 * schemes into the output. */
+	if (xkb_keymap) {
+		struct xkb_keymap *new_keymap = compile_keymap_or_die(buf, size, format);
+		char *old_name = get_keycodes_section_name(xkb_keymap_buf);
+		char *new_name = get_keycodes_section_name(buf);
+		uint32_t old_keys = xkb_keymap_max_keycode(xkb_keymap) - xkb_keymap_min_keycode(xkb_keymap) + 1;
+		uint32_t new_keys = xkb_keymap_max_keycode(new_keymap) - xkb_keymap_min_keycode(new_keymap) + 1;
+
+		fprintf(stderr,
+			"keyboard change detected. please use only the remote keyboard throughout the process. restarting now.\n"
+			"  (received new keymap message -- old device type \"%s\" with %u keys, new device type \"%s\" with %u keys)\n",
+			old_name ? old_name : "(unknown)", old_keys,
+			new_name ? new_name : "(unknown)", new_keys);
+
+		free(old_name);
+		free(new_name);
+		xkb_keymap_unref(xkb_keymap);
+		xkb_keymap = new_keymap;
+	} else {
+		xkb_keymap = compile_keymap_or_die(buf, size, format);
+	}
+
+	free(xkb_keymap_buf);
+	xkb_keymap_buf = xcalloc(size, 1);
+	memcpy(xkb_keymap_buf, buf, size);
+	xkb_keymap_buf_size = size;
+
 	munmap(buf, size);
 	close(fd);
 
@@ -380,6 +506,14 @@ static void keyboard_keymap(void *data, struct wl_keyboard *wl_kb, uint32_t form
 		fprintf(stderr, "limiting maximum local keycode to %u\n", raw_keymap_max);
 	}
 	raw_keymap_init();
+	if (started) {
+		/* Only the very first keymap prints its own initial prompt,
+		 * from pointer_button() on the click that sets `started`. A
+		 * restart happening after that point needs to prompt again
+		 * itself, or the user has no indication their progress just
+		 * got reset. */
+		raw_keymap_prompt();
+	}
 }
 
 static void keyboard_enter(void *data, struct wl_keyboard *wl_kb, uint32_t serial, struct wl_surface *surface, struct wl_array *keys)
