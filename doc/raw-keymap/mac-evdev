@@ -1,0 +1,116 @@
+# waynergy raw-keymap: macOS Barrier/Synergy server -> Linux (xkb evdev) client
+#
+# Keys are the keycodes sent by the macOS server; values are the local
+# xkb/evdev keycodes to emit.  The macOS server keycodes correspond to the
+# values in doc/xkb/keycodes/mac minus 7 (that file encodes mac keycode + 8,
+# while the server sends mac keycode + 1).
+#
+# Keep xkb_key_offset = 0 and do NOT point xkb_keymap at the mac keycodes:
+# upload a normal evdev keymap (e.g. the compositor default, or
+# doc/config-example/xkb_keymap) so that modifier keys (Command, Option ->
+# Super/Alt) are applied correctly.  Then include this section in config.ini.
+#
+# Generated from doc/xkb/keycodes/mac and xkb-config's evdev keycodes.
+
+[raw-keymap]
+
+1 = 38  # AC01
+2 = 39  # AC02
+3 = 40  # AC03
+4 = 41  # AC04
+5 = 43  # AC06
+6 = 42  # AC05
+7 = 52  # AB01
+8 = 53  # AB02
+9 = 54  # AB03
+10 = 55  # AB04
+12 = 56  # AB05
+13 = 24  # AD01
+14 = 25  # AD02
+15 = 26  # AD03
+16 = 27  # AD04
+17 = 29  # AD06
+18 = 28  # AD05
+19 = 10  # AE01
+20 = 11  # AE02
+21 = 12  # AE03
+22 = 13  # AE04
+23 = 15  # AE06
+24 = 14  # AE05
+25 = 21  # AE12
+26 = 18  # AE09
+27 = 16  # AE07
+28 = 20  # AE11
+29 = 17  # AE08
+30 = 19  # AE10
+31 = 35  # AD12
+32 = 32  # AD09
+33 = 30  # AD07
+34 = 34  # AD11
+35 = 31  # AD08
+36 = 33  # AD10
+37 = 36  # RTRN
+38 = 46  # AC09
+39 = 44  # AC07
+40 = 48  # AC11
+41 = 45  # AC08
+42 = 47  # AC10
+43 = 51  # BKSL
+44 = 59  # AB08
+45 = 61  # AB10
+46 = 57  # AB06
+47 = 58  # AB07
+48 = 60  # AB09
+49 = 23  # TAB
+50 = 65  # SPCE
+51 = 49  # TLDE
+52 = 22  # BKSP
+54 = 9  # ESC
+56 = 133  # LWIN
+57 = 50  # LFSH
+58 = 66  # CAPS
+59 = 64  # LALT
+60 = 37  # LCTL
+66 = 91  # KPDL
+68 = 63  # KPMU
+70 = 86  # KPAD
+72 = 77  # NMLK
+76 = 106  # KPDV
+77 = 104  # KPEN
+79 = 82  # KPSU
+83 = 90  # KP0
+84 = 87  # KP1
+85 = 88  # KP2
+86 = 89  # KP3
+87 = 83  # KP4
+88 = 84  # KP5
+89 = 85  # KP6
+90 = 79  # KP7
+92 = 80  # KP8
+93 = 81  # KP9
+97 = 71  # FK05
+98 = 72  # FK06
+99 = 73  # FK07
+100 = 69  # FK03
+101 = 74  # FK08
+102 = 75  # FK09
+104 = 95  # FK11
+106 = 107  # PRSC
+108 = 78  # SCLK
+110 = 76  # FK10
+111 = 135  # MENU
+112 = 96  # FK12
+114 = 127  # PAUS
+115 = 118  # INS
+116 = 110  # HOME
+117 = 112  # PGUP
+118 = 119  # DELE
+119 = 70  # FK04
+120 = 115  # END
+121 = 68  # FK02
+122 = 117  # PGDN
+123 = 67  # FK01
+124 = 113  # LEFT
+125 = 114  # RGHT
+126 = 116  # DOWN
+127 = 111  # UP
