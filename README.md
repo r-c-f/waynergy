@@ -240,6 +240,15 @@ general-purpose mappings is more difficult, but if anyone wants to
 contribute some under `doc` with clearly-defined server and client 
 targets they would be appreciated by somebody probably. 
 
+A ready-made mapping for a macOS server and a Linux client using xkb's
+`evdev` keycodes is provided in `doc/raw-keymap/mac-evdev`. On Wayland
+clients (and clients where the compositor's own keymap is used), prefer this
+over pointing `xkb_keymap` at the mac keycodes: uploading a mac-keycodes
+keymap leaves modifier keys such as Command/Option undelivered as Super/Alt on
+some compositors (for example Hyprland). To use it, add the section to
+`config.ini`, leave `xkb_key_offset` at `0`, and keep `xkb_keymap` pointing at
+a normal evdev map (the compositor default, or `doc/config-example/xkb_keymap`).
+
 The offset functionality is enabled through `raw-keymap/offset`, though it
 can also be disabled for explicit mappings by setting `raw-keymap/offset_on_explicit`
 to `false`. 
