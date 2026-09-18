@@ -331,7 +331,8 @@ typedef struct uSynergyContext
 	uSynergyReceiveFunc				m_receiveFunc;									/* Receive data function */
 	uSynergySleepFunc				m_sleepFunc;									/* Thread sleep function */
 	uSynergyGetTimeFunc				m_getTimeFunc;									/* Get current time function */
-	const char*						m_clientName;									/* Name of Synergy Screen / Client */
+	char*						m_clientName;									/* Name of Synergy Screen / Client */
+	bool 							m_clientAutoName; 								/* whether to set name on each connection attempt from hostname */
 	uint16_t						m_clientWidth;									/* Width of screen */
 	uint16_t						m_clientHeight;									/* Height of screen */
 

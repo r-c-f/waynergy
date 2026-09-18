@@ -179,12 +179,6 @@ int main(int argc, char **argv)
 	/* and drop said privileges */
 	osDropPriv();
 
-	/* we default to name being hostname, so get it*/
-	if (gethostname(hostname, _POSIX_HOST_NAME_MAX - 1) == -1) {
-		perror("gethostname");
-		goto error;
-	}
-
 	uSynergyInit(&synContext);
 	/* figure out whether we need to override the configuration path */
 	osConfigPathOverride = getenv("WAYNERGY_CONF_PATH");
@@ -193,7 +187,7 @@ int main(int argc, char **argv)
 	/* Load defaults for everything */
 	port = configTryString("port", "24800");
 	host = configTryString("host", "localhost");
-	name = configTryString("name", hostname);
+	name = configTryString("name", NULL);
 	backend = configTryString("backend", NULL);
 	enable_crypto = configTryBool("tls/enable", false);
 	enable_tofu = configTryBool("tls/tofu", false);
@@ -278,8 +272,14 @@ opterror:
 	}
 	/* set up signal handler */
 	sigHandleInit(argv);
+	if (!name) {
+		logInfo("Automatically setting name from hostname");
+		name = hostname;
+		synContext.m_clientAutoName = true;
+	}
 	/* we can't override const, so set hostname here*/
 	synContext.m_clientName = name;
+
 	if (!synNetInit(&synNetContext, &synContext, host, port, enable_crypto, enable_tofu)) {
 		logErr("Could not initialize network code");
 		goto error;
@@ -330,7 +330,6 @@ error:
 done:
 	free(log_path);
 	free(host);
-	free(name);
 	free(port);
 	free(backend);
 	return ret;

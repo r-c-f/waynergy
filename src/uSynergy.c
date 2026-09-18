@@ -333,6 +333,17 @@ static void sProcessMessage(uSynergyContext *context, struct sspBuf *msg)
 		}
 		logInfo("Server is %s %" PRIu16 ".%" PRIu16, imp, server_major, server_minor);
 
+		// If we have autoname enabled, update the name from the hostname.
+		// This allows us to handle hostname changes due to late network
+		// setup in some cases (see #104)
+		if (context->m_clientAutoName) {
+			if (gethostname(context->m_clientName, _POSIX_HOST_NAME_MAX - 1) == -1) {
+				logPErr("Updating gethostname() failed");
+				REPLY_ERROR();
+			}
+			logDbg("Updated name to %s", context->m_clientName);
+		}
+
 		// Initialize position in reply buffer -- discards leftovers from
 		// failed send attempts, ensures no protocol errors on initialization
 		context->m_replyCur = context->m_replyBuffer+4;
