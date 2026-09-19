@@ -371,6 +371,7 @@ typedef struct uSynergyContext
 	size_t 							m_clipPosExpect[2]; /* expected length of clipboard data */
 	bool 							m_clipInStream[2]; /* whether or not we are currently in a clipboard data stream */
 	bool 							m_clipGrabbed[2]; /* whether or not we're grabbed -- i.e. obligated to send data on focus loss */
+	bool 							m_clipGrabPending[2]; /* grab happened before we had a sequence number; announce on next screen enter */
 } uSynergyContext;
 
 

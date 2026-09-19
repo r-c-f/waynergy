@@ -233,11 +233,13 @@ void netPoll(struct synNetContext *snet_ctx, struct wlContext *wl_ctx)
 		if (syn_ctx->m_connected) {
 			wlPollProc(wl_ctx, netPollFd[POLLFD_WL].revents);
 			sigHandleRun();
-			clipMonitorPollProc(&netPollFd[POLLFD_CLIP_MON]);
-			sigHandleRun();
-			for (int i = POLLFD_CLIP_UPDATER; i < POLLFD_COUNT; ++i) {
-				clipMonitorPollProc(netPollFd + i);
+			if (syn_ctx->m_hasReceivedHello && syn_ctx->m_infoCurrent) {
+				clipMonitorPollProc(&netPollFd[POLLFD_CLIP_MON]);
 				sigHandleRun();
+				for (int i = POLLFD_CLIP_UPDATER; i < POLLFD_COUNT; ++i) {
+					clipMonitorPollProc(netPollFd + i);
+					sigHandleRun();
+				}
 			}
 		}
 		nfd = syn_ctx->m_connected ? POLLFD_COUNT : 1;
