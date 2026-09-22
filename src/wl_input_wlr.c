@@ -68,17 +68,21 @@ static void mouse_button(struct wlInput *input, int button, int state)
 static void mouse_wheel(struct wlInput *input, signed short dx, signed short dy)
 {
 	struct state_wlr *wlr = input->state;
+	int sign = (wlr->wheel_mult < 0) ? -1 : 1;
+	int mult = (wlr->wheel_mult < 0) ? -wlr->wheel_mult : wlr->wheel_mult;
+	if (mult == 0) mult = 1;
+
 	//we are a wheel, after all
 	zwlr_virtual_pointer_v1_axis_source(wlr->pointer, 0);
 	if (dx < 0) {
-		zwlr_virtual_pointer_v1_axis_discrete(wlr->pointer, wlTS(input->wl_ctx), 1, wl_fixed_from_int(15), wlr->wheel_mult);
-	}else if (dx > 0) {
-		zwlr_virtual_pointer_v1_axis_discrete(wlr->pointer, wlTS(input->wl_ctx), 1, wl_fixed_from_int(-15), -1 * wlr->wheel_mult);
+		zwlr_virtual_pointer_v1_axis_discrete(wlr->pointer, wlTS(input->wl_ctx), 1, wl_fixed_from_int(15 * sign), mult * sign);
+	} else if (dx > 0) {
+		zwlr_virtual_pointer_v1_axis_discrete(wlr->pointer, wlTS(input->wl_ctx), 1, wl_fixed_from_int(-15 * sign), -mult * sign);
 	}
 	if (dy < 0) {
-		zwlr_virtual_pointer_v1_axis_discrete(wlr->pointer, wlTS(input->wl_ctx), 0, wl_fixed_from_int(15), wlr->wheel_mult);
+		zwlr_virtual_pointer_v1_axis_discrete(wlr->pointer, wlTS(input->wl_ctx), 0, wl_fixed_from_int(15 * sign), mult * sign);
 	} else if (dy > 0) {
-		zwlr_virtual_pointer_v1_axis_discrete(wlr->pointer, wlTS(input->wl_ctx), 0, wl_fixed_from_int(-15), -1 * wlr->wheel_mult);
+		zwlr_virtual_pointer_v1_axis_discrete(wlr->pointer, wlTS(input->wl_ctx), 0, wl_fixed_from_int(-15 * sign), -mult * sign);
 	}
 	zwlr_virtual_pointer_v1_frame(wlr->pointer);
 	wlDisplayFlush(input->wl_ctx);
