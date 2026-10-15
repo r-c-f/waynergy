@@ -369,14 +369,21 @@ static void sProcessMessage(uSynergyContext *context, struct sspBuf *msg)
 		//		kMsgQInfo			= "QINF"
 		//		kMsgDInfo			= "DINF%2i%2i%2i%2i%2i%2i%2i"
 		uint16_t x = 0, y = 0, warp = 0;
+		uint16_t w = context->m_clientWidth;
+		uint16_t h = context->m_clientHeight;
+		/* Deskflow rejects a DINF whose width or height is <= 0. */
+		if (w == 0 || h == 0) {
+			logWarn("Not sending DINF with empty geometry %ux%u", w, h);
+			return;
+		}
 		if (!(sAddString(context, "DINF") &&
 		      sAddUInt16(context, x) &&
 		      sAddUInt16(context, y) &&
-		      sAddUInt16(context, context->m_clientWidth) &&
-		      sAddUInt16(context, context->m_clientHeight) &&
+		      sAddUInt16(context, w) &&
+		      sAddUInt16(context, h) &&
 		      sAddUInt16(context, warp) &&
-		      sAddUInt16(context, 0) &&			// mx?
-		      sAddUInt16(context, 0))) {		// my?
+		      sAddUInt16(context, w / 2) &&
+		      sAddUInt16(context, h / 2))) {
 			REPLY_ERROR();
 		}
 		sSendReply(context);
@@ -936,6 +943,8 @@ void uSynergyUpdateClipBuf(uSynergyContext *context, enum uSynergyClipboardId id
 /* Update resolution */
 void uSynergyUpdateRes(uSynergyContext *context, int16_t width, int16_t height)
 {
+	if (width <= 0 || height <= 0)
+		return;
 	context->m_clientWidth = width;
 	context->m_clientHeight = height;
 	if (context->m_connected) {
