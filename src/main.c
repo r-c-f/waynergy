@@ -116,6 +116,13 @@ void wl_output_update_cb(struct wlContext *context)
 	}
 	width = r - l;
 	height = t - b;
+	/* A compositor can remove the output global while the monitor is
+	 * still connected. Deskflow rejects a 0x0 DINF, so keep the last
+	 * real size until an output comes back. */
+	if (width <= 0 || height <= 0) {
+		logInfo("Ignoring empty geometry %dx%d", width, height);
+		return;
+	}
 	logInfo("Geometry updated: %dx%d", width, height);
 	uSynergyUpdateRes(&synContext, width, height);
 	wlResUpdate(&wlContext, width, height);
