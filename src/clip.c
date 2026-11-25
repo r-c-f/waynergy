@@ -5,7 +5,7 @@
 extern uSynergyContext synContext;
 extern char **environ;
 
-int clipMonitorFd;
+int clipMonitorFd = -1;
 struct sockaddr_un clipMonitorAddr;
 pid_t clipMonitorPid[2];
 
